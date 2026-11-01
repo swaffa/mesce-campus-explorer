@@ -29,4 +29,8 @@ Walk close to a parked vehicle and press R (or tap the ride button) to mount. W/
 
 The Main Block and gate share a central approach with a narrow lawn divider, a stepped gate, and Bharathappuzha behind campus. The computer-science block is closer to the Main Block, with a connecting walkway through the compact lawn. The tea stall has contextual chaya, lime-juice, pazham-pori and parippu-vada interactions.
 
+Students' Corner has a shaded gathering tree, seating, snack displays, a drinks fridge, an ice-cream freezer, and an extruded serif I-heart-MESCE landmark (Gentilis font outlines distributed under their embedded SIL Open Font License). The meals canteen has communal tables, banana-leaf plates, serving pots and a biriyani counter. The masjid sits farther back near the entrance, facing bike parking, in a low-walled compound with a small gate and connecting path. Reduced car parking faces the auditorium portico; the library is attached behind the auditorium. The road outside the entrance is a narrow local pocket road.
+
+Large broadleaf trees shade departments. Contextual controls appear by the CSE swing and red-flowering Mechanical tree swing. A student can sit, invite classmates via room chat, and receive pushes from nearby students. Seats are exclusive per room; the shared push timestamp drives the visible swing animation. Standing releases the seat. Riding and swinging are mutually exclusive activities.
+
 Run `npm test` after building to verify shared-room presence, movement, text messages, voice delivery, room isolation, expired messages, photo invitations, and leaving sessions.
