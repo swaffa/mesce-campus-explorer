@@ -33,7 +33,7 @@ box(x,1.6,z+d/2+.17,2.1,3.1,.22,'#293f3a');box(x,1.6,z+d/2+.32,.07,3.1,.05,'#b3a
 // Central main-block arched glazing is distinct from the square classroom windows.
 for(const x of [-54.4,-51,-47.6]){const shape=new THREE.Shape();shape.moveTo(-1,0);shape.lineTo(1,0);shape.lineTo(1,4.5);shape.absarc(0,4.5,1,0,Math.PI,false);shape.lineTo(-1,0);const mesh=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.13,bevelEnabled:false}),glass);mesh.position.set(x,7.1,-20.75);scene.add(mesh);box(x,9.4,-20.5,.07,4.5,.08,'#e0d6c2');box(x,9.8,-20.5,2,.07,.08,'#e0d6c2');}
 // Crisp white foundation plinths and shallow entry steps.
-for(const [x,z,w,d]of [[12,-28,20,18],[40,-28,20,18],[68,-28,20,18],[-39,26,12,11],[2,54,36,15]]){box(x,.35,z,w+.35,.7,d+.35,'#b7ad9b');}
+for(const [x,z,w,d]of [[12,-28,20,18],[40,-28,20,18],[68,-28,20,18]]){box(x,.35,z,w+.35,.7,d+.35,'#b7ad9b');}
 for(const x of [12,40,68])for(let i=0;i<4;i++)box(x,.15+i*.18,-16.6-i*.5,4.5,.28,.7,'#c4bba8');
 // Benches with separate timber slats and metal legs.
 for(const [x,z]of [[-11,-13],[2,-13],[-75,39],[25,37],[44,35],[-58,13]]){for(let i=0;i<4;i++)box(x,.8,z+i*.17,2.8,.1,.13,'#78523b');for(let i=0;i<3;i++)box(x,1.15+i*.17,z-.12,2.8,.11,.1,'#8d6042');for(const a of [-1,1])box(x+a,.4,z+.2,.12,.8,.8,'#384a43');}

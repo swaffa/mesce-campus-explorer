@@ -2,6 +2,8 @@ import * as THREE from './vendor/three.module.js';
 export function campusDetails({scene,box,cyl,mat,colors}){
 // The entrance, divided approach, fountain and Main Block share the same axis.
 const gateX=-51;
+// A small local pocket road runs outside the front boundary.
+box(0,-.68,77,220,1.6,7,'#a5997d');box(0,.16,77,220,.12,4.8,colors.road);for(const z of [74.5,79.5])box(0,.24,z,220,.2,.22,'#bcb6a5');box(gateX,.17,70.5,16,.16,9,colors.road);box(0,-.6,84,230,1.4,7,'#c6b78e');
 for(const x of [gateX-11,gateX+11]){box(x,3.7,65,3.2,7.4,2.5,colors.cream);box(x,7.6,65,3.7,.4,2.8,'#d4c8ad');}
 box(gateX,7.7,65,25.5,2.1,2.6,colors.cream);box(gateX,8.95,65,20.5,.55,2.6,colors.cream);box(gateX,9.4,65,15,.4,2.6,colors.cream);box(gateX,9.7,65,11,.25,2.7,'#d9d1c1');
 for(const x of [gateX-11,gateX+11])for(let z=66;z<=70;z+=.65)box(x,1.6,z,.08,3.2,.08,'#454c46');
