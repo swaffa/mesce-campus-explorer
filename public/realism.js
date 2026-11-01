@@ -25,7 +25,7 @@ const panes=[];scene.traverse(o=>{if(o.isMesh&&o.geometry?.type==='BoxGeometry'&
 const glass=new THREE.MeshPhysicalMaterial({color:'#304a50',roughness:.18,metalness:.48,clearcoat:1,clearcoatRoughness:.14});
 for(const p of panes){p.material=glass;const x=p.position.x,y=p.position.y,z=p.position.z;const direction=z< -28?-1:1;box(x,y,z+direction*.12,.055,1.65,.05,'#b9c4bb');box(x,y,z+direction*.12,1.65,.055,.05,'#b9c4bb');box(x,y-.88,z,1.9,.12,.42,'#c1b6a1');box(x,y+1,z,1.95,.1,.7,'#e1d8c6');}
 // Side elevations previously had blank walls.
-for(const [x,z,w,d,h] of [[-51,-30,12,18,20],[-65,-31,16,17,13],[-78,-32,10,16,9],[-37,-31,16,17,13],[-24,-32,10,16,9],[18,-28,20,18,14],[46,-28,20,18,14],[74,-28,20,18,14]]){
+for(const [x,z,w,d,h] of [[-51,-30,12,18,20],[-65,-31,16,17,13],[-78,-32,10,16,9],[-37,-31,16,17,13],[-24,-32,10,16,9],[12,-28,20,18,14],[40,-28,20,18,14],[68,-28,20,18,14]]){
 for(const side of [-1,1])for(let y=1.7;y<h-1;y+=3.1)for(let zz=-d/2+2;zz<d/2;zz+=3.2){const p=box(x+side*(w/2+.08),y,z+zz,.1,1.65,1.7,'#355555');p.material=glass;box(x+side*(w/2+.16),y-.88,z+zz,.4,.12,1.95,'#d0c3ae');}
 // Recessed ground-floor doors and rooftop parapets.
 box(x,1.6,z+d/2+.17,2.1,3.1,.22,'#293f3a');box(x,1.6,z+d/2+.32,.07,3.1,.05,'#b3a68d');for(const side of [-1,1])box(x,h+.8,z+side*d/2,w+.5,.8,.35,colors.cream);for(const side of [-1,1])box(x+side*w/2,h+.8,z,.35,.8,d,colors.cream);
@@ -33,8 +33,8 @@ box(x,1.6,z+d/2+.17,2.1,3.1,.22,'#293f3a');box(x,1.6,z+d/2+.32,.07,3.1,.05,'#b3a
 // Central main-block arched glazing is distinct from the square classroom windows.
 for(const x of [-54.4,-51,-47.6]){const shape=new THREE.Shape();shape.moveTo(-1,0);shape.lineTo(1,0);shape.lineTo(1,4.5);shape.absarc(0,4.5,1,0,Math.PI,false);shape.lineTo(-1,0);const mesh=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.13,bevelEnabled:false}),glass);mesh.position.set(x,7.1,-20.75);scene.add(mesh);box(x,9.4,-20.5,.07,4.5,.08,'#e0d6c2');box(x,9.8,-20.5,2,.07,.08,'#e0d6c2');}
 // Crisp white foundation plinths and shallow entry steps.
-for(const [x,z,w,d]of [[18,-28,20,18],[46,-28,20,18],[74,-28,20,18],[-39,26,12,11],[2,54,36,15]]){box(x,.35,z,w+.35,.7,d+.35,'#b7ad9b');}
-for(const x of [18,46,74])for(let i=0;i<4;i++)box(x,.15+i*.18,-16.6-i*.5,4.5,.28,.7,'#c4bba8');
+for(const [x,z,w,d]of [[12,-28,20,18],[40,-28,20,18],[68,-28,20,18],[-39,26,12,11],[2,54,36,15]]){box(x,.35,z,w+.35,.7,d+.35,'#b7ad9b');}
+for(const x of [12,40,68])for(let i=0;i<4;i++)box(x,.15+i*.18,-16.6-i*.5,4.5,.28,.7,'#c4bba8');
 // Benches with separate timber slats and metal legs.
 for(const [x,z]of [[-11,-13],[2,-13],[-75,39],[25,37],[44,35],[-58,13]]){for(let i=0;i<4;i++)box(x,.8,z+i*.17,2.8,.1,.13,'#78523b');for(let i=0;i<3;i++)box(x,1.15+i*.17,z-.12,2.8,.11,.1,'#8d6042');for(const a of [-1,1])box(x+a,.4,z+.2,.12,.8,.8,'#384a43');}
 // Narrow kerbs, tactile paving and crossing stripes make distances readable.

@@ -3,6 +3,7 @@ import {surface,finish} from './realism.js';
 import {createSocial} from './social.js';
 import {parkVehicles} from './vehicles.js';
 import {campusDetails} from './campus-details.js';
+import {teaStall} from './tea-stall.js';
 const $=id=>document.getElementById(id), canvas=$('world');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#d5ddc1');scene.fog=new THREE.Fog('#d5ddc1',160,340);
@@ -29,9 +30,9 @@ function dome(x,y,z,r){const g=new THREE.SphereGeometry(r,24,12,0,Math.PI*2,0,Ma
 building(-51,-30,12,18,20,'MAIN BLOCK');building(-65,-31,16,17,13);building(-78,-32,10,16,9);building(-37,-31,16,17,13);building(-24,-32,10,16,9);dome(-51,20.8,-30,4.8);dome(-60,13.8,-31,1.6);dome(-42,13.8,-31,1.6);
 box(-51,.22,-13,4,.15,14,colors.path);box(-51,3.5,-14,4.5,.35,13,colors.cream);for(const z of [-19,-13,-8])for(const x of [-52.8,-49.2])box(x,1.7,z,.24,3.3,.25,colors.cream);
 // Smaller lawn between the main and computer science blocks.
-box(-6,.17,-28,14,.2,26,'#cbbd90');box(-6,.29,-28,12.8,.12,24.8,'#9eaf6a');sign('THE LAWN',-6,2,-28,10);
-building(18,-28,20,18,14,'CSE · ADS · CYBER');building(46,-28,20,18,14,'EEE · ECE');building(74,-28,20,18,14,'MECHANICAL');
-for(const x of [18,46,74]){box(x,.15,-11,4,.15,15,colors.path);box(x,1,-18,5,2,1.5,colors.cream);}
+box(-9,.17,-28,10,.2,26,'#cbbd90');box(-9,.29,-28,8.8,.12,24.8,'#9eaf6a');sign('THE LAWN',-6,2,-28,10);
+building(12,-28,20,18,14,'CSE · ADS · CYBER');building(40,-28,20,18,14,'EEE · ECE');building(68,-28,20,18,14,'MECHANICAL');
+for(const x of [12,40,68]){box(x,.15,-11,4,.15,15,colors.path);box(x,1,-18,5,2,1.5,colors.cream);}
 // Fountain: moving water streams and a circular forecourt.
 cyl(-51,.2,0,2.8,.3,colors.path);cyl(-51,.4,0,2.15,.5,colors.cream);cyl(-51,.68,0,1.95,.1,'#69b5bf');cyl(-51,1.1,0,.35,.8,colors.cream);cyl(-51,1.5,0,.9,.2,'#8ccad1');cyl(-51,1.8,0,.18,.5,colors.cream);solid(-51,0,4.4,4.4);
 const water=[];for(let i=0;i<8;i++){const a=i*Math.PI/4;const m=ball(-51+Math.cos(a)*.65,2,Math.sin(a)*.65,.08,'#a7e4df');water.push(m);}
@@ -73,10 +74,10 @@ const locations=[
 {id:'entrance',name:'College entrance',x:-54,z:58,icon:'🚪',text:'Every college day begins here. Take a breath, step through the gates, and make the campus your own.',extra:'Your trail starts at the entrance. There is no timer, and no wrong turn.'},
 {id:'corner',name:'Students’ Corner',x:-80,z:40,icon:'☕',text:'A canteen, a meeting point, and a good excuse to stay a little longer. Some of the best college conversations happen between classes.',extra:'Find the I ♥ MESCE sign beside the pavilion. This one deserves a mental photograph.'},
 {id:'main',name:'Main Block & fountain',x:-51,z:-8,icon:'⛲',text:'The familiar dome, stepped wings, and covered approach. The fountain marks the way to the heart of MESCE.',extra:'Look up: the main block is modeled around the distinctive white dome and red-and-white façade in your references.'},
-{id:'lawn',name:'The lawn',x:-6,z:-15,icon:'🌿',text:'A small patch of green between busy blocks. Slow down for a moment. Classes can wait in this little version of campus.',extra:'Across the road: the parking area, masjid, canteen, and auditorium/library precinct.'},
-{id:'cse',name:'CSE · ADS · Cyber',x:18,z:-12,icon:'💻',text:'Algorithms, ideas, and the next project that starts with “what if”. This is the computer science side of the academic row.',extra:'Campus challenge: visit all nine places to complete your explorer trail.'},
-{id:'eee',name:'EEE · ECE',x:46,z:-12,icon:'⚡',text:'A corner of campus for circuits, signals, and bright ideas. Follow the academic road toward the Mechanical block.',extra:'Tip: hold Shift to run, or take your time and enjoy the walk.'},
-{id:'mech',name:'Mechanical',x:74,z:-12,icon:'⚙️',text:'Machines, making, and learning how things move. You have reached the far end of the academic row.',extra:'Turn back toward the lawn to explore the facilities across the road.'},
+{id:'lawn',name:'The lawn',x:-9,z:-15,icon:'🌿',text:'A small patch of green between busy blocks. Slow down for a moment. Classes can wait in this little version of campus.',extra:'Across the road: the parking area, masjid, canteen, and auditorium/library precinct.'},
+{id:'cse',name:'CSE · ADS · Cyber',x:12,z:-12,icon:'💻',text:'Algorithms, ideas, and the next project that starts with “what if”. This is the computer science side of the academic row.',extra:'Campus challenge: visit all nine places to complete your explorer trail.'},
+{id:'eee',name:'EEE · ECE',x:40,z:-12,icon:'⚡',text:'A corner of campus for circuits, signals, and bright ideas. Follow the academic road toward the Mechanical block.',extra:'Tip: hold Shift to run, or take your time and enjoy the walk.'},
+{id:'mech',name:'Mechanical',x:68,z:-12,icon:'⚙️',text:'Machines, making, and learning how things move. You have reached the far end of the academic row.',extra:'Turn back toward the lawn to explore the facilities across the road.'},
 {id:'canteen',name:'Canteen & masjid precinct',x:30,z:35,icon:'🍵',text:'A break from the academic blocks. The canteen sits beside the empty parking area, with the masjid on the other side.',extra:'No parked cars here, just as requested. The open space connects the inward-facing auditorium to the campus.'},
 {id:'library',name:'Auditorium & Central Library',x:2,z:38,icon:'📚',text:'A place for quiet pages and shared occasions. The columned entrance faces inward, toward the parking area and the college.',extra:'You are exploring the outdoor campus. Building interiors are not part of this version.'}
 ];
@@ -98,7 +99,7 @@ const joystick=$('joystick');function joyMove(e){const r=joystick.getBoundingCli
 joystick.onpointerdown=e=>{joystick.setPointerCapture(e.pointerId);joyMove(e);};joystick.onpointermove=e=>{if(joystick.hasPointerCapture(e.pointerId))joyMove(e);};function joyStop(){joy={x:0,y:0};joystick.firstElementChild.style.transform='';}joystick.onpointerup=joyStop;joystick.onpointercancel=joyStop;
 let audio=null,audioOn=false;const sound=$('sound');sound.onclick=()=>{if(!audio){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;audio=new AC();const buffer=audio.createBuffer(1,audio.sampleRate*3,audio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()-.5)*.12;const source=audio.createBufferSource();source.buffer=buffer;source.loop=true;const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=450;const gain=audio.createGain();gain.gain.value=.14;source.connect(filter).connect(gain).connect(audio.destination);source.start();}audioOn=!audioOn;audioOn?audio.resume():audio.suspend();sound.style.background=audioOn?'#c5e17d':'';sound.setAttribute('aria-label',`Turn ambient sound ${audioOn?'off':'on'}`);toast(audioOn?'A little campus breeze.':'Ambient sound off.');};
 const mapCtx=$('map').getContext('2d');function mini(){const c=mapCtx;c.clearRect(0,0,204,136);c.fillStyle='#d8ddbb';c.fillRect(0,0,204,136);const mx=x=>(x+101)*1.01,mz=z=>(z+73)*.91;c.fillStyle='#9b9f8b';c.fillRect(2,mz(-4),200,8);c.fillRect(mx(-58),mz(0),14,65);c.fillStyle='#bd7962';for(const b of collisions){c.fillRect(mx(b.x-b.w),mz(b.z-b.d),b.w*2,b.d*1.82);}c.fillStyle='#a5b576';c.fillRect(mx(-12),mz(-40),13,24);for(const l of locations){c.beginPath();c.arc(mx(l.x),mz(l.z),visited.has(l.id)?2.5:1.6,0,7);c.fillStyle=visited.has(l.id)?'#52794e':'#f8f3de';c.fill();}if(destination){c.beginPath();c.arc(mx(destination.x),mz(destination.z),5+Math.sin(time*4),0,7);c.strokeStyle='#ca763d';c.lineWidth=2;c.stroke();}c.beginPath();c.arc(mx(player.position.x),mz(player.position.z),3.5,0,7);c.fillStyle='#183e37';c.fill();c.strokeStyle='white';c.lineWidth=1.5;c.stroke();}
-let last=performance.now();let frames=0;function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;const paused=$('card').open||$('menu').open;
+let last=performance.now();let frames=0;function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;const paused=$('card').open||$('menu').open||$('photoDialog').open||tea.paused();
 if(started&&!paused){let sx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x;let sy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0)+joy.y;let len=Math.hypot(sx,sy);if(len>.05){sx/=Math.max(1,len);sy/=Math.max(1,len);const speed=keys.shift?12:6.5;const dx=(Math.cos(yaw)*sx+Math.sin(yaw)*sy)*speed*dt,dz=(-Math.sin(yaw)*sx+Math.cos(yaw)*sy)*speed*dt;if(!blocked(player.position.x+dx,player.position.z))player.position.x+=dx;if(!blocked(player.position.x,player.position.z+dz))player.position.z+=dz;player.rotation.y=Math.atan2(dx,dz);player.userData.legs.forEach((l,i)=>l.rotation.x=Math.sin(time*(keys.shift?17:11)+i*Math.PI)*.55);player.userData.arms.forEach((a,i)=>a.rotation.x=-Math.sin(time*(keys.shift?17:11)+i*Math.PI)*.35);player.position.y=Math.abs(Math.sin(time*11))*.055;}else{player.userData.legs.forEach(l=>l.rotation.x=0);player.userData.arms.forEach(a=>a.rotation.x=0);player.position.y=0;}
 let closest=null,distance=Infinity;for(const l of locations){const d=Math.hypot(player.position.x-l.x,player.position.z-l.z);if(d<distance){distance=d;closest=l;}}active=distance<8?closest:null;$('prompt').hidden=true;$('interact').textContent=active?`E · ${active.name}`:'';$('locationText').textContent=distance<15?closest.name:'Somewhere between classes';
 }
@@ -114,7 +115,7 @@ for(const b of collisions){const bounds=new THREE.Box3(new THREE.Vector3(b.x-b.w
 camDesired.copy(target).addScaledVector(direction,nearest);
 }
 camera.position.lerp(camDesired,1-Math.exp(-dt*5));const look=target.clone();look.x+=welcomeOffset;camera.lookAt(look);
-realism.update(time);details.update(time);social.update(dt,time);for(let i=0;i<npcs.length;i++){npcs[i].rotation.y+=Math.sin(time*.5+i)*dt*.07;}
+realism.update(time);details.update(time);tea.update(started);social.update(dt,time);for(let i=0;i<npcs.length;i++){npcs[i].rotation.y+=Math.sin(time*.5+i)*dt*.07;}
 for(const o of scene.children){if(o.isSprite&&o.userData.labelWidth){const distance=camera.position.distanceTo(o.position);const maxWidth=distance*Math.tan(camera.fov*Math.PI/360)*2*210/innerHeight;const width=Math.min(o.userData.labelWidth,maxWidth);o.scale.set(width,width*96/512,1);}}
 renderer.render(scene,camera);if(frames++%6===0)mini();}
 const realism=finish(scene,renderer,sun,{box,cyl,ball,mat,colors});
@@ -122,6 +123,7 @@ const realism=finish(scene,renderer,sun,{box,cyl,ball,mat,colors});
 // Building labels are removed; players are identified only by their chosen names.
 for(const o of [...scene.children])if(o.isSprite&&!o.userData.landmark){if(o.material.map)o.material.map.dispose();o.material.dispose();scene.remove(o);}
 const details=campusDetails({scene,box,cyl,mat,colors});
+const tea=teaStall({scene,player,box,cyl,roof,solid,toast});
 const social=createSocial({scene,player,person,camera,renderer,getView:()=>viewMode,setDestination:p=>{destination=p;},toast,captureFrame:()=>renderer.render(scene,camera)});
 camera.position.set(100,130,180);requestAnimationFrame(animate);$('loading').remove();
 // Read-only state makes gameplay verification possible without hidden mutations.

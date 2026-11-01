@@ -2,3 +2,5 @@
 @media(max-width:700px){.social-bar{top:78px;left:15px;right:15px;gap:5px}.social-bar button,.social-bar>span{font-size:9px;padding:9px}#chatPanel{top:170px;left:15px;right:15px;width:auto;max-height:calc(100dvh - 260px)}#messages{height:160px;max-height:23dvh}#connection{max-width:145px}.welcome{top:18%}.welcome h1{font-size:39px}.join-fields{margin-top:16px}.welcome-foot{max-width:300px;line-height:1.6}.minimap{bottom:170px}.bottom>span{display:none}.top-right{gap:5px}#toast{top:175px}.chat-head{font-size:11px}}
 
 .brand small{letter-spacing:1.4px;font-size:7px}.welcome h1{font-size:clamp(48px,5.2vw,78px)}
+
+#teaAction{position:absolute;bottom:95px;left:50%;transform:translateX(-50%);background:#173d37;color:#fff6e5;padding:14px 22px;border-radius:24px;font-size:12px}.snack-menu{display:grid;gap:8px;margin:20px 0}.snack-menu button{background:#e3e8d0;border-radius:7px;padding:14px;text-align:left;font-size:13px}@media(max-width:700px){#teaAction{bottom:200px;white-space:nowrap}}
