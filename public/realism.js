@@ -38,15 +38,15 @@ for(const x of [18,46,74])for(let i=0;i<4;i++)box(x,.15+i*.18,-16.6-i*.5,4.5,.28
 // Benches with separate timber slats and metal legs.
 for(const [x,z]of [[-11,-13],[2,-13],[-75,39],[25,37],[44,35],[-58,13]]){for(let i=0;i<4;i++)box(x,.8,z+i*.17,2.8,.1,.13,'#78523b');for(let i=0;i<3;i++)box(x,1.15+i*.17,z-.12,2.8,.11,.1,'#8d6042');for(const a of [-1,1])box(x+a,.4,z+.2,.12,.8,.8,'#384a43');}
 // Narrow kerbs, tactile paving and crossing stripes make distances readable.
-for(const z of [-4.2,4.2])box(10,.28,z,169,.3,.23,'#b9b4a4');for(const x of [-71.3,-62.7])box(x,.3,36,.22,.35,52,'#b9b4a4');for(let i=0;i<7;i++)box(-8+i*.65,.24,0,.34,.03,6.8,'#dedbcd');
+for(const z of [-4.2,4.2])box(10,.28,z,169,.3,.23,'#b9b4a4');for(let i=0;i<7;i++)box(-8+i*.65,.24,0,.34,.03,6.8,'#dedbcd');
 // Roof tiles use an actual repeating terracotta surface.
 scene.traverse(o=>{if(o.isMesh&&o.geometry?.type==='ConeGeometry'){o.material=material('tile',14,10);}});
 // Ground contact shadows beneath characters and trees.
 const cv=document.createElement('canvas');cv.width=cv.height=64;const c=cv.getContext('2d'),g=c.createRadialGradient(32,32,2,32,32,32);g.addColorStop(0,'#00000065');g.addColorStop(1,'#00000000');c.fillStyle=g;c.fillRect(0,0,64,64);const shadowTex=new THREE.CanvasTexture(cv);
 scene.children.filter(o=>o.isGroup).forEach(o=>{const s=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false}));s.rotation.x=-Math.PI/2;s.position.y=.22;o.add(s);});
 // Water surface uses animated highlights and expanding ripples.
-const waterMat=new THREE.MeshPhysicalMaterial({color:'#4c939d',roughness:.12,metalness:.25,transparent:true,opacity:.88,clearcoat:1});const water=new THREE.Mesh(new THREE.CircleGeometry(4.22,48),waterMat);water.rotation.x=-Math.PI/2;water.position.set(-51,1.03,0);scene.add(water);
-const ripples=[];for(let i=0;i<4;i++){const r=new THREE.Mesh(new THREE.RingGeometry(.97,1,48),new THREE.MeshBasicMaterial({color:'#bee6e3',transparent:true,opacity:.2,depthWrite:false,side:THREE.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.set(-51,1.045+i*.002,0);scene.add(r);ripples.push(r);}
-const streams=[];for(let i=0;i<8;i++){const a=i*Math.PI/4;const points=[];for(let j=0;j<20;j++){const t=j/19;points.push(new THREE.Vector3(-51+Math.cos(a)*t*2.8,2.8+Math.sin(t*Math.PI)*1.2-t*1.8,Math.sin(a)*t*2.8));}const stream=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),20,.035,4,false),new THREE.MeshPhysicalMaterial({color:'#c0e6e4',transparent:true,opacity:.65,roughness:.15}));scene.add(stream);streams.push(stream);}
-return {update(t){for(let i=0;i<ripples.length;i++){const p=(t*.3+i/4)%1;const size=.6+p*3.5;ripples[i].scale.set(size,size,1);ripples[i].material.opacity=(1-p)*.25;}streams.forEach((s,i)=>s.material.opacity=.5+Math.sin(t*3+i)*.1);}};
+const waterMat=new THREE.MeshPhysicalMaterial({color:'#4c939d',roughness:.12,metalness:.25,transparent:true,opacity:.88,clearcoat:1});const water=new THREE.Mesh(new THREE.CircleGeometry(1.91,48),waterMat);water.rotation.x=-Math.PI/2;water.position.set(-51,.7,0);scene.add(water);
+const ripples=[];for(let i=0;i<4;i++){const r=new THREE.Mesh(new THREE.RingGeometry(.97,1,48),new THREE.MeshBasicMaterial({color:'#bee6e3',transparent:true,opacity:.2,depthWrite:false,side:THREE.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.set(-51,.72+i*.002,0);scene.add(r);ripples.push(r);}
+const streams=[];for(let i=0;i<8;i++){const a=i*Math.PI/4;const points=[];for(let j=0;j<20;j++){const t=j/19;points.push(new THREE.Vector3(-51+Math.cos(a)*t*1.3,1.9+Math.sin(t*Math.PI)*.6-t*1.2,Math.sin(a)*t*1.3));}const stream=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),20,.035,4,false),new THREE.MeshPhysicalMaterial({color:'#c0e6e4',transparent:true,opacity:.65,roughness:.15}));scene.add(stream);streams.push(stream);}
+return {update(t){for(let i=0;i<ripples.length;i++){const p=(t*.3+i/4)%1;const size=.2+p*1.6;ripples[i].scale.set(size,size,1);ripples[i].material.opacity=(1-p)*.25;}streams.forEach((s,i)=>s.material.opacity=.5+Math.sin(t*3+i)*.1);}};
 }

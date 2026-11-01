@@ -1,0 +1,1 @@
+{"name":"mesce-after-class","private":true,"type":"module","scripts":{"build":"node scripts/build-social.mjs","dev":"node scripts/dev-social.mjs","test":"node --test tests/social.test.mjs"}}
