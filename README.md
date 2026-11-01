@@ -25,4 +25,8 @@ Room chat and recorded voice notes (up to 20 seconds, 512 KB) are server-backed 
 
 Wave to classmates, invite the room to gather at your position, and mark invitations on the minimap. Group photos frame nearby players with an obstruction-aware camera and download locally as PNG; photos are not uploaded. Parked motorcycles and scooters are actual detailed procedural 3D meshes.
 
+Walk close to a parked vehicle and press R (or tap the ride button) to mount. W/S accelerates and brakes/reverses; A/D steers. Press R again to get off; vehicles return to their parking spots. Riding is shared with the room, and server-side ownership prevents simultaneous riders on one vehicle. Scooters have a lower top speed than motorcycles. Collision and campus boundary checks remain active.
+
+The Main Block and gate share a central approach with a narrow lawn divider, a stepped gate, and Bharathappuzha behind campus. The computer-science block is closer to the Main Block, with a connecting walkway through the compact lawn. The tea stall has contextual chaya, lime-juice, pazham-pori and parippu-vada interactions.
+
 Run `npm test` after building to verify shared-room presence, movement, text messages, voice delivery, room isolation, expired messages, photo invitations, and leaving sessions.

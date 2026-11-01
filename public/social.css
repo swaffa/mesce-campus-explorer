@@ -4,3 +4,5 @@
 .brand small{letter-spacing:1.4px;font-size:7px}.welcome h1{font-size:clamp(48px,5.2vw,78px)}
 
 #teaAction{position:absolute;bottom:95px;left:50%;transform:translateX(-50%);background:#173d37;color:#fff6e5;padding:14px 22px;border-radius:24px;font-size:12px}.snack-menu{display:grid;gap:8px;margin:20px 0}.snack-menu button{background:#e3e8d0;border-radius:7px;padding:14px;text-align:left;font-size:13px}@media(max-width:700px){#teaAction{bottom:200px;white-space:nowrap}}
+
+#rideBtn{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:#173d37;color:#fff6e5;padding:14px 23px;border-radius:24px;font-size:12px}#rideBtn:disabled{opacity:.6}@media(max-width:700px){#rideBtn{bottom:210px}}

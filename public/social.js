@@ -1,14 +1,14 @@
 import * as THREE from './vendor/three.module.js';
 const $=id=>document.getElementById(id);
-export function createSocial({scene,player,person,camera,renderer,getView,setDestination,toast,captureFrame}){
+export function createSocial({scene,player,person,camera,renderer,getView,setDestination,toast,captureFrame,onVehicleState}){
 let session=null,online=false,since=0,timer=null,busy=false,wave=false,failures=0,recording=null,recorded=null,recordUrl=null,stream=null,recordTimer=null,recordClock=null,lastPlayers=[];
 const peers=new Map(),seen=new Set(),audioUrls=[];const roomParam=new URL(location.href).searchParams.get('room');$('roomInput').value=roomParam||'campus';try{$('nickname').value=localStorage.getItem('mesce-nickname')||'';}catch{}
 function nameTag(name){const cv=document.createElement('canvas');cv.width=384;cv.height=80;const c=cv.getContext('2d');c.fillStyle='#faf5e9ed';c.beginPath();c.roundRect(3,3,378,74,20);c.fill();c.fillStyle='#173d37';c.font='600 27px sans-serif';c.textAlign='center';c.fillText(name,192,50,355);const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,depthTest:false}));s.position.y=2.8;s.userData.nameTag=true;s.scale.set(3.8,.79,1);return s;}
 async function api(path,data,options={}){const headers={...(session?{Authorization:'Bearer '+session.token}:{}),...options.headers};const method=options.method||'POST';if(data!==undefined&&!options.blob)headers['Content-Type']='application/json';const r=await fetch(path,{method,headers,body:options.blob|| (data!==undefined?JSON.stringify(data):undefined),signal:AbortSignal.timeout(12000)});if(!r.ok){let e;try{e=await r.json();}catch{}throw new Error(e?.error||'Campus connection unavailable.');}return options.raw?r:r.json();}
 function status(text,ok){$('connectionText').textContent=text;$('connection').classList.toggle('offline',!ok);}
 function updateRoster(players){$('onlineCount').textContent=players.length+' online';$('roster').replaceChildren();for(const p of players){const el=document.createElement('span');el.textContent=p.name+(p.id===session?.id?' (you)':'');$('roster').append(el);}}
-async function sync(){if(!session||busy||document.hidden)return;busy=true;try{const r=await api('/api/state',{x:player.position.x,z:player.position.z,yaw:player.rotation.y,since,wave});wave=false;failures=0;online=true;status('Live · '+session.room,true);lastPlayers=r.players;updateRoster(r.players);
-const ids=new Set();for(const p of r.players){if(p.id===session.id)continue;ids.add(p.id);let peer=peers.get(p.id);if(!peer){const model=person('#3f847c');model.position.set(p.x,0,p.z);model.add(nameTag(p.name));peer={model,target:new THREE.Vector3(p.x,0,p.z),yaw:p.yaw,emote:0};peers.set(p.id,peer);}peer.target.set(p.x,0,p.z);peer.yaw=p.yaw;peer.emote=p.emote_at;}
+async function sync(){if(!session||busy||document.hidden)return;busy=true;try{const r=await api('/api/state',{x:player.position.x,z:player.position.z,yaw:player.rotation.y,since,wave});wave=false;failures=0;online=true;status('Live · '+session.room,true);lastPlayers=r.players;updateRoster(r.players);onVehicleState?.(r.players,session.id);
+const ids=new Set();for(const p of r.players){if(p.id===session.id)continue;ids.add(p.id);let peer=peers.get(p.id);if(!peer){const model=person('#3f847c');model.position.set(p.x,0,p.z);model.add(nameTag(p.name));peer={model,target:new THREE.Vector3(p.x,0,p.z),yaw:p.yaw,emote:0};peers.set(p.id,peer);}peer.target.set(p.x,0,p.z);peer.yaw=p.yaw;peer.emote=p.emote_at;peer.vehicle=p.vehicle;}
 for(const [id,p]of peers)if(!ids.has(id)){scene.remove(p.model);p.model.traverse(o=>{if(o.isSprite){o.material.map?.dispose();o.material.dispose();}});peers.delete(id);}
 for(const m of r.messages){since=Math.max(since,m.id);if(!seen.has(m.id)){seen.add(m.id);appendMessage(m);}}
 }catch(e){failures++;online=false;status(failures>2?'Connection lost · retrying…':'Reconnecting…',false);}finally{busy=false;}}
@@ -35,5 +35,5 @@ for(const p of peers.values()){const movement=p.model.position.distanceTo(p.targ
 addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(e.target.tagName))e.stopPropagation();},true);
 addEventListener('pagehide',()=>{stopTracks();if(session)fetch('/api/leave',{method:'POST',headers:{Authorization:'Bearer '+session.token},keepalive:true}).catch(()=>{});});
 addEventListener('visibilitychange',()=>{if(!document.hidden)sync();else if(recording?.state==='recording')recording.stop();});
-return {join,update,isJoined:()=>!!session,getPeers:()=>peers};
+return {join,update,requestRide:async vehicle=>{await api('/api/ride',{vehicle});await sync();},isJoined:()=>!!session,getPeers:()=>peers};
 }

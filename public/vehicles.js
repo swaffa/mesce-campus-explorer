@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-export function parkVehicles(scene){const materials={};const m=c=>materials[c]||(materials[c]=new THREE.MeshStandardMaterial({color:c,roughness:.45,metalness:['#3d4546','#bfc6c4'].includes(c)?.7:.12}));
+export function parkVehicles(scene){const vehicles=[];const materials={};const m=c=>materials[c]||(materials[c]=new THREE.MeshStandardMaterial({color:c,roughness:.45,metalness:['#3d4546','#bfc6c4'].includes(c)?.7:.12}));
 function part(g,geo,c,x,y,z){const a=new THREE.Mesh(geo,m(c));a.position.set(x,y,z);a.castShadow=true;g.add(a);return a;}
 function block(g,c,x,y,z,w,h,d){return part(g,new THREE.BoxGeometry(w,h,d),c,x,y,z);}
 function tube(g,a,b,r,c){const d=new THREE.Vector3().subVectors(b,a),o=part(g,new THREE.CylinderGeometry(r,r,d.length(),8),c,0,0,0);o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o;}
@@ -8,5 +8,6 @@ for(const z of [-.86,.86]){const wheel=part(g,new THREE.TorusGeometry(scooter?.3
 if(scooter){block(g,color,0,.82,-.45,.65,.65,.9);block(g,'#292f2d',0,1.2,-.4,.56,.16,.9);block(g,color,0,1.12,.58,.61,1.08,.32);block(g,color,0,.58,.05,.65,.16,1.12);block(g,color,0,1.64,.7,.7,.28,.28);block(g,'#e5dfb7',0,1.64,.86,.31,.16,.06);block(g,'#6e2823',0,.9,-.94,.43,.15,.05);
 }else{tube(g,new THREE.Vector3(0,.55,-.8),new THREE.Vector3(0,1.06,.25),.065,'#3d4546');tube(g,new THREE.Vector3(0,1.06,.25),new THREE.Vector3(0,.55,.85),.065,'#bfc6c4');const tank=part(g,new THREE.SphereGeometry(.37,12,8),color,0,1.2,.1);tank.scale.set(1,.7,1.4);block(g,'#242a28',0,1.18,-.48,.5,.14,.85);block(g,'#3d4546',0,.7,-.03,.46,.48,.5);tube(g,new THREE.Vector3(.34,.47,-.9),new THREE.Vector3(.34,.52,.1),.08,'#bfc6c4');const lamp=part(g,new THREE.CylinderGeometry(.2,.2,.16,12),'#eee4bf',0,1.4,.73);lamp.rotation.x=Math.PI/2;block(g,'#7c2821',0,1.08,-.95,.26,.12,.05);}
 tube(g,new THREE.Vector3(0,.48,.86),new THREE.Vector3(0,1.65,.64),.045,'#bfc6c4');tube(g,new THREE.Vector3(-.48,1.63,.65),new THREE.Vector3(.48,1.63,.65),.045,'#3d4546');for(const x of [-.47,.47]){tube(g,new THREE.Vector3(x,1.63,.65),new THREE.Vector3(x,1.97,.6),.02,'#3d4546');const mirror=part(g,new THREE.SphereGeometry(.12,10,6),'#bfc6c4',x,1.97,.6);mirror.scale.set(1.5,.7,.3);}block(g,'#e0ddd1',0,.73,-1.02,.3,.17,.035);
-g.position.set(-84+i*1.85,0,i%2?59:55);g.rotation.y=.16;scene.add(g);}
+g.position.set(-84+i*1.85,0,i%2?59:55);g.rotation.y=.16;scene.add(g);vehicles.push({id:'bike-'+i,group:g,parked:g.position.clone(),scooter});}
+return vehicles;
 }

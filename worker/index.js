@@ -18,10 +18,15 @@ const b=await body(req),name=clean(b.name,24),room=clean(b.room,32).toLowerCase(
 const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM campus_players WHERE room = ? AND updated_at > ?').bind(room,now-LIVE).first();if(count.n>=MAX)fail('This room is full. Choose another room.',409);
 const id=crypto.randomUUID(),token=crypto.randomUUID()+crypto.randomUUID();await env.DB.prepare('INSERT INTO campus_players (id, token_hash, room, name, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(id,await hash(token),room,name,now,now).run();ctx.waitUntil(cleanup(env));return json({id,token,room,name,capacity:MAX,spawn:{x:-55+(count.n%2)*7.5,z:59-Math.floor(count.n/3)*1.4}});}
 const p=await auth(req,env);
+if(u.pathname==='/api/ride'&&req.method==='POST'){
+const b=await body(req);if(b.vehicle!==null&&!/^bike-[0-9]$/.test(b.vehicle))fail('Choose a parked bike or scooter.');
+if(b.vehicle!==null){const i=Number(b.vehicle.split('-')[1]);const x=-84+i*1.85,z=i%2?59:55;if(Math.hypot(p.x-x,p.z-z)>5)fail('Walk closer to that bike first.');}
+await env.DB.prepare('UPDATE campus_players SET vehicle = NULL WHERE room = ? AND updated_at < ?').bind(p.room,now-LIVE).run();
+try{await env.DB.prepare('UPDATE campus_players SET vehicle = ?, updated_at = ? WHERE id = ?').bind(b.vehicle,now,p.id).run();}catch{fail('Someone is already riding that one. Try another.',409);}return json({vehicle:b.vehicle});}
 if(u.pathname==='/api/state'&&req.method==='POST'){
 const b=await body(req);if(!validPos(b))fail('Invalid player position.');const emote=b.wave===true?now:p.emote_at;
 await env.DB.prepare('UPDATE campus_players SET x = ?, z = ?, yaw = ?, emote_at = ?, updated_at = ? WHERE id = ?').bind(b.x,b.z,b.yaw,emote,now,p.id).run();
-const peers=await env.DB.prepare('SELECT id, name, x, z, yaw, emote_at FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40').bind(p.room,now-LIVE).all();const since=Math.max(0,Math.floor(Number(b.since)||0));
+const peers=await env.DB.prepare('SELECT id, name, x, z, yaw, emote_at, vehicle FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40').bind(p.room,now-LIVE).all();const since=Math.max(0,Math.floor(Number(b.since)||0));
 const messages=await env.DB.prepare('SELECT id, player_id, name, kind, body, media_id, x, z, created_at FROM campus_messages WHERE room = ? AND id > ? AND created_at > ? ORDER BY id DESC LIMIT 60').bind(p.room,since,now-DAY).all();return json({players:peers.results,messages:messages.results.reverse(),now});}
 if(u.pathname==='/api/message'&&req.method==='POST'){
 if(now-p.last_sent<1500)fail('Give your friends a moment between messages.',429);const b=await body(req),kind=['text','gather'].includes(b.kind)?b.kind:'text',text=clean(b.text,400);if(!text)fail('Write a message first.');if(kind==='gather'&&!validPos({...b,yaw:0}))fail('Invalid gathering point.');
