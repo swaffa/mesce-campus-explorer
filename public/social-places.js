@@ -1,4 +1,6 @@
 import * as THREE from './vendor/three.module.js';
+import {surface} from './realism.js';
+import {rectangularHipRoof} from './roof-geometry.js';
 export function socialPlaces({scene,box,cyl,ball,solid,mat,colors,roof}){
 function board(text,x,y,z,w=4,h=.65,color='#36534a',parent=scene){const cv=document.createElement('canvas');cv.width=640;cv.height=128;const c=cv.getContext('2d');c.fillStyle=color;c.fillRect(0,0,640,128);c.fillStyle='#fff6df';c.font='bold 38px sans-serif';c.textAlign='center';c.fillText(text,320,81,610);const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:t}));m.position.set(x,y,z);parent.add(m);return m;}
 // Existing Students' Corner pavilion is a working little Kerala snack shop.
@@ -20,12 +22,13 @@ for(const [x,z,w,d]of [[-42,40.2,.45,8.4],[-42,51.8,.45,8.4],[-20,46,.45,20],[-3
 for(const z of [44.4,47.6]){box(-42,1.25,z,.8,2.5,.8,colors.cream);box(-42,2.58,z,1,.18,1,colors.cream);}for(let z=44.7;z<47.5;z+=.35)box(-42,1,z,.07,1.7,.06,'#455549');box(-42,1.65,46,.08,.07,2.9,'#455549');
 box(-44,.27,51,2.5,.15,12,colors.path);box(-40,.28,46,8,.16,2.6,colors.path);box(-44.5,.27,57,3.5,.15,2.6,colors.path);
 // Connected auditorium and rear library: the portico faces north to parking.
-box(0,3.7,48,29,7.4,18,colors.cream);box(0,3.5,63,29,7,12,colors.cream);solid(0,48,29,18,9);solid(0,63,29,12,8);
-box(0,.45,54,30,.6,31,'#b7ae9a');const hallRoof=roof(0,9.2,48,31,20);hallRoof.scale.y=3.4;const libraryRoof=roof(0,8.5,63,31,14);libraryRoof.scale.y=2.6;
+box(0,3.7,48,29,7.4,18,colors.cream);box(0,3.5,63,29,7,12,colors.cream);solid(0,48,29,18,11);solid(0,63,29,12,11);
+box(0,.45,54,30,.6,31,'#b7ae9a');box(0,7.2,63,29,.45,12,colors.cream);box(0,7.38,54,29.5,.3,30.5,colors.cream);
+const fittedRoof=new THREE.Mesh(rectangularHipRoof(31,32,3.4,11),surface(colors.roof,31,1,32,mat(colors.roof))[2]);fittedRoof.position.set(0,7.55,54);fittedRoof.castShadow=true;fittedRoof.receiveShadow=true;scene.add(fittedRoof);
 function arch(x,y,z,w,h,angle=0){const shape=new THREE.Shape();shape.moveTo(-w/2,0);shape.lineTo(w/2,0);shape.lineTo(w/2,h-w/2);shape.absarc(0,h-w/2,w/2,0,Math.PI);shape.closePath();const pane=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshPhysicalMaterial({color:'#30423f',roughness:.2,metalness:.32,side:THREE.DoubleSide}));pane.position.set(x,y,z);pane.rotation.y=angle;scene.add(pane);return pane;}
 for(const x of [-11,-5.5,0,5.5,11]){arch(x,3.35,69.12,3.1,3.2);box(x,4.75,69.22,.075,2.7,.06,'#c3b9a7');box(x,4.7,69.22,3,.075,.06,'#c3b9a7');box(x,1.2,69.12,3,1.5,.12,'#3d5048');}
 board('CENTRAL LIBRARY',0,2.87,69.23,18,.6,'#756855');for(const side of [-1,1])for(const z of [43,49,55,61,66])arch(side*14.62,2.1,z,2.8,4.3,side*Math.PI/2);
-box(0,7.05,40,19,.35,6.8,colors.cream);for(const x of [-8,-2.7,2.7,8])cyl(x,3.5,37.5,.33,6.4,colors.cream);const triangle=new THREE.Shape();triangle.moveTo(-10,0);triangle.lineTo(0,3);triangle.lineTo(10,0);triangle.closePath();const pediment=new THREE.Mesh(new THREE.ExtrudeGeometry(triangle,{depth:5.7,bevelEnabled:false}),mat(colors.cream));pediment.position.set(0,7.25,36.8);pediment.castShadow=true;scene.add(pediment);for(const x of [-5.5,0,5.5])arch(x,.75,38.83,2.5,5.3,Math.PI);for(let i=0;i<5;i++)box(0,.12+i*.14,34.7+i*.52,18,.25,.75,'#b9ac94');
+box(0,7.05,40,19,.35,6.8,colors.cream);for(const x of [-8,-2.7,2.7,8])cyl(x,3.6,37.5,.33,6.6,colors.cream);const triangle=new THREE.Shape();triangle.moveTo(-10,0);triangle.lineTo(0,3);triangle.lineTo(10,0);triangle.closePath();const pediment=new THREE.Mesh(new THREE.ExtrudeGeometry(triangle,{depth:5.7,bevelEnabled:false}),mat(colors.cream));pediment.position.set(0,7.25,36.8);pediment.castShadow=true;scene.add(pediment);for(const x of [-5.5,0,5.5])arch(x,.75,38.83,2.5,5.3,Math.PI);for(let i=0;i<5;i++)box(0,.12+i*.14,34.7+i*.52,18,.25,.75,'#b9ac94');
 // The sculptural landmark is geometry, not a floating building label.
 box(-82.5,.4,44,15,.8,1.35,'#262b2b');solid(-82.5,44,15,1.5);
 const heartShape=new THREE.Shape();heartShape.moveTo(0,0);heartShape.bezierCurveTo(-.4,.45,-1.2,1,-1.2,1.65);heartShape.bezierCurveTo(-1.2,2.5,-.3,2.7,0,2.1);heartShape.bezierCurveTo(.3,2.7,1.2,2.5,1.2,1.65);heartShape.bezierCurveTo(1.2,1,.4,.45,0,0);const heart=new THREE.Mesh(new THREE.ExtrudeGeometry(heartShape,{depth:.3,bevelEnabled:true,bevelThickness:.06,bevelSize:.05,bevelSegments:2,steps:1}),new THREE.MeshStandardMaterial({color:'#e91834',roughness:.3}));heart.position.set(-86.8,.82,44.45);heart.castShadow=true;scene.add(heart);
