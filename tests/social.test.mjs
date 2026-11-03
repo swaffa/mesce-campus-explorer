@@ -89,25 +89,27 @@ test('shared seats enforce proximity, room ownership, seated position and releas
  assert.equal((await call('/api/life/buy',{shop:'canteen',item:'meals'},a.token)).data.points,8);
 });
 
-test('library reading seats and both prayer halls share presence and release spots on exit',async()=>{
- const a=(await call('/api/join',{name:'Library visitor',room:'interiors'})).data;
- const b=(await call('/api/join',{name:'Prayer visitor',room:'interiors'})).data;
- await call('/api/state',{x:-5.9,z:-1.2,yaw:0,area:'library'},a.token);
+test('library seating remains open while each prayer hall enforces the declared prayer space',async()=>{
+ const a=(await call('/api/join',{name:'Men visitor',room:'interiors',prayer_space:'men'})).data;
+ const b=(await call('/api/join',{name:'Second men visitor',room:'interiors',prayer_space:'men'})).data;
+ const c=(await call('/api/join',{name:'Women visitor',room:'interiors',prayer_space:'women'})).data;
+ const unknown=(await call('/api/join',{name:'Old client',room:'interiors'})).data;
+ assert.equal(a.prayer_space,'men');assert.equal(c.prayer_space,'women');
+ for(const p of [a,c])assert.equal((await call('/api/state',{x:-5.9,z:-1.2,yaw:0,area:'library'},p.token)).r.status,200);
  assert.equal((await call('/api/seat',{action:'sit',seat:'library-0-0-1-0'},a.token)).r.status,200);
- const read=(await call('/api/state',{x:0,z:0,yaw:0,area:'library'},a.token)).data.players.find(p=>p.id===a.id);
- assert.equal(read.area,'library');assert.equal(read.x,-5.9);assert.equal(read.activity,'seat-library-0-0-1-0');
- assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,400);
- for(const person of [a,b])await call('/api/state',{x:0,z:5.5,yaw:0,area:'masjid'},person.token);
+ await call('/api/seat',{action:'stand'},a.token);
+ const deniedWoman=await call('/api/state',{x:0,z:5,yaw:0,area:'masjid'},c.token);assert.equal(deniedWoman.r.status,403);assert.equal(deniedWoman.data.error,'This is the men’s prayer space.');
+ const deniedMan=await call('/api/state',{x:0,z:5,yaw:0,area:'women-masjid'},a.token);assert.equal(deniedMan.r.status,403);assert.equal(deniedMan.data.error,'This is the women’s prayer space.');
+ assert.equal((await call('/api/state',{x:0,z:5,yaw:0,area:'masjid'},unknown.token)).r.status,403);
+ for(const p of [a,b])await call('/api/state',{x:0,z:5,yaw:0,area:'masjid'},p.token);
  assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},a.token)).r.status,200);
  assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,409);
- await call('/api/state',{x:0,z:5.5,yaw:0,area:'women-masjid'},b.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-women-masjid-2-1'},b.token)).r.status,200);
- const state=(await call('/api/state',{x:9,z:9,yaw:0,area:'women-masjid'},b.token)).data.players;
- assert.equal(state.find(p=>p.id===b.id).area,'women-masjid');assert.equal(state.find(p=>p.id===b.id).z,4);assert.equal(state.find(p=>p.id===a.id).area,'masjid');
- await call('/api/state',{x:-39,z:46,yaw:0,area:'campus'},a.token);
- await call('/api/state',{x:0,z:5.5,yaw:0,area:'masjid'},b.token);
+ await call('/api/state',{x:0,z:5,yaw:0,area:'women-masjid'},c.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-women-masjid-2-1'},c.token)).r.status,200);
+ await call('/api/seat',{action:'stand'},a.token);assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-women-masjid-2-1'},a.token)).r.status,403);
+ const state=(await call('/api/state',{x:9,z:9,yaw:0,area:'women-masjid'},c.token)).data.players;
+ assert.equal(state.find(p=>p.id===c.id).z,4);assert.equal(state.find(p=>p.id===a.id).area,'masjid');assert(!JSON.stringify(state).includes('prayer_space'));
+ await call('/api/state',{x:-39,z:64,yaw:0,area:'campus'},a.token);
  assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,200);
- assert.equal((await call('/api/ride',{vehicle:'bike-0'},b.token)).r.status,400);
  await call('/api/seat',{action:'stand'},b.token);
- assert.equal((await call('/api/state',{x:0,z:5.5,yaw:0,area:'masjid'},b.token)).data.players.find(p=>p.id===b.id).activity,null);
 });

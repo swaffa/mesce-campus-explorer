@@ -14,20 +14,20 @@ cyl(-93,2.5,43,.55,5,'#756148');const branch=cyl(-92.2,4.2,43,.25,3,'#756148');b
 box(33,1.1,21.5,15,1.8,.9,'#a39b83');box(33,2.07,21.5,15.4,.12,1.2,'#c4c6b8');board('BIRIYANI · MEALS',33,3.6,22.15,10,.8,'#6b4c38');for(const x of [28,30.5,33,35.5]){cyl(x,2.5,21.5,.65,.7,'#b3b7ae');cyl(x,2.9,21.5,.68,.12,'#626d62');}board('LUNCH IS SERVED',39,2.9,22.16,3.2,.6,'#5a6d44');
 for(const x of [28.5,36.5])for(const z of [26,30]){box(x,1.12,z,5,.15,1.65,'#ae9e7d');for(const dx of [-1.8,1.8])box(x+dx,.55,z,.12,1.1,1.4,'#5d695d');for(const dx of [-1.5,0,1.5]){box(x+dx,1.22,z,.85,.04,.6,'#63914d');cyl(x+dx,1.27,z,.2,.09,'#d5b677');for(const dz of [-1.35,1.35]){box(x+dx,.6,z+dz,.75,.15,.7,'#7d9374');box(x+dx,1.05,z+dz+(dz>0?.3:-.3),.75,.75,.1,'#7d9374');}}}
 // Relocated masjid: its entrance faces west, toward bike parking.
-const mosque=new THREE.Group();mosque.position.set(-30,0,46);mosque.rotation.y=-Math.PI/2;scene.add(mosque);
+const mosque=new THREE.Group();mosque.position.set(-30,0,64);mosque.rotation.y=-Math.PI/2;scene.add(mosque);
 box(0,2.6,0,12,5.2,10,colors.cream,mosque);box(0,5.4,0,12.7,.4,10.7,colors.cream,mosque);cyl(0,5.8,0,3.8,.6,colors.cream,mosque);const dome=new THREE.Mesh(new THREE.SphereGeometry(3.6,24,12,0,Math.PI*2,0,Math.PI/2),mat(colors.cream));dome.position.set(0,6.1,0);dome.castShadow=true;mosque.add(dome);cyl(0,10,0,.1,.7,'#b29b5a',mosque);cyl(-5,4.8,3,.65,9.5,colors.cream,mosque);ball(-5,9.8,3,.85,colors.cream,mosque);cyl(-5,10.8,3,.07,.65,'#b29b5a',mosque);
-box(0,3.5,6.2,8,.3,3.8,colors.cream,mosque);for(const x of [-3.4,3.4])cyl(x,1.8,7.3,.23,3.6,colors.cream,mosque);for(const x of [-3.6,0,3.6]){box(x,2.2,5.08,1.5,2.9,.12,'#324a43',mosque);const arch=new THREE.Mesh(new THREE.TorusGeometry(.75,.09,6,16,Math.PI),mat(colors.cream));arch.position.set(x,3.65,5.18);mosque.add(arch);}box(0,.25,7.7,8.8,.5,2.2,'#baae96',mosque);solid(-30,46,10,12,10.8);
-// A quiet masjid compound with a small west-facing gate and an entrance path.
-for(const [x,z,w,d]of [[-42,40.2,.45,8.4],[-42,51.8,.45,8.4],[-20,46,.45,20],[-31,36,22,.45],[-31,56,22,.45]]){box(x,1,z,w,2,d,colors.cream);box(x,2.08,z,w+.12,.16,d+.12,'#c4baa3');solid(x,z,w,d,2.2);}
-for(const z of [44.4,47.6]){box(-42,1.25,z,.8,2.5,.8,colors.cream);box(-42,2.58,z,1,.18,1,colors.cream);}for(let z=44.7;z<47.5;z+=.35)box(-42,1,z,.07,1.7,.06,'#455549');box(-42,1.65,46,.08,.07,2.9,'#455549');
-box(-44,.27,51,2.5,.15,12,colors.path);box(-40,.28,46,8,.16,2.6,colors.path);box(-44.5,.27,57,3.5,.15,2.6,colors.path);
+box(0,3.5,6.2,8,.3,3.8,colors.cream,mosque);for(const x of [-3.4,3.4])cyl(x,1.8,7.3,.23,3.6,colors.cream,mosque);for(const x of [-3.6,0,3.6]){box(x,2.2,5.08,1.5,2.9,.12,'#324a43',mosque);const arch=new THREE.Mesh(new THREE.TorusGeometry(.75,.09,6,16,Math.PI),mat(colors.cream));arch.position.set(x,3.65,5.18);mosque.add(arch);}box(0,.25,7.7,8.8,.5,2.2,'#baae96',mosque);solid(-30,64,10,12,10.8);
+// Men's prayer compound is at the rear, facing toward the bike-parking approach.
+for(const [x,z,w,d]of [[-42,58.2,.45,8.4],[-42,68.8,.45,6.4],[-20,63,.45,18],[-31,54,22,.45],[-31,72,22,.45]]){box(x,1,z,w,2,d,colors.cream);box(x,2.08,z,w+.12,.16,d+.12,'#c4baa3');solid(x,z,w,d,2.2);}
+for(const z of [62.4,65.6]){box(-42,1.25,z,.8,2.5,.8,colors.cream);box(-42,2.58,z,1,.18,1,colors.cream);}
+box(-44,.27,60.5,2.5,.15,10,colors.path);box(-40,.28,64,8,.16,2.6,colors.path);box(-44.5,.27,56,3.5,.15,2.6,colors.path);
 // Raised auditorium faces the parking; the attached library is on the left
 // when approaching the auditorium, and the women's masjid is behind the main one.
 box(0,1.05,48,30,2.1,19,'#9d998a');box(0,5.8,48,29,7.4,18,colors.cream);solid(0,48,29,18,13);
 box(24,3.8,56,18,7.6,23,colors.cream);solid(24,56,18,23,11);box(24,.25,56,19,.5,24,'#aaa18e');
 box(0,9.48,48,29.5,.3,18.5,colors.cream);box(24,7.7,56,18.6,.3,23.6,colors.cream);
 for(const [x,y,z,w,d,rise,ridge]of [[0,9.65,48,31,20,3.4,11],[24,7.85,56,20,25,2.5,8]]){const fittedRoof=new THREE.Mesh(rectangularHipRoof(w,d,rise,ridge),surface(colors.roof,w,1,d,mat(colors.roof))[2]);fittedRoof.position.set(x,y,z);fittedRoof.castShadow=true;fittedRoof.receiveShadow=true;scene.add(fittedRoof);}
-function arch(x,y,z,w,h,angle=0){const shape=new THREE.Shape();shape.moveTo(-w/2,0);shape.lineTo(w/2,0);shape.lineTo(w/2,h-w/2);shape.absarc(0,h-w/2,w/2,0,Math.PI);shape.closePath();const pane=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshPhysicalMaterial({color:'#30423f',roughness:.2,metalness:.32,side:THREE.DoubleSide}));pane.position.set(x,y,z);pane.rotation.y=angle;scene.add(pane);return pane;}
+function arch(x,y,z,w,h,angle=0,parent=scene){const shape=new THREE.Shape();shape.moveTo(-w/2,0);shape.lineTo(w/2,0);shape.lineTo(w/2,h-w/2);shape.absarc(0,h-w/2,w/2,0,Math.PI);shape.closePath();const pane=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshPhysicalMaterial({color:'#30423f',roughness:.2,metalness:.32,side:THREE.DoubleSide}));pane.position.set(x,y,z);pane.rotation.y=angle;parent.add(pane);return pane;}
 for(const x of [17.5,21.8,26.2,30.5]){arch(x,3.8,44.38,2.8,3.3,Math.PI);box(x,5.2,44.25,.07,2.9,.06,'#c3b9a7');box(x,5.2,44.25,2.7,.07,.06,'#c3b9a7');box(x,1.2,44.35,2.8,1.8,.12,'#3d5048');}
 board('CENTRAL LIBRARY',24,3.15,44.2,16,.75,'#756855').rotation.y=Math.PI;
 box(24,1.2,44.19,2.8,2.4,.12,'#233d35');box(24,.12,42.7,6,.24,3,'#b7ad95');
@@ -46,16 +46,16 @@ box(12,1.05,37.5,5,2.1,4,'#b6ab96');for(let i=0;i<7;i++)box(15+i*.65,(7-i)*.15,3
 box(-16.7,1.05,38.5,4.4,2.1,7,'#b6ab96');for(let i=0;i<10;i++)box(-17.5,(10-i)*.105,42.3+i*.65,4,(10-i)*.21,.67,'#a99c84');
 box(-17.5,.13,53.7,3,.26,11,colors.path);box(-24,.13,58.4,16,.26,2.8,colors.path);
 for(const x of [-19.6,-15.4]){box(x,2.85,38.4,.12,1.3,6.5,'#596357');for(let i=0;i<7;i++){const z=42.3+i*.9,h=2.1-i*.3;box(x,h+.65,z,.1,1.3,.1,'#596357');}}
-// A separate, smaller prayer hall at the rear of the main masjid.
-box(-30,2.1,64,11,4.2,9,colors.cream);box(-30,4.35,64,11.8,.3,9.8,colors.cream);solid(-30,64,11,9,7);
-const womenDome=new THREE.Mesh(new THREE.SphereGeometry(2.3,24,12,0,Math.PI*2,0,Math.PI/2),mat(colors.cream));womenDome.position.set(-30,4.5,64);scene.add(womenDome);
-for(const x of [-33.7,-30,-26.3])arch(x,.65,59.35,1.8,2.8,Math.PI);
-box(-30,3.1,58.8,7.8,.25,2.7,colors.cream);for(const x of [-33.3,-26.7])cyl(x,1.5,57.7,.19,3,colors.cream);
-board('WOMEN’S MASJID',-30,3.6,59.28,8,.65,'#456356').rotation.y=Math.PI;
-box(-30,.12,58,7,.24,2.5,colors.path);
-// A visibly open gate replaces the barred line across the main masjid entrance.
-for(const o of [...scene.children])if(o.isMesh&&Math.abs(o.position.x+42)<.01&&o.position.z>44.4&&o.position.z<47.6&&o.position.y<2)scene.remove(o);
-board('MASJID',-35.2,4.45,46,5,.65,'#456356').rotation.y=-Math.PI/2;
+// The women's hall sits behind the auditorium; its entrance turns clockwise to face east.
+const women=new THREE.Group();women.position.set(-11,0,64);women.rotation.y=-Math.PI/2;scene.add(women);
+box(0,2.1,0,11,4.2,9,colors.cream,women);box(0,4.35,0,11.8,.3,9.8,colors.cream,women);solid(-11,64,9,11,7);
+const womenDome=new THREE.Mesh(new THREE.SphereGeometry(2.3,24,12,0,Math.PI*2,0,Math.PI/2),mat(colors.cream));womenDome.position.set(0,4.5,0);women.add(womenDome);
+for(const x of [-3.7,0,3.7])arch(x,.65,-4.65,1.8,2.8,Math.PI,women);
+box(0,3.1,-5.2,7.8,.25,2.7,colors.cream,women);for(const x of [-3.3,3.3])cyl(x,1.5,-6.3,.19,3,colors.cream,women);
+board('WOMEN’S MASJID',0,3.6,-4.72,8,.65,'#456356',women).rotation.y=Math.PI;
+box(0,.12,-6,7,.24,2.5,colors.path,women);
+board('MEN’S MASJID',-35.2,4.45,64,6,.65,'#456356').rotation.y=-Math.PI/2;
+box(-10,.13,57.8,17,.26,2.5,colors.path);box(-3.4,.13,61,2.5,.26,8,colors.path);
 // The sculptural landmark is geometry, not a floating building label.
 box(-82.5,.4,44,15,.8,1.35,'#262b2b');solid(-82.5,44,15,1.5,3.6);
 const heartShape=new THREE.Shape();heartShape.moveTo(0,0);heartShape.bezierCurveTo(-.4,.45,-1.2,1,-1.2,1.65);heartShape.bezierCurveTo(-1.2,2.5,-.3,2.7,0,2.1);heartShape.bezierCurveTo(.3,2.7,1.2,2.5,1.2,1.65);heartShape.bezierCurveTo(1.2,1,.4,.45,0,0);const heart=new THREE.Mesh(new THREE.ExtrudeGeometry(heartShape,{depth:.3,bevelEnabled:true,bevelThickness:.06,bevelSize:.05,bevelSegments:2,steps:1}),new THREE.MeshStandardMaterial({color:'#e91834',roughness:.3}));heart.position.set(-86.8,.82,44.45);heart.castShadow=true;scene.add(heart);

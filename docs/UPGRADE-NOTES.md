@@ -21,3 +21,8 @@ The local-only `?qa=1` checkpoint panel is restricted to localhost/127.0.0.1 and
 
 ## Known limits
 Natural field recordings and species-authentic Kerala bird calls are not supplied. The four exported WAVs are original procedural sound design. Live voice still needs a reliable TURN deployment for users on incompatible networks; the prior relay test failed, so voice signaling passing is not an end-to-end call guarantee. Campus geometry is a stylized interpretation of supplied photos, not a survey.
+
+## Latest layout and access correction
+The fountain forecourt is raised with four shallow approach steps. The men’s masjid is at (-30,64), in the former women’s-hall area; the women’s hall is behind the auditorium at (-11,64), with its doorway rotated clockwise to face east. At joining, visitors explicitly select a prayer space; clothing is not used to infer it. Both the doorway UI and server state/seat endpoints reject the other prayer area with its matching message. This is a game choice, not verified real-world identity. The selection is not broadcast in public player state. Old sessions without a selection must rejoin.
+
+The public menu no longer contains audio, lighting, weather or graphics tuning. It uses the established afternoon, clear-weather, audio-mix and device-appropriate graphics defaults; the top mute control remains. Reduced motion follows the operating system preference. Earlier manual setting controls were verified during the atmosphere pass and subsequently removed at the user’s request.
