@@ -7,6 +7,7 @@ import {teaStall} from './tea-stall.js';
 import {createRiding} from './riding.js';
 import {socialPlaces} from './social-places.js';
 import {createSwings} from './swings.js';
+import {createCampusDogs} from './campus-dogs.js';
 import {createLiveVoice} from './live-voice.js';
 import {createEvents} from './events.js';
 import {createAuditorium} from './auditorium.js';
@@ -129,7 +130,7 @@ for(const b of collisions){const bounds=new THREE.Box3(new THREE.Vector3(b.x-b.w
 camDesired.copy(target).addScaledVector(direction,nearest);
 }
 if(indoors()){const bounds=activeScene().userData.cameraBounds||{x:15.5,z:22.5,y:10.5};camDesired.y=target.y+1.2;camDesired.x=THREE.MathUtils.clamp(camDesired.x,-bounds.x,bounds.x);camDesired.z=THREE.MathUtils.clamp(camDesired.z,-bounds.z,bounds.z);camDesired.y=Math.min(camDesired.y,bounds.y);if(!wasIndoor)camera.position.copy(camDesired);}wasIndoor=indoors();camera.position.lerp(camDesired,1-Math.exp(-dt*5));const look=target.clone();look.x+=welcomeOffset;camera.lookAt(look);
-realism.update(time);details.update(time);tea.update(started&&!indoors());social.update(dt,time);riding.update(started&&!indoors());swings.update(started&&!indoors(),dt);auditorium.update(started);interiors.update(started);document.querySelector('.minimap').hidden=indoors();seating.update(started);events.update();liveVoice.update();ambience.update(started,time,dt);visuals.update(time,dt,player,indoors(),cozy.reducedMotion());cozy.update(time,dt,indoors(),paused);life.update(started,time,dt);proximity.update(started,time,dt,indoors(),cozy.reducedMotion());for(let i=0;i<npcs.length;i++){npcs[i].rotation.y+=Math.sin(time*.5+i)*dt*.07;}
+realism.update(time);details.update(time);tea.update(started&&!indoors());social.update(dt,time);riding.update(started&&!indoors());swings.update(started&&!indoors(),dt);auditorium.update(started);interiors.update(started);document.querySelector('.minimap').hidden=indoors();seating.update(started);events.update();liveVoice.update();ambience.update(started,time,dt);visuals.update(time,dt,player,indoors(),cozy.reducedMotion());cozy.update(time,dt,indoors(),paused);dogs.update(started,dt,indoors());life.update(started,time,dt);proximity.update(started,time,dt,indoors(),cozy.reducedMotion());for(let i=0;i<npcs.length;i++){npcs[i].rotation.y+=Math.sin(time*.5+i)*dt*.07;}
 for(const o of scene.children){if(o.isSprite&&o.userData.labelWidth){const distance=camera.position.distanceTo(o.position);const maxWidth=distance*Math.tan(camera.fov*Math.PI/360)*2*210/innerHeight;const width=Math.min(o.userData.labelWidth,maxWidth);o.scale.set(width,width*96/512,1);}}
 renderer.render(activeScene(),camera);if(frames++%6===0)mini();}
 const realism=finish(scene,renderer,sun,{box,cyl,ball,mat,colors});
@@ -141,7 +142,7 @@ raiseForecourt();
 function raiseForecourt(){for(const o of [...scene.children]){if(o.position&&Math.abs(o.position.x+51)<12.8&&Math.abs(o.position.z)<12.8)o.position.y+=.9;else if(o.isMesh&&Math.abs(o.position.x+51)<3&&o.position.z< -12.8&&o.position.z> -20)o.position.y+=.9;}cyl(-51,.48,0,12.8,.96,'#aaa18b');for(let i=0;i<4;i++)box(-51,(4-i)*.1475,13.15+i*.7,7,(4-i)*.295,.72,'#b5ad98');box(-51,.52,-16.5,5,1.04,9,'#a69c83');}
 departmentDetails({scene,box,cyl,ball,mat,colors,tree});
 const tea=teaStall({scene,player,box,cyl,roof,solid,toast});
-const social=createSocial({scene,player,person,camera,renderer,getView:()=>viewMode,setDestination:p=>{destination=p;},toast,captureFrame:()=>renderer.render(activeScene(),camera),getActiveScene:()=>activeScene(),onCommunityState:r=>{liveVoice.onState(r);seating.reconcile(r.players,social.sessionId());},setStyle:style=>restyleCharacter(player,style),onVehicleState:(players,id)=>riding.reconcile(players,id),onSwingState:(players,id)=>swings.reconcile(players,id)});
+const social=createSocial({scene,player,person,camera,renderer,getView:()=>viewMode,setDestination:p=>{destination=p;},toast,captureFrame:()=>renderer.render(activeScene(),camera),getActiveScene:()=>activeScene(),onCommunityState:r=>{dogs.sync(r.now);liveVoice.onState(r);seating.reconcile(r.players,social.sessionId());},setStyle:style=>restyleCharacter(player,style),onVehicleState:(players,id)=>riding.reconcile(players,id),onSwingState:(players,id)=>swings.reconcile(players,id)});
 socialPlaces({scene,box,cyl,ball,solid,mat,colors,roof});
 const riding=createRiding({vehicles:parkedVehicles,player,social,toast,blocked});
 const swings=createSwings({scene,player,social,box,cyl,ball,solid,mat,toast,riding});
@@ -156,6 +157,7 @@ const events=createEvents({social,toast,auditorium,setDestination:p=>destination
 const ambience=createAmbience({player,indoors,isRiding:()=>riding.active(),isSwinging:()=>swings.active(),voiceActive:()=>liveVoice.isActive(),isRaining:()=>visuals.isRaining(),isPaused:()=>document.hidden||!!document.querySelector('dialog[open]'),isSeated:()=>seating.active(),getArea:()=>social.getArea(),getHeading:()=>yaw,toast});
 const visuals=communityVisuals({scene,sun,box});
 const cozy=cozyWorld({scene,renderer,sun,player,camera,box,cyl,ball,mat});
+const dogs=createCampusDogs({scene,player,reducedMotion:()=>cozy.reducedMotion()});
 const proximity=createProximity({player,social,scene,toast,character:()=>campusCharacter({shopkeeper:true}),sound:kind=>ambience.effect?.(kind)});
 const life=campusLife({scene,player,social,toast,indoors,getEvent:()=>events.currentEvent()});
 cozy.batch();

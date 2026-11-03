@@ -113,3 +113,22 @@ test('library seating remains open while each prayer hall enforces the declared 
  assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,200);
  await call('/api/seat',{action:'stand'},b.token);
 });
+
+test('late ICE signals are validated and delivered only to their selected peer',async()=>{
+ const a=(await call('/api/join',{name:'ICE sender',room:'late-ice'})).data,b=(await call('/api/join',{name:'ICE receiver',room:'late-ice'})).data,c=(await call('/api/join',{name:'Outside',room:'late-else'})).data;
+ for(const p of [a,b,c])await call('/api/rtc/enable',{enabled:1,mode:'room'},p.token);
+ const payload={type:'ice',call:'actual-call',candidate:{candidate:'candidate:1 1 udp 2122260223 192.0.2.1 5000 typ host',sdpMid:'0',sdpMLineIndex:0}};
+ assert.equal((await call('/api/rtc/signal',{to:b.id,payload},a.token)).r.status,200);
+ const signals=(await call('/api/rtc/signals?since=0',undefined,b.token,{method:'GET'})).data.signals;assert.equal(signals.length,1);assert.deepEqual(JSON.parse(signals[0].payload),payload);
+ assert.equal((await call('/api/rtc/signal',{to:c.id,payload},a.token)).r.status,409);
+ assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{...payload,candidate:{candidate:'x'.repeat(3001)}}},a.token)).r.status,400);
+ assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{...payload,candidate:{candidate:'candidate',sdpMLineIndex:-1}}},a.token)).r.status,400);
+});
+test('dedicated relay configuration is validated, and service secrets stay server-side',async()=>{
+ const p=(await call('/api/join',{name:'Relay setup',room:'relay-setup'})).data;
+ env.VOICE_ICE_SERVERS='invalid-json';assert.equal((await call('/api/rtc/config',undefined,p.token,{method:'GET'})).r.status,503);delete env.VOICE_ICE_SERVERS;
+ const original=globalThis.fetch;let request;
+ env.CLOUDFLARE_TURN_KEY_ID='test-key-id-123';env.CLOUDFLARE_TURN_API_TOKEN='private-test-token';
+ globalThis.fetch=async(url,options)=>{request={url,options};return Response.json({iceServers:[{urls:'turn:relay.example:3478',username:'temporary-user',credential:'temporary-password'}]},{status:201});};
+ try{const r=await call('/api/rtc/config',undefined,p.token,{method:'GET'});assert.equal(r.r.status,200);assert.equal(r.data.relay,'dedicated');assert(!JSON.stringify(r.data).includes('private-test-token'));assert.equal(request.options.headers.Authorization,'Bearer private-test-token');assert.equal(JSON.parse(request.options.body).ttl,3600);assert(r.data.expiresAt>Date.now());}finally{globalThis.fetch=original;delete env.CLOUDFLARE_TURN_KEY_ID;delete env.CLOUDFLARE_TURN_API_TOKEN;}
+});
