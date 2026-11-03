@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import {campusLayout} from '../public/campus-layout.js';
 import assert from 'node:assert/strict';
 import worker from '../dist/server/index.js';
 import {localEnv} from '../scripts/local-env.mjs';
@@ -44,7 +45,7 @@ test('fruit rewards are earned once daily near the matching tree, and food spend
  assert.equal((await call('/api/life/fruit',{tree:'mango'},a.token)).data.points,30);
  assert.equal((await call('/api/life/fruit',{tree:'mango'},a.token)).r.status,409);
  assert.equal((await call('/api/life/buy',{shop:'canteen',item:'biriyani'},a.token)).r.status,400);
- await call('/api/state',{x:33,z:28,yaw:0},a.token);
+ await call('/api/state',{x:33+campusLayout.canteen.dx,z:28+campusLayout.canteen.dz,yaw:0},a.token);
  assert.equal((await call('/api/life/buy',{shop:'canteen',item:'biriyani',price:0},a.token)).data.points,12);
  assert.equal((await call('/api/life/buy',{shop:'canteen',item:'biriyani'},a.token)).r.status,409);
  const b=(await call('/api/join',{name:'Returned collector',room:'other-economy',wallet_token:walletToken})).data;
@@ -84,7 +85,7 @@ test('shared seats enforce proximity, room ownership, seated position and releas
  await call('/api/state',{x:-58,z:13,yaw:0,area:'campus'},a.token);
  assert.equal((await call('/api/seat',{action:'sit',seat:'bench-5-1'},a.token)).r.status,200);
  await call('/api/seat',{action:'stand'},a.token);
- await call('/api/state',{x:28.5,z:27.7,yaw:0},a.token);
+ await call('/api/state',{x:28.5+campusLayout.canteen.dx,z:27.7+campusLayout.canteen.dz,yaw:0},a.token);
  assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},a.token)).r.status,200);
  assert.equal((await call('/api/life/buy',{shop:'canteen',item:'meals'},a.token)).data.points,8);
 });
@@ -131,4 +132,14 @@ test('dedicated relay configuration is validated, and service secrets stay serve
  env.CLOUDFLARE_TURN_KEY_ID='test-key-id-123';env.CLOUDFLARE_TURN_API_TOKEN='private-test-token';
  globalThis.fetch=async(url,options)=>{request={url,options};return Response.json({iceServers:[{urls:'turn:relay.example:3478',username:'temporary-user',credential:'temporary-password'}]},{status:201});};
  try{const r=await call('/api/rtc/config',undefined,p.token,{method:'GET'});assert.equal(r.r.status,200);assert.equal(r.data.relay,'dedicated');assert(!JSON.stringify(r.data).includes('private-test-token'));assert.equal(request.options.headers.Authorization,'Bearer private-test-token');assert.equal(JSON.parse(request.options.body).ttl,3600);assert(r.data.expiresAt>Date.now());}finally{globalThis.fetch=original;delete env.CLOUDFLARE_TURN_KEY_ID;delete env.CLOUDFLARE_TURN_API_TOKEN;}
+});
+
+test('canteen actions follow the relocated building rather than its former footprint',async()=>{
+ const p=(await call('/api/join',{name:'Rear canteen visitor',room:'rear-canteen'})).data;
+ await call('/api/state',{x:33,z:28,yaw:0},p.token);
+ assert.equal((await call('/api/life/buy',{shop:'canteen',item:'lime'},p.token)).r.status,400);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},p.token)).r.status,400);
+ await call('/api/state',{x:28.5+campusLayout.canteen.dx,z:27.7+campusLayout.canteen.dz,yaw:0},p.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},p.token)).r.status,200);
+ assert.equal((await call('/api/life/buy',{shop:'canteen',item:'lime'},p.token)).data.points,15);
 });

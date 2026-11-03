@@ -1,3 +1,4 @@
+import {campusLayout} from './campus-layout.js';
 import {renderKeralaAmbience} from './audio-synthesis.js';
 export function createAmbience({player,indoors,isRiding,isSwinging,voiceActive,isRaining,toast,isPaused=()=>false,isSeated=()=>false,getArea=()=>indoors()?'auditorium':'campus',getHeading=()=>0}){
  let context=null,master=null,ambience=null,effects=null,music=null,bedGain=null,rainGain=null,engineGain=null,engine=null,last={x:player.position.x,z:player.position.z},stepDistance=0,nextBird=0,nextVillage=0,nextClink=0,active=false;
@@ -26,7 +27,7 @@ export function createAmbience({player,indoors,isRiding,isSwinging,voiceActive,i
   const moving=distance>.01&&distance<2;engineGain.gain.setTargetAtTime(active&&isRiding()&&moving?.018:0,t,.2);engine.frequency.setTargetAtTime(moving?90:65,t,.2);
   if(!active||prefs.muted)return;if(!inside&&!isRaining()&&time>nextBird){nextBird=time+10+Math.random()*16;const pan=Math.random()*1.6-.8,base=1900+Math.random()*1000;tone(base,base*(.7+Math.random()*.6),.18+Math.random()*.13,.008+Math.random()*.004,ambience,pan);}
   if(!inside&&time>nextVillage){nextVillage=time+27+Math.random()*25;transient(.01,220,.18);}
-  if(!inside&&Math.hypot(player.position.x-33,player.position.z-26)<15&&time>nextClink){nextClink=time+12+Math.random()*19;tone(1250,1190,.1,.006,ambience,-.3);}
+  if(!inside&&Math.hypot(player.position.x-campusLayout.canteen.x,player.position.z-campusLayout.canteen.z)<15&&time>nextClink){nextClink=time+12+Math.random()*19;tone(1250,1190,.1,.006,ambience,-.3);}
   if(moving&&!isRiding()&&!isSwinging()&&!isSeated()){stepDistance+=distance;const stride=Math.PI/1.65;if(stepDistance>stride){stepDistance%=stride;const road=(!inside&&(Math.abs(player.position.z)<4||Math.abs(player.position.x+51)<7)),grass=!inside&&!road&&player.position.z<30;transient(quiet?.018:grass?.023:.038,inside?450:road?850:1800,grass?.08:.06);}}else stepDistance=0;
  }
  addEventListener('visibilitychange',()=>{if(document.hidden)context?.suspend().catch(()=>{});else if(context)context.resume().catch(()=>{});});

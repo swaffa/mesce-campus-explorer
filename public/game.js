@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {campusLayout} from './campus-layout.js';
 import {surface,finish} from './realism.js';
 import {createSocial} from './social.js';
 import {parkVehicles} from './vehicles.js';
@@ -31,6 +32,7 @@ function box(x,y,z,w,h,d,c,parent=scene){const m=new THREE.Mesh(boxes,surface(c,
 function cyl(x,y,z,r,h,c,parent=scene,r2=r,n=12){const m=new THREE.Mesh(new THREE.CylinderGeometry(r2,r,h,n),mat(c));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
 function ball(x,y,z,r,c,parent=scene,sy=1){const m=new THREE.Mesh(sphere,mat(c));m.position.set(x,y,z);m.scale.set(r,r*sy,r);m.castShadow=true;parent.add(m);return m;}
 function solid(x,z,w,d,h=23){collisions.push({x,z,w:w/2+.8,d:d/2+.8,h});}
+function moveFacility(offset,build){const start=scene.children.length,collisionStart=collisions.length;build();for(const o of scene.children.slice(start)){o.position.x+=offset.dx;o.position.z+=offset.dz;}for(const b of collisions.slice(collisionStart)){b.x+=offset.dx;b.z+=offset.dz;}}
 function sign(text,x,y,z,size=9,bg='#f5ecd8',fg='#254b3c'){const cv=document.createElement('canvas');cv.width=512;cv.height=96;const c=cv.getContext('2d');c.fillStyle=bg;c.beginPath();c.roundRect(3,3,506,90,12);c.fill();c.fillStyle=fg;c.font='bold 28px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,49,480);const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,depthTest:true}));sp.position.set(x,y,z);sp.scale.set(size,size*96/512,1);sp.userData.labelWidth=size;sp.userData.landmark=text==='I ♥ MESCE';scene.add(sp);return sp;}
 box(0,-1.3,0,203,2.5,150,'#b3ba86');box(0,-.03,0,200,.12,147,colors.grass);
 // Paths and the two primary campus roads.
@@ -59,10 +61,10 @@ pavilion(-85,33,15,11,'STUDENTS’ CORNER');
 box(-76,.1,57,20,.2,13,colors.path);box(-76,3.2,57,20,.25,7,'#c1c6b3');for(const x of [-85,-67])for(const z of [54,60])box(x,1.6,z,.15,3.2,.15,'#5f7562');const parkedVehicles=parkVehicles(scene);
 // Facilities sit across the road, opposite the lawn.
 box(-3,.15,24,32,.2,21,colors.road);for(let x=-17;x<12;x+=3.5){for(const z of [17,29]){box(x,.28,z,.1,.02,5.5,'#e5e2ce');}}box(-3,.3,23,31,.02,.12,'#dad9c1');
-pavilion(33,26,18,12,'CANTEEN');
+moveFacility(campusLayout.canteen,()=>pavilion(33,26,18,12,'CANTEEN'));
 // Restrained landscaping with deterministic variation.
 let seed=42;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
-function tree(x,z,s=1){
+function tree(x,z,s=1){if(z===66&&x>18&&x<94)z=70.3;
 cyl(x,1.8*s,z,.2*s,3.6*s,'#77634c');
 const foliage=new THREE.Group();foliage.position.set(x,3.7*s,z);
 for(let i=0;i<11;i++){const a=i*2.4,r=.4+rand()*1.05;const m=new THREE.Mesh(new THREE.IcosahedronGeometry(.8+rand()*.5,1),mat(['#546f3c','#678248','#74894a','#4f6938'][i%4]));m.position.set(Math.cos(a)*r*s,(rand()-.25)*1.6*s,Math.sin(a)*r*s);m.scale.set(s,s*.85,s);m.castShadow=true;foliage.add(m);}foliage.userData.windCanopy={phase:x*.13+z*.19};scene.add(foliage);
@@ -84,9 +86,9 @@ const locations=[
 {id:'mech',name:'Mechanical',x:68,z:-12,icon:'⚙️',text:'Machines, making, and learning how things move. You have reached the far end of the academic row.',extra:'Turn back toward the lawn to explore the facilities across the road.'},
 {id:'masjid',name:'Men’s masjid',x:-39,z:64,icon:'◈',text:'Enter through the small gate for a quiet moment of prayer.',extra:'Prayer mats inside can be used by one visitor at a time.'},
 {id:'women-masjid',name:'Women’s masjid',x:-3.4,z:64,icon:'◈',text:'The separate women’s prayer hall is behind the auditorium, with its entrance facing east.',extra:'The steps on the right of the auditorium lead down toward this entrance.'},
-{id:'library',name:'Central library',x:24,z:42,icon:'📖',text:'The library adjoins the auditorium on the left of its approach.',extra:'Enter, find a reading chair, and open a book.'},
-{id:'auditorium',name:'Auditorium',x:0,z:34,icon:'🎭',text:'Climb the steps from the parking area to the auditorium.',extra:'Anyone can organize an event. Seats inside face the stage.'},
-{id:'canteen',name:'Canteen',x:30,z:35,icon:'🍵',text:'A break from the academic blocks. The canteen sits beside the empty parking area, serving biriyani and Kerala meals.',extra:'No parked cars here, just as requested. Stop by the serving counter or gather at the communal tables.'},
+{id:'library',name:'Central library',x:campusLayout.library.doorX,z:campusLayout.library.doorZ,icon:'📖',text:'The library adjoins the auditorium on the left of its approach.',extra:'Enter, find a reading chair, and open a book.'},
+{id:'auditorium',name:'Auditorium',x:campusLayout.auditorium.doorX,z:campusLayout.auditorium.doorZ-3,icon:'🎭',text:'Climb the steps from the parking area to the auditorium.',extra:'Anyone can organize an event. Seats inside face the stage.'},
+{id:'canteen',name:'Canteen',x:30+campusLayout.canteen.dx,z:35+campusLayout.canteen.dz,icon:'🍵',text:'A break from the academic blocks. The canteen sits beside the empty parking area, serving biriyani and Kerala meals.',extra:'No parked cars here, just as requested. Stop by the serving counter or gather at the communal tables.'},
 ];
 let visited=new Set();try{visited=new Set(JSON.parse(localStorage.getItem('mesce-trail')||'[]').filter(id=>locations.some(l=>l.id===id)));}catch{}let started=false,active=null,keys={},joy={x:0,y:0},yaw=.15,zoom=18,menuOpen=false,time=0;let viewMode=0;const target=new THREE.Vector3(-8,0,0),desired=new THREE.Vector3(),camDesired=new THREE.Vector3();
 function updateTrail(){ $('count').textContent=`${visited.size} / ${locations.length}`;$('stamps').innerHTML=locations.map(l=>`<span class="${visited.has(l.id)?'found':''}" title="${l.name}">${visited.has(l.id)?'✓':'·'}</span>`).join('');$('places').innerHTML=locations.map(l=>`<button data-place="${l.id}">${visited.has(l.id)?'✓':'○'} ${l.name}</button>`).join('');try{localStorage.setItem('mesce-trail',JSON.stringify([...visited]));}catch{}}
@@ -143,7 +145,7 @@ function raiseForecourt(){for(const o of [...scene.children]){if(o.position&&Mat
 departmentDetails({scene,box,cyl,ball,mat,colors,tree});
 const tea=teaStall({scene,player,box,cyl,roof,solid,toast});
 const social=createSocial({scene,player,person,camera,renderer,getView:()=>viewMode,setDestination:p=>{destination=p;},toast,captureFrame:()=>renderer.render(activeScene(),camera),getActiveScene:()=>activeScene(),onCommunityState:r=>{dogs.sync(r.now);liveVoice.onState(r);seating.reconcile(r.players,social.sessionId());},setStyle:style=>restyleCharacter(player,style),onVehicleState:(players,id)=>riding.reconcile(players,id),onSwingState:(players,id)=>swings.reconcile(players,id)});
-socialPlaces({scene,box,cyl,ball,solid,mat,colors,roof});
+socialPlaces({scene,box,cyl,ball,solid,mat,colors,roof,moveFacility});
 const riding=createRiding({vehicles:parkedVehicles,player,social,toast,blocked});
 const swings=createSwings({scene,player,social,box,cyl,ball,solid,mat,toast,riding});
 const auditorium=createAuditorium({player,social,toast,busyActivity:()=>riding.active()||swings.active()||seating.active()||interiors.active(),beforeExit:()=>seating.active()?seating.stand():true});
@@ -151,7 +153,7 @@ const seating=createSeating({player,social,toast,busyActivity:()=>riding.active(
 const interiors=createCampusInteriors({player,social,toast,busyActivity:()=>riding.active()||swings.active()||seating.active()||auditorium.active(),beforeExit:()=>seating.active()?seating.stand():true});
 function indoors(){return auditorium.active()||interiors.active();}
 function activeScene(){return interiors.active()?interiors.scene():auditorium.active()?auditorium.scene:scene;}
-function campusFloor(x,z){if(Math.hypot(x+51,z)<12.8||Math.abs(x+51)<3&&z< -12&&z>-20)return 1.18;if(Math.abs(x+51)<3.5&&z>=12.8&&z<=15.5)return Math.max(0,1.18-Math.floor((z-12.8)/.7)*.3);if(Math.abs(x)<9&&z>=30.5&&z<36.5)return Math.min(2.1,Math.ceil((z-30.5)/.6)*.21);if(x>=-19&&x<=14.5&&z>=35.5&&z<39)return 2.1;if(x>14.5&&x<19.6&&z>35.5&&z<39.5)return Math.max(0,2.1-Math.floor((x-14.5)/.65)*.3);if(x>-19.6&&x<-15.3&&z>=39&&z<48.8)return z<42?2.1:Math.max(0,2.1-Math.floor((z-42)/.65)*.21);return 0;}
+function campusFloor(x,z){if(Math.hypot(x+51,z)<12.8||Math.abs(x+51)<3&&z< -12&&z>-20)return 1.18;if(Math.abs(x+51)<3.5&&z>=12.8&&z<=15.5)return Math.max(0,1.18-Math.floor((z-12.8)/.7)*.3);x-=campusLayout.auditorium.dx;z-=campusLayout.auditorium.dz;if(Math.abs(x)<9&&z>=30.5&&z<36.5)return Math.min(2.1,Math.ceil((z-30.5)/.6)*.21);if(x>=-19&&x<=14.5&&z>=35.5&&z<39)return 2.1;if(x>14.5&&x<19.6&&z>35.5&&z<39.5)return Math.max(0,2.1-Math.floor((x-14.5)/.65)*.3);if(x>-19.6&&x<-15.3&&z>=39&&z<48.8)return z<42?2.1:Math.max(0,2.1-Math.floor((z-42)/.65)*.21);return 0;}
 const liveVoice=createLiveVoice({social,toast});
 const events=createEvents({social,toast,auditorium,setDestination:p=>destination=p});
 const ambience=createAmbience({player,indoors,isRiding:()=>riding.active(),isSwinging:()=>swings.active(),voiceActive:()=>liveVoice.isActive(),isRaining:()=>visuals.isRaining(),isPaused:()=>document.hidden||!!document.querySelector('dialog[open]'),isSeated:()=>seating.active(),getArea:()=>social.getArea(),getHeading:()=>yaw,toast});
@@ -164,4 +166,4 @@ cozy.batch();
 camera.position.set(100,130,180);requestAnimationFrame(animate);$('loading').remove();
 // Read-only state makes gameplay verification possible without hidden mutations.
 window.mesceState=()=>({started,position:{x:player.position.x,z:player.position.z},nearby:active?.id||null,visited:[...visited],area:social.getArea(),seated:seating.active(),landmarks:locations.length,collisionCount:collisions.length,viewMode,renderStyle:'textured-3d'});
-if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('qa'))import('./local-playtest.js').then(({localPlaytest})=>localPlaytest({player,toast,resetCamera:()=>{yaw=0;viewMode=0;zoom=18;target.copy(player.position);}}));
+if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('qa'))import('./local-playtest.js').then(({localPlaytest})=>localPlaytest({player,toast,resetCamera:name=>{yaw=name==='Facilities overview'?Math.PI:0;viewMode=name==='Facilities overview'?2:0;zoom=name==='Facilities overview'?23:18;target.copy(player.position);}}));

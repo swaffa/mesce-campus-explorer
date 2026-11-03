@@ -1,8 +1,9 @@
 import * as THREE from './vendor/three.module.js';
+import {campusLayout} from './campus-layout.js';
 import {campusSeats} from './seat-data.js';
 import {readingBooks} from './reading-books.js';
 export function createCampusInteriors({player,social,toast,busyActivity,beforeExit}){
- const entries=[{id:'masjid',name:'Men’s masjid',x:-39,z:64,width:9,depth:12},{id:'women-masjid',name:'Women’s masjid',x:-3.4,z:64,width:9,depth:12},{id:'library',name:'Central library',x:24,z:42.2,width:13,depth:14}];
+ const entries=[{id:'masjid',name:'Men’s masjid',x:-39,z:64,width:9,depth:12},{id:'women-masjid',name:'Women’s masjid',x:-3.4,z:64,width:9,depth:12},{id:'library',name:'Central library',x:campusLayout.library.doorX,z:campusLayout.library.doorZ,width:13,depth:14}];
  let current=null,near=null,changing=false;
  const rooms=new Map(),materials=new Map();
  const mat=c=>{if(!materials.has(c))materials.set(c,new THREE.MeshStandardMaterial({color:c,roughness:.85}));return materials.get(c);};
