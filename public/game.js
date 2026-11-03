@@ -49,10 +49,10 @@ box(-9,.17,-28,10,.2,26,'#cbbd90');box(-9,.29,-28,8.8,.12,24.8,'#9eaf6a');sign('
 building(12,-28,20,18,14,'CSE · ADS · CYBER');building(40,-28,20,18,14,'EEE · ECE');building(68,-28,20,18,14,'MECHANICAL');
 for(const x of [12,40,68]){box(x,.15,-11,4,.15,15,colors.path);box(x,1,-18,5,2,1.5,colors.cream);}
 // Fountain: moving water streams and a circular forecourt.
-cyl(-51,.2,0,2.8,.3,colors.path);cyl(-51,.4,0,2.15,.5,colors.cream);cyl(-51,.68,0,1.95,.1,'#69b5bf');cyl(-51,1.1,0,.35,.8,colors.cream);cyl(-51,1.5,0,.9,.2,'#8ccad1');cyl(-51,1.8,0,.18,.5,colors.cream);solid(-51,0,4.4,4.4);
+cyl(-51,.2,0,2.8,.3,colors.path);cyl(-51,.4,0,2.15,.5,colors.cream);cyl(-51,.68,0,1.95,.1,'#69b5bf');cyl(-51,1.1,0,.35,.8,colors.cream);cyl(-51,1.5,0,.9,.2,'#8ccad1');cyl(-51,1.8,0,.18,.5,colors.cream);solid(-51,0,4.4,4.4,2.3);
 const water=[];for(let i=0;i<8;i++){const a=i*Math.PI/4;const m=ball(-51+Math.cos(a)*.65,2,Math.sin(a)*.65,.08,'#a7e4df');water.push(m);}
 function roof(x,y,z,w,d){const geo=new THREE.ConeGeometry(1,1,4);const m=new THREE.Mesh(geo,mat(colors.roof));m.rotation.y=Math.PI/4;m.position.set(x,y,z);m.scale.set(w/Math.SQRT2,3,d/Math.SQRT2);m.userData.canopy={w,d};m.castShadow=true;scene.add(m);return m;}
-function pavilion(x,z,w,d,label){box(x,.3,z,w+1,.6,d+1,colors.path);roof(x,5.9,z,w+2,d+2);for(const a of [-w/2+.5,w/2-.5])for(const b of [-d/2+.5,d/2-.5])cyl(x+a,2.5,z+b,.25,4.5,colors.cream);box(x,1.8,z-d/2+.5,w-1,3.2,1,colors.cream);solid(x,z-d/2+.5,w,1.5);if(label!=='CANTEEN')for(const a of [-3,3]){box(x+a,1.1,z,2.7,.18,1.6,'#765444');for(const b of [-1,1])box(x+a,.6,z+b,2.7,.3,.5,'#5b7052');}sign(label,x,8.6,z,w+5);}
+function pavilion(x,z,w,d,label){box(x,.3,z,w+1,.6,d+1,colors.path);roof(x,5.9,z,w+2,d+2);for(const a of [-w/2+.5,w/2-.5])for(const b of [-d/2+.5,d/2-.5])cyl(x+a,2.5,z+b,.25,4.5,colors.cream);box(x,1.8,z-d/2+.5,w-1,3.2,1,colors.cream);solid(x,z-d/2+.5,w,1.5,4.1);if(label!=='CANTEEN')for(const a of [-3,3]){box(x+a,1.1,z,2.7,.18,1.6,'#765444');for(const b of [-1,1])box(x+a,.6,z+b,2.7,.3,.5,'#5b7052');}sign(label,x,8.6,z,w+5);}
 pavilion(-85,33,15,11,'STUDENTS’ CORNER');
 // Entrance and compact bike shed just left after entering.
 box(-76,.1,57,20,.2,13,colors.path);box(-76,3.2,57,20,.25,7,'#c1c6b3');for(const x of [-85,-67])for(const z of [54,60])box(x,1.6,z,.15,3.2,.15,'#5f7562');const parkedVehicles=parkVehicles(scene);
@@ -125,7 +125,7 @@ const elevation=started?(viewMode===2?.85:viewMode===1?.3:.66):.72;
 camDesired.set(target.x+Math.sin(yaw)*distance+welcomeOffset,target.y+distance*elevation,target.z+Math.cos(yaw)*distance);
 if(started&&!indoors()){
 const direction=camDesired.clone().sub(target);const length=direction.length();direction.normalize();const ray=new THREE.Ray(target,direction);let nearest=length;
-for(const b of collisions){const bounds=new THREE.Box3(new THREE.Vector3(b.x-b.w,0,b.z-b.d),new THREE.Vector3(b.x+b.w,b.h||23,b.z+b.d));const hit=ray.intersectBox(bounds,new THREE.Vector3());if(hit)nearest=Math.min(nearest,Math.max(2.5,target.distanceTo(hit)-1));}
+for(const b of collisions){const bounds=new THREE.Box3(new THREE.Vector3(b.x-b.w,0,b.z-b.d),new THREE.Vector3(b.x+b.w,b.h||23,b.z+b.d));const hit=ray.intersectBox(bounds,new THREE.Vector3());if(hit)nearest=Math.min(nearest,Math.max(5.5,target.distanceTo(hit)-1));}
 camDesired.copy(target).addScaledVector(direction,nearest);
 }
 if(indoors()){const bounds=activeScene().userData.cameraBounds||{x:15.5,z:22.5,y:10.5};camDesired.y=target.y+1.2;camDesired.x=THREE.MathUtils.clamp(camDesired.x,-bounds.x,bounds.x);camDesired.z=THREE.MathUtils.clamp(camDesired.z,-bounds.z,bounds.z);camDesired.y=Math.min(camDesired.y,bounds.y);if(!wasIndoor)camera.position.copy(camDesired);}wasIndoor=indoors();camera.position.lerp(camDesired,1-Math.exp(-dt*5));const look=target.clone();look.x+=welcomeOffset;camera.lookAt(look);
