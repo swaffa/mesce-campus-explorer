@@ -9,4 +9,7 @@ code=code.replace("import {communityRoute} from './community-api.js';",()=> 'con
 const lifeData=fs.readFileSync('public/campus-life-data.js','utf8').replaceAll('export const','const');
 const economy=fs.readFileSync('worker/economy-api.js','utf8').replace("import {shops,fruitTrees} from '../public/campus-life-data.js';",lifeData).replace('export async function economyRoute','async function economyRoute');
 code=code.replace("import {economyRoute} from './economy-api.js';",()=> 'const economyRoute=(()=>{'+economy+';return economyRoute;})();');
+const seatData=fs.readFileSync('public/seat-data.js','utf8').replaceAll('export const','const');
+const seating=fs.readFileSync('worker/seating-api.js','utf8').replace("import {campusSeats} from '../public/seat-data.js';",seatData).replace('export async function seatingRoute','async function seatingRoute').replace('export {campusSeats};','');
+code=code.replace("import {seatingRoute,campusSeats} from './seating-api.js';",()=> 'const {seatingRoute,campusSeats}=(()=>{'+seating+';return {seatingRoute,campusSeats};})();');
 fs.rmSync('dist',{recursive:true,force:true});fs.mkdirSync('dist/server',{recursive:true});fs.mkdirSync('dist/.openai',{recursive:true});fs.writeFileSync('dist/server/index.js',code);fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');console.log('Built shared-campus Worker, '+Object.keys(assets).length+' assets.');

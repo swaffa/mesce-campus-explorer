@@ -16,13 +16,13 @@ const cache=new Map();function material(type,w,h){const key=`${type}:${w.toFixed
 export function surface(c,w,h,d,fallback){const t=types[c];if(!t)return fallback;return [material(t,d,h),material(t,d,h),material(t,w,d),material(t,w,d),material(t,w,h),material(t,w,h)];}
 export function finish(scene,renderer,sun,{box,cyl,ball,mat,colors}){
 renderer.toneMappingExposure=1.02;scene.background=new THREE.Color('#b8d3e0');scene.fog=new THREE.FogExp2('#c5d8d9',.0028);
-scene.children.filter(o=>o.isHemisphereLight).forEach(l=>{l.intensity=1.15;l.color.set('#d4e7f3');l.groundColor.set('#87775c');});sun.color.set('#ffdeb2');sun.intensity=3.1;sun.position.set(-62,86,54);sun.shadow.normalBias=.035;sun.shadow.bias=-.00015;sun.shadow.radius=3;
+scene.children.filter(o=>o.isHemisphereLight).forEach(l=>{l.intensity=1.15;l.color.set('#d4e7f3');l.groundColor.set('#87775c');});sun.color.set('#ffdeb2');sun.intensity=3.1;sun.position.set(-62,86,54);sun.shadow.normalBias=.035;sun.shadow.bias=-.00015;sun.shadow.radius=4;
 // Soft procedural sky dome and a continuous horizon beyond campus.
 const sky=new THREE.Mesh(new THREE.SphereGeometry(390,24,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color('#7ba9ca')},bottom:{value:new THREE.Color('#e4e7dc')}},vertexShader:'varying vec3 v;void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'uniform vec3 top;uniform vec3 bottom;varying vec3 v;void main(){float h=clamp(normalize(v).y*.9,0.,1.);gl_FragColor=vec4(mix(bottom,top,pow(h,.65)),1.);}' }));sky.renderOrder=-2;scene.add(sky);
 const outer=new THREE.Mesh(new THREE.PlaneGeometry(900,900),material('grass',900,900));outer.rotation.x=-Math.PI/2;outer.position.y=-1.5;outer.receiveShadow=true;scene.add(outer);
 // Reflective windowpanes with real depth, lintels, sills and mullions.
 const panes=[];scene.traverse(o=>{if(o.isMesh&&o.geometry?.type==='BoxGeometry'&&o.material?.color?.getHexString()==='355555')panes.push(o);});
-const glass=new THREE.MeshPhysicalMaterial({color:'#304a50',roughness:.18,metalness:.48,clearcoat:1,clearcoatRoughness:.14});
+const glass=new THREE.MeshPhysicalMaterial({color:'#304a50',roughness:.52,metalness:.12,clearcoat:.3,clearcoatRoughness:.14});
 for(const p of panes){p.material=glass;const x=p.position.x,y=p.position.y,z=p.position.z;const direction=z< -28?-1:1;box(x,y,z+direction*.12,.055,1.65,.05,'#b9c4bb');box(x,y,z+direction*.12,1.65,.055,.05,'#b9c4bb');box(x,y-.88,z,1.9,.12,.42,'#c1b6a1');box(x,y+1,z,1.95,.1,.7,'#e1d8c6');}
 // Side elevations previously had blank walls.
 for(const [x,z,w,d,h] of [[-51,-30,12,18,20],[-65,-31,16,17,13],[-78,-32,10,16,9],[-37,-31,16,17,13],[-24,-32,10,16,9],[12,-28,20,18,14],[40,-28,20,18,14],[68,-28,20,18,14]]){

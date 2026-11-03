@@ -25,7 +25,7 @@ Room text chat is server-backed and expires from access after 24 hours. Live voi
 
 A documented shared Open Relay TURN fallback is included. Connectivity depends on the relay and the participants' networks. For a production service, set the secret `VOICE_ICE_SERVERS` environment variable to a JSON array of your provider's WebRTC ICE servers. The live-voice panel has a microphone-free relay check. The default relay credentials last one hour and refresh for new connections after 30 minutes.
 
-Club and alumni groups can submit auditorium events. Requests stay pending until an organizer approves them; organizers can reorder, start, and end events. Only the first approved event can start, and only one event can be live per room. The stage displays that event for everyone. Organizer access lasts two hours per session and requires the server secret `EVENT_ORGANIZER_KEY`. Keep that code outside public source. Local preview uses `local-organizer`, unless the environment overrides it.
+Anyone can organize an auditorium event. New events enter the queue immediately, and their hosts can start them at the front of the queue, end them, or cancel them. Only one event is live per room. Event ownership survives rejoining from the same browser wallet. The stage displays the current event for everyone. Existing moderator credentials remain compatible with previous deployments.
 
 Campus ambience starts after entering the game, with synthesized breeze, birds, fountain water, footsteps, canteen sounds and riding sounds. The sound button controls ambience separately from live voice. Ambience lowers during calls. Afternoon and golden-hour lighting can be selected from the menu.
 
@@ -49,3 +49,11 @@ Every browser has a private guest wallet, initially worth 20 campus points, rest
 Mango, guava and jackfruit trees award 10 points each per UTC day. A live auditorium event awards 25 points after 60 seconds of attendance, once per wallet per event. The server measures attendance from short active heartbeats; clients cannot supply a duration. Reward claims prevent duplicate earning and balances cannot go negative. These are casual guest-game rules, not verified student accounts or anti-cheat security.
 
 Students use warm faceted low-poly characters in cream-and-navy outfits, with shirt/trousers and braided-hair/skirt options. The selected appearance is shared with other people in the room. Shopkeepers have round glasses, receding grey hair, white shirts, mundu and sandals. The menu offers clear skies or monsoon rain with falling drops, overcast light, wet grounds and a separate synthesized rain ambience. Weather is a local viewing preference.
+
+
+Press B or tap the nearby seat button to sit or stand. Auditorium chairs face the stage; canteen seats face their tables. Benches around campus, the snack corner and shade tree are also usable. Seat ownership is shared per room and prevents overlap; inactive occupants release their seats after 45 seconds. Walking pauses while seated, while chat, voice, photos, food orders and event attendance continue.
+
+### Enterable library and prayer halls
+The auditorium now stands on a raised podium with broad walkable entrance steps. Facing its entrance from parking, the attached Central Library is to the left; steps to the right descend toward the separate women's masjid behind the main masjid. Department entrance boards and planted borders follow the supplied building references.
+
+Walk up to a doorway and use **Enter**. The Central Library has shared reading chairs (**B**) and six original short books with page controls (**R**). Both masjids have individual prayer mats; approach a free mat and press **P** to kneel quietly, then **P** again to finish. Prayer is optional and has no point reward. Prayer mats use the same server-enforced exclusive occupancy and release-on-exit rules as seats. Players see only others in the same interior, and nearby voice respects the current area.

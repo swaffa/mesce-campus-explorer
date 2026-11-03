@@ -15,7 +15,25 @@ test('one student sits while a nearby classmate pushes; standing releases the sw
 test('alumni join the same room with optional batch details',async()=>{const a=(await call('/api/join',{name:'Alumni Friend',room:'alumni',member_type:'alumni',batch:'2018',avatar_style:'braids'})).data;const b=(await call('/api/join',{name:'Current Student',room:'alumni',member_type:'student'})).data;const r=(await call('/api/state',position,b.token)).data;assert.equal(r.players.find(p=>p.id===a.id).member_type,'alumni');assert.equal(r.players.find(p=>p.id===a.id).batch,'2018');assert.equal(r.players.find(p=>p.id===a.id).avatar_style,'braids');assert.equal(r.players.length,2);});
 test('live-voice signals reach only their recipient in the same room and area',async()=>{const a=(await call('/api/join',{name:'Caller',room:'calls'})).data;const b=(await call('/api/join',{name:'Listener',room:'calls'})).data;const c=(await call('/api/join',{name:'Other room',room:'elsewhere'})).data;for(const p of [a,b,c])await call('/api/rtc/enable',{enabled:p===a?1:2,mode:'room'},p.token);assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{type:'offer',call:'qa-call',sdp:'v=0\r\n'}},a.token)).r.status,200);const inbox=(await call('/api/rtc/signals?since=0',undefined,b.token,{method:'GET'})).data;assert.equal(inbox.signals.length,1);assert.equal(inbox.signals[0].sender,a.id);assert.equal((await call('/api/rtc/signals?since=0',undefined,c.token,{method:'GET'})).data.signals.length,0);assert.equal((await call('/api/rtc/signal',{to:c.id,payload:{type:'offer',call:'x',sdp:'v=0'}},a.token)).r.status,409);await call('/api/state',{...position,area:'auditorium'},b.token);assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{type:'offer',call:'x',sdp:'v=0'}},a.token)).r.status,409);await call('/api/rtc/enable',{enabled:0},a.token);assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{type:'hangup',call:'qa-call'}},a.token)).r.status,403);});
 test('voice configuration issues temporary relay credentials without microphone access',async()=>{const p=(await call('/api/join',{name:'Connection test',room:'rtc-config'})).data;const r=(await call('/api/rtc/config',undefined,p.token,{method:'GET'})).data;assert(r.iceServers.some(s=>String(s.urls).includes('turn:')));assert(!JSON.stringify(r).includes('openrelayprojectsecret'));});
-test('organizers approve and reorder event priority; visitors cannot self-approve',async()=>{env.EVENT_ORGANIZER_KEY='qa-organizer-key';const a=(await call('/api/join',{name:'Club member',room:'events'})).data;const o=(await call('/api/join',{name:'Organizer',room:'events'})).data;const first=(await call('/api/events/request',{title:'Alumni reunion',club:'Alumni 2018',duration:30,description:'Catch up'},a.token)).data;const second=(await call('/api/events/request',{title:'Music club evening',club:'Music club',duration:45,description:'Acoustic session'},a.token)).data;assert.equal((await call('/api/events/manage',{id:first.id,action:'approve'},a.token)).r.status,403);assert.equal((await call('/api/organizer/login',{key:'wrong'},o.token)).r.status,403);assert.equal((await call('/api/organizer/login',{key:'qa-organizer-key'},o.token)).r.status,200);for(const e of [first,second])assert.equal((await call('/api/events/manage',{id:e.id,action:'approve'},o.token)).r.status,200);assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},o.token)).r.status,400);await call('/api/events/manage',{id:second.id,action:'up'},o.token);assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},o.token)).r.status,200);assert.equal((await call('/api/events/manage',{id:first.id,action:'start'},o.token)).r.status,400);const publicList=(await call('/api/events',undefined,a.token,{method:'GET'})).data;assert.equal(publicList.events[0].id,second.id);assert.equal(publicList.events[0].status,'live');assert.equal(publicList.organizer,false);await call('/api/events/manage',{id:second.id,action:'end'},o.token);assert.equal((await call('/api/events/manage',{id:first.id,action:'start'},o.token)).r.status,200);});
+test('anyone can host their own event, while the queue and ownership remain enforced',async()=>{
+ const token=crypto.randomUUID()+crypto.randomUUID();
+ const a=(await call('/api/join',{name:'New host',room:'events',wallet_token:token})).data;
+ const b=(await call('/api/join',{name:'Another host',room:'events'})).data;
+ const first=(await call('/api/events/request',{title:'Open reunion',club:'Friends',duration:30},a.token)).data;
+ const second=(await call('/api/events/request',{title:'Music evening',club:'Music club',duration:45},b.token)).data;
+ assert.equal(first.status,'approved');assert.equal(second.status,'approved');
+ const list=(await call('/api/events',undefined,a.token,{method:'GET'})).data.events;
+ assert.equal(list.find(e=>e.id===first.id).can_manage,true);assert.equal(list.find(e=>e.id===second.id).can_manage,false);assert(!JSON.stringify(list).includes('owner_wallet_id'));
+ assert.equal((await call('/api/events/manage',{id:first.id,action:'start'},b.token)).r.status,403);
+ assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},b.token)).r.status,400);
+ assert.equal((await call('/api/events/manage',{id:first.id,action:'start'},a.token)).r.status,200);
+ assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},b.token)).r.status,400);
+ assert.equal((await call('/api/events/manage',{id:first.id,action:'end'},b.token)).r.status,403);
+ await call('/api/leave',{},a.token);
+ const returned=(await call('/api/join',{name:'Returning host',room:'events',wallet_token:token})).data;
+ assert.equal((await call('/api/events/manage',{id:first.id,action:'end'},returned.token)).r.status,200);
+ assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},b.token)).r.status,200);
+});
 
 const walletToken='aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'+'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
 test('fruit rewards are earned once daily near the matching tree, and food spends a persistent wallet',async()=>{
@@ -45,4 +63,51 @@ test('a minute of actual live-event attendance earns one reward, with no reward 
  env.db.prepare('UPDATE campus_attendance SET attended_ms = 59000, last_seen = ? WHERE wallet_id = ? AND event_id = ?').run(Date.now()-2000,wid,id);
  const earned=(await call('/api/life/attend',{event:id},a.token)).data;assert.equal(earned.earned,25);assert.equal(earned.points,45);
  const repeat=(await call('/api/life/attend',{event:id},a.token)).data;assert.equal(repeat.earned,0);assert.equal(repeat.points,45);
+});
+
+test('shared seats enforce proximity, room ownership, seated position and release',async()=>{
+ const a=(await call('/api/join',{name:'Sitter A',room:'seats'})).data;
+ const b=(await call('/api/join',{name:'Sitter B',room:'seats'})).data;
+ const c=(await call('/api/join',{name:'Other room sitter',room:'other-seats'})).data;
+ assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},a.token)).r.status,400);
+ for(const p of [a,b,c])await call('/api/state',{x:-6,z:10.5,yaw:0,area:'auditorium'},p.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},a.token)).r.status,200);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},b.token)).r.status,409);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},c.token)).r.status,200);
+ const state=(await call('/api/state',{x:0,z:19,yaw:0,area:'auditorium'},a.token)).data;
+ const self=state.players.find(p=>p.id===a.id);assert.equal(self.x,-6);assert.equal(self.z,9);assert.equal(self.yaw,Math.PI);assert.equal(self.activity,'seat-hall-5-2');
+ assert.equal((await call('/api/swing',{action:'stand'},a.token)).r.status,400);
+ const stand=(await call('/api/seat',{action:'stand'},a.token)).data;assert.equal(stand.x,-6);assert.equal(stand.z,10.5);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},b.token)).r.status,200);
+ await call('/api/leave',{},b.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},a.token)).r.status,200);
+ await call('/api/state',{x:-58,z:13,yaw:0,area:'campus'},a.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'bench-5-1'},a.token)).r.status,200);
+ await call('/api/seat',{action:'stand'},a.token);
+ await call('/api/state',{x:28.5,z:27.7,yaw:0},a.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},a.token)).r.status,200);
+ assert.equal((await call('/api/life/buy',{shop:'canteen',item:'meals'},a.token)).data.points,8);
+});
+
+test('library reading seats and both prayer halls share presence and release spots on exit',async()=>{
+ const a=(await call('/api/join',{name:'Library visitor',room:'interiors'})).data;
+ const b=(await call('/api/join',{name:'Prayer visitor',room:'interiors'})).data;
+ await call('/api/state',{x:-5.9,z:-1.2,yaw:0,area:'library'},a.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'library-0-0-1-0'},a.token)).r.status,200);
+ const read=(await call('/api/state',{x:0,z:0,yaw:0,area:'library'},a.token)).data.players.find(p=>p.id===a.id);
+ assert.equal(read.area,'library');assert.equal(read.x,-5.9);assert.equal(read.activity,'seat-library-0-0-1-0');
+ assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,400);
+ for(const person of [a,b])await call('/api/state',{x:0,z:5.5,yaw:0,area:'masjid'},person.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},a.token)).r.status,200);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,409);
+ await call('/api/state',{x:0,z:5.5,yaw:0,area:'women-masjid'},b.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-women-masjid-2-1'},b.token)).r.status,200);
+ const state=(await call('/api/state',{x:9,z:9,yaw:0,area:'women-masjid'},b.token)).data.players;
+ assert.equal(state.find(p=>p.id===b.id).area,'women-masjid');assert.equal(state.find(p=>p.id===b.id).z,4);assert.equal(state.find(p=>p.id===a.id).area,'masjid');
+ await call('/api/state',{x:-39,z:46,yaw:0,area:'campus'},a.token);
+ await call('/api/state',{x:0,z:5.5,yaw:0,area:'masjid'},b.token);
+ assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,200);
+ assert.equal((await call('/api/ride',{vehicle:'bike-0'},b.token)).r.status,400);
+ await call('/api/seat',{action:'stand'},b.token);
+ assert.equal((await call('/api/state',{x:0,z:5.5,yaw:0,area:'masjid'},b.token)).data.players.find(p=>p.id===b.id).activity,null);
 });

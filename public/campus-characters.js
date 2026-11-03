@@ -3,7 +3,7 @@ const materials=new Map(),headGeometry=new THREE.IcosahedronGeometry(1,1),softGe
 function material(color){if(!materials.has(color))materials.set(color,new THREE.MeshStandardMaterial({color,roughness:1,flatShading:true}));return materials.get(color);}
 export function campusCharacter({style='trousers',shopkeeper=false}={}){
  const g=new THREE.Group(),skin=material('#bc8d59'),hair=material('#30271d'),white=material('#eee9d6'),navy=material('#323d48'),shoe=material('#393127'),grey=material('#9b9280');
- const skirt=style==='braids'&&!shopkeeper;
+ const skirt=style==='braids'&&!shopkeeper;let skirtMesh=null;
  function mesh(geometry,m,x,y,z,sx=1,sy=1,sz=1,parent=g){const o=new THREE.Mesh(geometry,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;parent.add(o);return o;}
  function ell(x,y,z,sx,sy,sz,m,parent=g,detailed=false){return mesh(detailed?headGeometry:softGeometry,m,x,y,z,sx,sy,sz,parent);}
  function block(x,y,z,w,h,d,m,parent=g){return mesh(new THREE.BoxGeometry(1,1,1),m,x,y,z,w,h,d,parent);}
@@ -26,19 +26,19 @@ export function campusCharacter({style='trousers',shopkeeper=false}={}){
   if(skirt){
    ell(0,2.34,-.025,.38,.19,.33,hair,g,true);ell(-.17,2.25,.25,.23,.14,.13,hair);ell(.17,2.25,.25,.23,.14,.13,hair);
    for(const side of [-1,1]){for(let i=0;i<5;i++)ell(side*(.32+(i%2)*.025),2.06-i*.115,-.09,.095-i*.006,.095,.09,hair);block(side*.335,1.58,-.075,.105,.045,.09,material('#8e4b37'));}
-   tube(0,.83,0,.26,.39,.56,navy,g,8);
+   skirtMesh=tube(0,.83,0,.26,.39,.56,navy,g,8);
   }else{ell(0,2.35,-.02,.37,.19,.32,hair,g,true);ell(-.17,2.29,.23,.22,.12,.15,hair);ell(.16,2.32,.19,.21,.12,.16,hair);}
   block(0,1.3,-.25,.42,.49,.2,material('#967858'));for(const x of [-.21,.21])block(x,1.39,.22,.045,.49,.035,material('#826c51'));
  }
  // Separate little collar triangles, shirt buttons, articulated elbows and knees.
  for(const side of [-1,1]){const collar=block(side*.075,1.59,.23,.13,.13,.035,white);collar.rotation.z=side*.33;}
  for(const y of [1.43,1.28,1.13])block(0,y,.284,.017,.017,.012,material('#afa68e'));
- const legs=[],arms=[];for(const x of [-.15,.15]){
-  const pivot=new THREE.Group();pivot.position.set(x,.96,0);const legColor=shopkeeper?white:skirt?skin:navy;tube(0,-.34,0,.105,.09,.61,legColor,pivot);if(skirt)tube(0,-.64,0,.093,.095,.17,white,pivot);
-  block(0,-.79,.08,.22,.13,.36,shoe,pivot);if(shopkeeper){block(0,-.73,.08,.2,.025,.22,skin,pivot);block(0,-.71,.08,.2,.025,.045,shoe,pivot);}g.add(pivot);legs.push(pivot);
+ const legs=[],arms=[],knees=[];for(const x of [-.15,.15]){
+  const pivot=new THREE.Group();pivot.position.set(x,.96,0);const legColor=shopkeeper?white:skirt?skin:navy;tube(0,-.16,0,.105,.095,.32,legColor,pivot);const knee=new THREE.Group();knee.position.y=-.32;pivot.add(knee);knees.push(knee);tube(0,-.17,0,.095,.09,.34,legColor,knee);if(skirt)tube(0,-.32,0,.093,.095,.17,white,knee);
+  block(0,-.47,.08,.22,.13,.36,shoe,knee);if(shopkeeper){block(0,-.41,.08,.2,.025,.22,skin,knee);block(0,-.39,.08,.2,.025,.045,shoe,knee);}g.add(pivot);legs.push(pivot);
   const arm=new THREE.Group();arm.position.set(x*2.25,1.51,0);tube(0,-.13,0,.105,.13,.28,white,arm);tube(0,-.41,0,.075,.065,.34,skin,arm);ell(0,-.61,0,.075,.09,.07,skin,arm);g.add(arm);arms.push(arm);
  }
  for(const child of g.children)child.userData.characterPart=true;
- g.userData={legs,arms,puppet:true,style};return g;
+ g.userData={legs,arms,knees,skirt:skirtMesh,puppet:true,style};return g;
 }
 export function restyleCharacter(model,style){const replacement=campusCharacter({style});for(const child of [...model.children])if(child.userData.characterPart)model.remove(child);for(const child of [...replacement.children])model.add(child);Object.assign(model.userData,replacement.userData);}

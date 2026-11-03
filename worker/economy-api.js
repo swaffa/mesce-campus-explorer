@@ -22,7 +22,7 @@ export async function economyRoute(req,env,p,u){
   await reward(key,tree.reward);return json({points:await balance(),message:`Collected ${tree.name.toLowerCase()} · +${tree.reward} points`});
  }
  if(u.pathname==='/api/life/buy'&&req.method==='POST'){
-  const b=await read(),shop=shops.find(s=>s.id===b.shop),item=shop?.items.find(i=>i.id===b.item);if(!item)fail('Choose something from this shop.');if(p.area!=='campus'||Math.hypot(p.x-shop.x,p.z-shop.z)>9)fail('Visit the shop counter to buy food.');if(p.vehicle||p.activity)fail('Get off your ride or swing before ordering.');
+  const b=await read(),shop=shops.find(s=>s.id===b.shop),item=shop?.items.find(i=>i.id===b.item);if(!item)fail('Choose something from this shop.');if(p.area!=='campus'||Math.hypot(p.x-shop.x,p.z-shop.z)>9)fail('Visit the shop counter to buy food.');if(p.vehicle||p.activity?.startsWith('swing-'))fail('Get off your ride or swing before ordering.');
   const paid=await db.prepare('UPDATE campus_wallets SET points = points - ? WHERE id = ? AND points >= ? RETURNING points').bind(item.price,p.wallet_id,item.price).first();if(!paid)fail('Not enough points. Collect fruit or attend a live event to earn more.',409);
   await db.prepare('INSERT INTO campus_purchases (id, wallet_id, shop, item, name, price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(crypto.randomUUID(),p.wallet_id,shop.id,item.id,item.name,item.price,now).run();return json({points:paid.points,item,message:`Enjoy your ${item.name.toLowerCase()}!`});
  }

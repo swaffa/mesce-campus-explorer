@@ -21,14 +21,41 @@ box(0,3.5,6.2,8,.3,3.8,colors.cream,mosque);for(const x of [-3.4,3.4])cyl(x,1.8,
 for(const [x,z,w,d]of [[-42,40.2,.45,8.4],[-42,51.8,.45,8.4],[-20,46,.45,20],[-31,36,22,.45],[-31,56,22,.45]]){box(x,1,z,w,2,d,colors.cream);box(x,2.08,z,w+.12,.16,d+.12,'#c4baa3');solid(x,z,w,d,2.2);}
 for(const z of [44.4,47.6]){box(-42,1.25,z,.8,2.5,.8,colors.cream);box(-42,2.58,z,1,.18,1,colors.cream);}for(let z=44.7;z<47.5;z+=.35)box(-42,1,z,.07,1.7,.06,'#455549');box(-42,1.65,46,.08,.07,2.9,'#455549');
 box(-44,.27,51,2.5,.15,12,colors.path);box(-40,.28,46,8,.16,2.6,colors.path);box(-44.5,.27,57,3.5,.15,2.6,colors.path);
-// Connected auditorium and rear library: the portico faces north to parking.
-box(0,3.7,48,29,7.4,18,colors.cream);box(0,3.5,63,29,7,12,colors.cream);solid(0,48,29,18,11);solid(0,63,29,12,11);
-box(0,.45,54,30,.6,31,'#b7ae9a');box(0,7.2,63,29,.45,12,colors.cream);box(0,7.38,54,29.5,.3,30.5,colors.cream);
-const fittedRoof=new THREE.Mesh(rectangularHipRoof(31,32,3.4,11),surface(colors.roof,31,1,32,mat(colors.roof))[2]);fittedRoof.position.set(0,7.55,54);fittedRoof.castShadow=true;fittedRoof.receiveShadow=true;scene.add(fittedRoof);
+// Raised auditorium faces the parking; the attached library is on the left
+// when approaching the auditorium, and the women's masjid is behind the main one.
+box(0,1.05,48,30,2.1,19,'#9d998a');box(0,5.8,48,29,7.4,18,colors.cream);solid(0,48,29,18,13);
+box(24,3.8,56,18,7.6,23,colors.cream);solid(24,56,18,23,11);box(24,.25,56,19,.5,24,'#aaa18e');
+box(0,9.48,48,29.5,.3,18.5,colors.cream);box(24,7.7,56,18.6,.3,23.6,colors.cream);
+for(const [x,y,z,w,d,rise,ridge]of [[0,9.65,48,31,20,3.4,11],[24,7.85,56,20,25,2.5,8]]){const fittedRoof=new THREE.Mesh(rectangularHipRoof(w,d,rise,ridge),surface(colors.roof,w,1,d,mat(colors.roof))[2]);fittedRoof.position.set(x,y,z);fittedRoof.castShadow=true;fittedRoof.receiveShadow=true;scene.add(fittedRoof);}
 function arch(x,y,z,w,h,angle=0){const shape=new THREE.Shape();shape.moveTo(-w/2,0);shape.lineTo(w/2,0);shape.lineTo(w/2,h-w/2);shape.absarc(0,h-w/2,w/2,0,Math.PI);shape.closePath();const pane=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshPhysicalMaterial({color:'#30423f',roughness:.2,metalness:.32,side:THREE.DoubleSide}));pane.position.set(x,y,z);pane.rotation.y=angle;scene.add(pane);return pane;}
-for(const x of [-11,-5.5,0,5.5,11]){arch(x,3.35,69.12,3.1,3.2);box(x,4.75,69.22,.075,2.7,.06,'#c3b9a7');box(x,4.7,69.22,3,.075,.06,'#c3b9a7');box(x,1.2,69.12,3,1.5,.12,'#3d5048');}
-board('CENTRAL LIBRARY',0,2.87,69.23,18,.6,'#756855');for(const side of [-1,1])for(const z of [43,49,55,61,66])arch(side*14.62,2.1,z,2.8,4.3,side*Math.PI/2);
-box(0,7.05,40,19,.35,6.8,colors.cream);for(const x of [-8,-2.7,2.7,8])cyl(x,3.6,37.5,.33,6.6,colors.cream);const triangle=new THREE.Shape();triangle.moveTo(-10,0);triangle.lineTo(0,3);triangle.lineTo(10,0);triangle.closePath();const pediment=new THREE.Mesh(new THREE.ExtrudeGeometry(triangle,{depth:5.7,bevelEnabled:false}),mat(colors.cream));pediment.position.set(0,7.25,36.8);pediment.castShadow=true;scene.add(pediment);for(const x of [-5.5,0,5.5])arch(x,.75,38.83,2.5,5.3,Math.PI);for(let i=0;i<5;i++)box(0,.12+i*.14,34.7+i*.52,18,.25,.75,'#b9ac94');
+for(const x of [17.5,21.8,26.2,30.5]){arch(x,3.8,44.38,2.8,3.3,Math.PI);box(x,5.2,44.25,.07,2.9,.06,'#c3b9a7');box(x,5.2,44.25,2.7,.07,.06,'#c3b9a7');box(x,1.2,44.35,2.8,1.8,.12,'#3d5048');}
+board('CENTRAL LIBRARY',24,3.15,44.2,16,.75,'#756855').rotation.y=Math.PI;
+box(24,1.2,44.19,2.8,2.4,.12,'#233d35');box(24,.12,42.7,6,.24,3,'#b7ad95');
+for(const side of [-1,1])for(const z of [43,48,53])arch(side*14.62,4.2,z,2.8,4.3,side*Math.PI/2);
+for(const z of [48,53,58,63])arch(33.12,3.4,z,2.8,3.7,Math.PI/2);
+box(0,2,37.8,20,.3,5.5,'#bf9d79');box(0,9.15,40,20,.35,6.8,colors.cream);
+for(const x of [-8,-2.7,2.7,8]){cyl(x,5.65,37.5,.33,6.8,colors.cream);cyl(x,2.3,37.5,.5,.3,colors.cream);cyl(x,9,37.5,.47,.25,colors.cream);}
+const triangle=new THREE.Shape();triangle.moveTo(-10.5,0);triangle.lineTo(0,3);triangle.lineTo(10.5,0);triangle.closePath();const pediment=new THREE.Mesh(new THREE.ExtrudeGeometry(triangle,{depth:5.7,bevelEnabled:false}),mat(colors.cream));pediment.position.set(0,9.35,36.8);pediment.castShadow=true;scene.add(pediment);
+board('AUDITORIUM',0,10.2,36.72,8,.72,'#b77d7d').rotation.y=Math.PI;
+for(const x of [-5.5,0,5.5])arch(x,2.15,38.83,2.5,5.3,Math.PI);
+// Ten broad, walkable treads climb to the portico.
+for(let i=0;i<10;i++)box(0,(i+1)*.105,30.8+i*.6,18,(i+1)*.21,.62,i<4?'#77776a':'#ba9473');
+// Left landing descends to the library entrance.
+box(12,1.05,37.5,5,2.1,4,'#b6ab96');for(let i=0;i<7;i++)box(15+i*.65,(7-i)*.15,37.5,.67,(7-i)*.3,4,'#a99c84');box(23,.13,40,8,.26,7,colors.path);
+// The right landing leads down toward the women's masjid.
+box(-16.7,1.05,38.5,4.4,2.1,7,'#b6ab96');for(let i=0;i<10;i++)box(-17.5,(10-i)*.105,42.3+i*.65,4,(10-i)*.21,.67,'#a99c84');
+box(-17.5,.13,53.7,3,.26,11,colors.path);box(-24,.13,58.4,16,.26,2.8,colors.path);
+for(const x of [-19.6,-15.4]){box(x,2.85,38.4,.12,1.3,6.5,'#596357');for(let i=0;i<7;i++){const z=42.3+i*.9,h=2.1-i*.3;box(x,h+.65,z,.1,1.3,.1,'#596357');}}
+// A separate, smaller prayer hall at the rear of the main masjid.
+box(-30,2.1,64,11,4.2,9,colors.cream);box(-30,4.35,64,11.8,.3,9.8,colors.cream);solid(-30,64,11,9,7);
+const womenDome=new THREE.Mesh(new THREE.SphereGeometry(2.3,24,12,0,Math.PI*2,0,Math.PI/2),mat(colors.cream));womenDome.position.set(-30,4.5,64);scene.add(womenDome);
+for(const x of [-33.7,-30,-26.3])arch(x,.65,59.35,1.8,2.8,Math.PI);
+box(-30,3.1,58.8,7.8,.25,2.7,colors.cream);for(const x of [-33.3,-26.7])cyl(x,1.5,57.7,.19,3,colors.cream);
+board('WOMEN’S MASJID',-30,3.6,59.28,8,.65,'#456356').rotation.y=Math.PI;
+box(-30,.12,58,7,.24,2.5,colors.path);
+// A visibly open gate replaces the barred line across the main masjid entrance.
+for(const o of [...scene.children])if(o.isMesh&&Math.abs(o.position.x+42)<.01&&o.position.z>44.4&&o.position.z<47.6&&o.position.y<2)scene.remove(o);
+board('MASJID',-35.2,4.45,46,5,.65,'#456356').rotation.y=-Math.PI/2;
 // The sculptural landmark is geometry, not a floating building label.
 box(-82.5,.4,44,15,.8,1.35,'#262b2b');solid(-82.5,44,15,1.5);
 const heartShape=new THREE.Shape();heartShape.moveTo(0,0);heartShape.bezierCurveTo(-.4,.45,-1.2,1,-1.2,1.65);heartShape.bezierCurveTo(-1.2,2.5,-.3,2.7,0,2.1);heartShape.bezierCurveTo(.3,2.7,1.2,2.5,1.2,1.65);heartShape.bezierCurveTo(1.2,1,.4,.45,0,0);const heart=new THREE.Mesh(new THREE.ExtrudeGeometry(heartShape,{depth:.3,bevelEnabled:true,bevelThickness:.06,bevelSize:.05,bevelSegments:2,steps:1}),new THREE.MeshStandardMaterial({color:'#e91834',roughness:.3}));heart.position.set(-86.8,.82,44.45);heart.castShadow=true;scene.add(heart);
