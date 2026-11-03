@@ -1,5 +1,7 @@
 // Asset bytes are embedded by scripts/build-social.mjs for the Worker ESM runtime.
 import { assets } from './assets.js';
+import {communityRoute} from './community-api.js';
+import {economyRoute} from './economy-api.js';
 const DAY=86400000, LIVE=45000, MAX=40;
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
@@ -16,8 +18,8 @@ const now=Date.now();
 if(u.pathname==='/api/join'&&req.method==='POST'){
 const b=await body(req),name=clean(b.name,24),room=clean(b.room,32).toLowerCase();if(name.length<2)fail('Choose a nickname with at least 2 characters.');if(!/^[a-z0-9-]{1,32}$/.test(room))fail('Use letters, numbers or hyphens for the room.');
 const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM campus_players WHERE room = ? AND updated_at > ?').bind(room,now-LIVE).first();if(count.n>=MAX)fail('This room is full. Choose another room.',409);
-const id=crypto.randomUUID(),token=crypto.randomUUID()+crypto.randomUUID();await env.DB.prepare('INSERT INTO campus_players (id, token_hash, room, name, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(id,await hash(token),room,name,now,now).run();ctx.waitUntil(cleanup(env));return json({id,token,room,name,capacity:MAX,spawn:{x:-55+(count.n%2)*7.5,z:59-Math.floor(count.n/3)*1.4}});}
-const p=await auth(req,env);
+const avatar=b.avatar_style==='braids'?'braids':'trousers';const member=b.member_type==='alumni'?'alumni':'student',batch=clean(b.batch,4);if(batch&&!/^\d{4}$/.test(batch))fail('Batch/year must be four digits.');const walletInput=clean(b.wallet_token,80),wallet=await hash(/^[a-f0-9-]{72}$/.test(walletInput)?walletInput:crypto.randomUUID()+crypto.randomUUID());await env.DB.prepare('INSERT OR IGNORE INTO campus_wallets (id, created_at) VALUES (?, ?)').bind(wallet,now).run();const id=crypto.randomUUID(),token=crypto.randomUUID()+crypto.randomUUID();await env.DB.prepare('INSERT INTO campus_players (id, token_hash, room, name, updated_at, created_at, member_type, batch, wallet_id, avatar_style) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(id,await hash(token),room,name,now,now,member,batch,wallet,avatar).run();ctx.waitUntil(cleanup(env));return json({id,token,room,name,capacity:MAX,member_type:member,batch,avatar_style:avatar,spawn:{x:-55+(count.n%2)*7.5,z:59-Math.floor(count.n/3)*1.4}});}
+const p=await auth(req,env);const life=await economyRoute(req,env,p,u);if(life)return life;const community=await communityRoute(req,env,p,u,ctx);if(community)return community;
 if(u.pathname==='/api/swing'&&req.method==='POST'){
 const b=await body(req);if(b.action==='stand'){await env.DB.prepare('UPDATE campus_players SET activity = NULL WHERE id = ?').bind(p.id).run();return json({ok:true});}const spot={cs:{x:8,z:-9},mech:{x:66,z:-9}}[b.swing];if(!spot||!['sit','push'].includes(b.action))fail('Choose a campus swing.');if(Math.hypot(p.x-spot.x,p.z-spot.z)>7)fail('Walk closer to the swing.');if(p.vehicle)fail('Get off your ride first.');await env.DB.prepare('UPDATE campus_players SET activity = NULL WHERE room = ? AND updated_at < ?').bind(p.room,now-LIVE).run();
 if(b.action==='sit'){try{await env.DB.prepare('UPDATE campus_players SET activity = ?, x = ?, z = ?, updated_at = ?, push_at = 0 WHERE id = ?').bind('swing-'+b.swing,spot.x,spot.z,now,p.id).run();}catch{fail('Someone is already on this swing. You can give them a push.',409);}return json({ok:true});}
@@ -28,9 +30,9 @@ if(b.vehicle!==null){const i=Number(b.vehicle.split('-')[1]);const x=-84+i*1.85,
 await env.DB.prepare('UPDATE campus_players SET vehicle = NULL WHERE room = ? AND updated_at < ?').bind(p.room,now-LIVE).run();
 try{await env.DB.prepare('UPDATE campus_players SET vehicle = ?, updated_at = ? WHERE id = ?').bind(b.vehicle,now,p.id).run();}catch{fail('Someone is already riding that one. Try another.',409);}return json({vehicle:b.vehicle});}
 if(u.pathname==='/api/state'&&req.method==='POST'){
-const b=await body(req);if(!validPos(b))fail('Invalid player position.');const emote=b.wave===true?now:p.emote_at;
+const b=await body(req);if(!validPos(b))fail('Invalid player position.');const emote=b.wave===true?now:p.emote_at;const area=b.area==='auditorium'?'auditorium':'campus';if(area!==p.area)await env.DB.prepare('UPDATE campus_players SET area = ?, vehicle = NULL, activity = NULL WHERE id = ?').bind(area,p.id).run();
 await env.DB.prepare('UPDATE campus_players SET x = ?, z = ?, yaw = ?, emote_at = ?, updated_at = ? WHERE id = ?').bind(b.x,b.z,b.yaw,emote,now,p.id).run();
-const peers=await env.DB.prepare('SELECT id, name, x, z, yaw, emote_at, vehicle, activity, push_at FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40').bind(p.room,now-LIVE).all();const since=Math.max(0,Math.floor(Number(b.since)||0));
+const peers=await env.DB.prepare('SELECT id, name, x, z, yaw, emote_at, vehicle, activity, push_at, member_type, batch, avatar_style, area, voice_on, voice_mode FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40').bind(p.room,now-LIVE).all();const since=Math.max(0,Math.floor(Number(b.since)||0));
 const messages=await env.DB.prepare('SELECT id, player_id, name, kind, body, media_id, x, z, created_at FROM campus_messages WHERE room = ? AND id > ? AND created_at > ? ORDER BY id DESC LIMIT 60').bind(p.room,since,now-DAY).all();return json({players:peers.results,messages:messages.results.reverse(),now});}
 if(u.pathname==='/api/message'&&req.method==='POST'){
 if(now-p.last_sent<1500)fail('Give your friends a moment between messages.',429);const b=await body(req),kind=['text','gather'].includes(b.kind)?b.kind:'text',text=clean(b.text,400);if(!text)fail('Write a message first.');if(kind==='gather'&&!validPos({...b,yaw:0}))fail('Invalid gathering point.');

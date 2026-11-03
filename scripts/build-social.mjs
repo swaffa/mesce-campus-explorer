@@ -3,5 +3,10 @@ import path from 'node:path';
 const assets={};
 function walk(dir){for(const n of fs.readdirSync(dir)){const p=path.join(dir,n);if(fs.statSync(p).isDirectory())walk(p);else{const ext=path.extname(p);const type={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8'}[ext]||'text/plain';assets['/'+path.relative('public',p).replaceAll('\\','/')]={body:fs.readFileSync(p,'utf8'),type};}}}
 walk('public');
-const code=fs.readFileSync('worker/index.js','utf8').replace("import { assets } from './assets.js';",()=> 'const assets='+JSON.stringify(assets)+';');
+let code=fs.readFileSync('worker/index.js','utf8').replace("import { assets } from './assets.js';",()=> 'const assets='+JSON.stringify(assets)+';');
+const community=fs.readFileSync('worker/community-api.js','utf8').replace('export async function communityRoute','async function communityRoute');
+code=code.replace("import {communityRoute} from './community-api.js';",()=> 'const communityRoute=(()=>{'+community+';return communityRoute;})();');
+const lifeData=fs.readFileSync('public/campus-life-data.js','utf8').replaceAll('export const','const');
+const economy=fs.readFileSync('worker/economy-api.js','utf8').replace("import {shops,fruitTrees} from '../public/campus-life-data.js';",lifeData).replace('export async function economyRoute','async function economyRoute');
+code=code.replace("import {economyRoute} from './economy-api.js';",()=> 'const economyRoute=(()=>{'+economy+';return economyRoute;})();');
 fs.rmSync('dist',{recursive:true,force:true});fs.mkdirSync('dist/server',{recursive:true});fs.mkdirSync('dist/.openai',{recursive:true});fs.writeFileSync('dist/server/index.js',code);fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');console.log('Built shared-campus Worker, '+Object.keys(assets).length+' assets.');
