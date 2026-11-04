@@ -143,3 +143,11 @@ test('canteen actions follow the relocated building rather than its former footp
  assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},p.token)).r.status,200);
  assert.equal((await call('/api/life/buy',{shop:'canteen',item:'lime'},p.token)).data.points,15);
 });
+
+test('all attire choices survive joining and are visible to friends independently of prayer space',async()=>{
+ const members=[];
+ for(const [style,prayer]of [['trousers','women'],['braids','men'],['hijab','women']]){const joined=await call('/api/join',{name:'Attire '+style,room:'attire',avatar_style:style,prayer_space:prayer});assert.equal(joined.r.status,200);assert.equal(joined.data.avatar_style,style);assert.equal(joined.data.prayer_space,prayer);members.push(joined.data);}
+ const view=(await call('/api/state',position,members[0].token)).data.players;
+ for(const member of members){assert.equal(view.find(p=>p.id===member.id).avatar_style,member.avatar_style);assert(!Object.hasOwn(view.find(p=>p.id===member.id),'prayer_space'));}
+ const fallback=(await call('/api/join',{name:'Fallback attire',room:'attire',avatar_style:'unknown'})).data;assert.equal(fallback.avatar_style,'trousers');
+});

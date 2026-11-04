@@ -9,12 +9,14 @@ import {createRiding} from './riding.js';
 import {socialPlaces} from './social-places.js';
 import {createSwings} from './swings.js';
 import {createCampusDogs} from './campus-dogs.js';
+import {createCampusSecurity} from './campus-security.js';
 import {createLiveVoice} from './live-voice.js';
 import {createEvents} from './events.js';
 import {createAuditorium} from './auditorium.js';
 import {createAmbience} from './campus-ambience.js';
 import {communityVisuals} from './community-visuals.js';
 import {campusCharacter,restyleCharacter} from './campus-characters.js';
+import {createAttirePreview} from './attire-preview.js';
 import {campusLife} from './campus-life.js';
 import {createSeating} from './seating.js';
 import {createCampusInteriors} from './campus-interiors.js';
@@ -74,6 +76,7 @@ for(let x=-18;x<=78;x+=16){cyl(x,2.1,6,.1,4.2,'#3f5b4e');ball(x,4.3,6,.36,'#f7e3
 // Student figures, with a simple walking animation.
 function person(style='trousers'){const g=campusCharacter({style});scene.add(g);return g;}
 const player=person();player.position.set(-54,0,59);const ring=new THREE.Mesh(new THREE.RingGeometry(.7,.85,24),new THREE.MeshBasicMaterial({color:'#fff2bf',side:THREE.DoubleSide,transparent:true,opacity:.7}));ring.rotation.x=-Math.PI/2;ring.position.y=.25;ring.visible=false;player.add(ring);
+const attirePreview=createAttirePreview({canvas:$('attirePreview'),select:$('characterStyle'),onChange:style=>restyleCharacter(player,style)});
 const npcs=[];
 
 const locations=[
@@ -96,7 +99,7 @@ updateTrail();let toastTimer;function toast(s){$('toast').textContent=s;$('toast
 function interact(){if(!active||!started||menuOpen)return;const fresh=!visited.has(active.id);visited.add(active.id);updateTrail();$('cardTitle').textContent=active.name;$('cardIcon').textContent=active.icon;$('cardText').textContent=active.text;$('cardExtra').textContent=visited.size===locations.length?'Every place discovered. You know your way around! Keep wandering whenever you like.':active.extra;$('cardTag').textContent=fresh?'NEW CAMPUS STAMP':'A FAMILIAR PLACE';$('card').showModal();keys={};joy={x:0,y:0};}
 function blocked(x,z){if(interiors.active())return interiors.blocked(x,z);if(auditorium.active())return auditorium.blocked(x,z);if(riding.active()&&Math.hypot(x+51,z)<13)return true;if(x<-97||x>97||z<-68||z>80)return true;if(z>70&&z<74&&(x<-64||x>-38))return true;return collisions.some(b=>Math.abs(x-b.x)<b.w&&Math.abs(z-b.z)<b.d);}
 function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
-async function begin(){ambience.unlock();if(!(await social.join()))return;started=true;document.body.classList.add('playing');$('hud').hidden=false;zoom=18;target.copy(player.position);target.y=1.5;toast('You’re on campus. Invite friends to the same room!');} $('start').onclick=begin;
+async function begin(){ambience.unlock();if(!(await social.join()))return;started=true;attirePreview.dispose();document.body.classList.add('playing');$('hud').hidden=false;zoom=18;target.copy(player.position);target.y=1.5;toast('You’re on campus. Invite friends to the same room!');} $('start').onclick=begin;
 document.querySelectorAll('[data-avatar]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-avatar]').forEach(a=>a.classList.remove('selected'));b.classList.add('selected');const c=['#3f847c','#bf7355','#6e729b'][Number(b.dataset.avatar)];player.children[0].material=mat(c);});
 function closeCard(){$('card').close();} $('closeCard').onclick=closeCard;$('keepGoing').onclick=closeCard;$('interact').onclick=interact;$('touchAction').onclick=interact;
 $('menuBtn').onclick=()=>{menuOpen=true;keys={};$('menu').showModal();};$('closeMenu').onclick=()=>$('menu').close();$('menu').addEventListener('close',()=>menuOpen=false);$('homeBtn').onclick=async()=>{if(seating.active()&&!await seating.stand())return;if(interiors.active()&&!await interiors.exit())return;if(auditorium.active())await auditorium.exit();player.position.set(-54,0,59);$('menu').close();toast('Back at the college gates.');};$('resetBtn').onclick=async()=>{if(seating.active()&&!await seating.stand())return;visited.clear();updateTrail();if(interiors.active()&&!await interiors.exit())return;if(auditorium.active())await auditorium.exit();player.position.set(-54,0,59);$('menu').close();toast('A fresh campus trail.');};
@@ -132,7 +135,7 @@ for(const b of collisions){const bounds=new THREE.Box3(new THREE.Vector3(b.x-b.w
 camDesired.copy(target).addScaledVector(direction,nearest);
 }
 if(indoors()){const bounds=activeScene().userData.cameraBounds||{x:15.5,z:22.5,y:10.5};camDesired.y=target.y+1.2;camDesired.x=THREE.MathUtils.clamp(camDesired.x,-bounds.x,bounds.x);camDesired.z=THREE.MathUtils.clamp(camDesired.z,-bounds.z,bounds.z);camDesired.y=Math.min(camDesired.y,bounds.y);if(!wasIndoor)camera.position.copy(camDesired);}wasIndoor=indoors();camera.position.lerp(camDesired,1-Math.exp(-dt*5));const look=target.clone();look.x+=welcomeOffset;camera.lookAt(look);
-realism.update(time);details.update(time);tea.update(started&&!indoors());social.update(dt,time);riding.update(started&&!indoors());swings.update(started&&!indoors(),dt);auditorium.update(started);interiors.update(started);document.querySelector('.minimap').hidden=indoors();seating.update(started);events.update();liveVoice.update();ambience.update(started,time,dt);visuals.update(time,dt,player,indoors(),cozy.reducedMotion());cozy.update(time,dt,indoors(),paused);dogs.update(started,dt,indoors());life.update(started,time,dt);proximity.update(started,time,dt,indoors(),cozy.reducedMotion());for(let i=0;i<npcs.length;i++){npcs[i].rotation.y+=Math.sin(time*.5+i)*dt*.07;}
+realism.update(time);details.update(time);tea.update(started&&!indoors());social.update(dt,time);riding.update(started&&!indoors());swings.update(started&&!indoors(),dt);auditorium.update(started);interiors.update(started);document.querySelector('.minimap').hidden=indoors();seating.update(started);events.update();liveVoice.update();ambience.update(started,time,dt);visuals.update(time,dt,player,indoors(),cozy.reducedMotion());cozy.update(time,dt,indoors(),paused);dogs.update(started,dt,indoors());security.update(started,dt,indoors(),paused);life.update(started,time,dt);proximity.update(started,time,dt,indoors(),cozy.reducedMotion());for(let i=0;i<npcs.length;i++){npcs[i].rotation.y+=Math.sin(time*.5+i)*dt*.07;}
 for(const o of scene.children){if(o.isSprite&&o.userData.labelWidth){const distance=camera.position.distanceTo(o.position);const maxWidth=distance*Math.tan(camera.fov*Math.PI/360)*2*210/innerHeight;const width=Math.min(o.userData.labelWidth,maxWidth);o.scale.set(width,width*96/512,1);}}
 renderer.render(activeScene(),camera);if(frames++%6===0)mini();}
 const realism=finish(scene,renderer,sun,{box,cyl,ball,mat,colors});
@@ -144,7 +147,7 @@ raiseForecourt();
 function raiseForecourt(){for(const o of [...scene.children]){if(o.position&&Math.abs(o.position.x+51)<12.8&&Math.abs(o.position.z)<12.8)o.position.y+=.9;else if(o.isMesh&&Math.abs(o.position.x+51)<3&&o.position.z< -12.8&&o.position.z> -20)o.position.y+=.9;}cyl(-51,.48,0,12.8,.96,'#aaa18b');for(let i=0;i<4;i++)box(-51,(4-i)*.1475,13.15+i*.7,7,(4-i)*.295,.72,'#b5ad98');box(-51,.52,-16.5,5,1.04,9,'#a69c83');}
 departmentDetails({scene,box,cyl,ball,mat,colors,tree});
 const tea=teaStall({scene,player,box,cyl,roof,solid,toast});
-const social=createSocial({scene,player,person,camera,renderer,getView:()=>viewMode,setDestination:p=>{destination=p;},toast,captureFrame:()=>renderer.render(activeScene(),camera),getActiveScene:()=>activeScene(),onCommunityState:r=>{dogs.sync(r.now);liveVoice.onState(r);seating.reconcile(r.players,social.sessionId());},setStyle:style=>restyleCharacter(player,style),onVehicleState:(players,id)=>riding.reconcile(players,id),onSwingState:(players,id)=>swings.reconcile(players,id)});
+const social=createSocial({scene,player,person,camera,renderer,getView:()=>viewMode,setDestination:p=>{destination=p;},toast,captureFrame:()=>renderer.render(activeScene(),camera),getActiveScene:()=>activeScene(),onCommunityState:r=>{dogs.sync(r.now);security.sync(r.now);liveVoice.onState(r);seating.reconcile(r.players,social.sessionId());},setStyle:style=>restyleCharacter(player,style),onVehicleState:(players,id)=>riding.reconcile(players,id),onSwingState:(players,id)=>swings.reconcile(players,id)});
 socialPlaces({scene,box,cyl,ball,solid,mat,colors,roof,moveFacility});
 const riding=createRiding({vehicles:parkedVehicles,player,social,toast,blocked});
 const swings=createSwings({scene,player,social,box,cyl,ball,solid,mat,toast,riding});
@@ -160,6 +163,7 @@ const ambience=createAmbience({player,indoors,isRiding:()=>riding.active(),isSwi
 const visuals=communityVisuals({scene,sun,box});
 const cozy=cozyWorld({scene,renderer,sun,player,camera,box,cyl,ball,mat});
 const dogs=createCampusDogs({scene,player,reducedMotion:()=>cozy.reducedMotion()});
+const security=createCampusSecurity({scene,player,floor:campusFloor,reducedMotion:()=>cozy.reducedMotion(),toast,sound:kind=>ambience.effect?.(kind)});
 const proximity=createProximity({player,social,scene,toast,character:()=>campusCharacter({shopkeeper:true}),sound:kind=>ambience.effect?.(kind)});
 const life=campusLife({scene,player,social,toast,indoors,getEvent:()=>events.currentEvent()});
 cozy.batch();
