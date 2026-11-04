@@ -1,1 +1,1 @@
-{"name":"mesce-after-class","private":true,"type":"module","scripts":{"build":"node scripts/build-social.mjs","dev":"node scripts/dev-social.mjs","test":"node --test tests/social.test.mjs"}}
+{"name":"mesce-campus-explorer","private":true,"type":"module","engines":{"node":">=24.0.0"},"scripts":{"build":"node scripts/build-social.mjs","dev":"node scripts/dev-social.mjs","test":"node --test tests/*.test.mjs"}}
