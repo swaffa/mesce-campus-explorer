@@ -1,18 +1,20 @@
 import * as THREE from './vendor/three.module.js';
-const materials=new Map(),headGeometry=new THREE.IcosahedronGeometry(1,1),softGeometry=new THREE.IcosahedronGeometry(1,0);
-function material(color){if(!materials.has(color))materials.set(color,new THREE.MeshStandardMaterial({color,roughness:1,flatShading:true}));return materials.get(color);}
+const materials=new Map(),headGeometry=new THREE.IcosahedronGeometry(1,1),softGeometry=new THREE.IcosahedronGeometry(1,0),roundGeometry=new THREE.SphereGeometry(1,20,14);
+const hoodGeometry=(()=>{const vertices=[],indices=[],columns=28,rows=12;for(let row=0;row<=rows;row++){const theta=.98+(Math.PI-.98)*row/rows;for(let column=0;column<=columns;column++){const phi=column/columns*Math.PI*2;vertices.push(Math.sin(theta)*Math.cos(phi),Math.sin(theta)*Math.sin(phi),Math.cos(theta));}}for(let row=0;row<rows;row++)for(let column=0;column<columns;column++){const a=row*(columns+1)+column,b=a+columns+1;indices.push(a,b,a+1,a+1,b,b+1);}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;})();
+function material(color,smooth=false){const key=color+':'+smooth;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:.95,flatShading:!smooth}));return materials.get(key);}
 export function campusCharacter({style='trousers',shopkeeper=false,security=false}={}){
- const g=new THREE.Group(),skin=material('#bc8d59'),hair=material('#30271d'),white=material(security?'#9caeb1':'#eee9d6'),navy=material('#323d48'),shoe=material('#393127'),grey=material('#9b9280');
- const hijab=style==='hijab'&&!shopkeeper&&!security,skirt=(style==='braids'||hijab)&&!shopkeeper&&!security;let skirtMesh=null;
+ const hijab=style==='hijab'&&!shopkeeper&&!security;
+ const g=new THREE.Group(),skin=material(hijab?'#c99f7e':'#bc8d59',hijab),hair=material('#30271d'),white=material(security?'#9caeb1':'#eee9d6'),navy=material('#323d48'),shoe=material('#393127'),grey=material('#9b9280');
+ const skirt=(style==='braids'||hijab)&&!shopkeeper&&!security;let skirtMesh=null;
  function mesh(geometry,m,x,y,z,sx=1,sy=1,sz=1,parent=g){const o=new THREE.Mesh(geometry,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;parent.add(o);return o;}
- function ell(x,y,z,sx,sy,sz,m,parent=g,detailed=false){return mesh(detailed?headGeometry:softGeometry,m,x,y,z,sx,sy,sz,parent);}
+ function ell(x,y,z,sx,sy,sz,m,parent=g,detailed=false){return mesh(hijab?roundGeometry:detailed?headGeometry:softGeometry,m,x,y,z,sx,sy,sz,parent);}
  function block(x,y,z,w,h,d,m,parent=g){return mesh(new THREE.BoxGeometry(1,1,1),m,x,y,z,w,h,d,parent);}
  function tube(x,y,z,top,bottom,h,m,parent=g,n=6){return mesh(new THREE.CylinderGeometry(top,bottom,h,n),m,x,y,z,1,1,1,parent);}
  tube(0,1.27,0,.3,shopkeeper?.35:.27,.72,white);tube(0,1.72,0,.095,.1,.2,skin);
  ell(0,2.08,0,.37,.4,.32,skin,g,true);for(const x of [-.36,.36])ell(x,2.05,0,.07,.1,.06,skin);
  // Small bead-like eyes and a sculpted polygon nose, as in the references.
- for(const x of [-.13,.13]){ell(x,2.09,.292,.026,.034,.022,shoe);block(x,2.2,.285,.085,.018,.018,shopkeeper?grey:hair);}
- ell(0,2.015,.331,.058,.064,.065,skin);block(0,1.92,.285,.075,.012,.012,material('#815e3c'));
+ for(const x of [-.13,.13]){if(hijab){ell(x,2.12,.292,.065,.088,.04,material('#f0e8d8',true));ell(x,2.12,.333,.031,.048,.015,material('#35312d',true));ell(x-.009,2.139,.347,.009,.013,.006,material('#fff9e9',true));const brow=block(x,2.265,.265,.105,.02,.02,material('#73503c',true));brow.rotation.z=x<0?.12:-.12;}else{ell(x,2.09,.292,.026,.034,.022,shoe);block(x,2.2,.285,.085,.018,.018,shopkeeper?grey:hair);}}
+ ell(0,2.015,.331,.058,.064,.065,skin);if(hijab){const smile=new THREE.CatmullRomCurve3([new THREE.Vector3(-.092,1.945,.293),new THREE.Vector3(0,1.914,.313),new THREE.Vector3(.092,1.945,.293)]);mesh(new THREE.TubeGeometry(smile,12,.008,5,false),material('#92634e',true),0,0,0);for(const x of [-.22,.22])ell(x,2.015,.24,.055,.035,.019,material('#c58e76',true));}else block(0,1.92,.285,.075,.012,.012,material('#815e3c'));
  if(shopkeeper){
   // Receding silver hair, round spectacles, white shirt and folded mundu.
   for(const x of [-.29,.29])ell(x,2.22,-.025,.15,.22,.23,grey,g,true);
@@ -35,10 +37,12 @@ export function campusCharacter({style='trousers',shopkeeper=false,security=fals
   for(const x of [-.045,.045])ell(x,1.965,.318,.055,.019,.025,hair);
  }else{
   if(hijab){
-   // A faceted, face-framing scarf, long-sleeved blouse and ankle-length uniform skirt.
-   ell(0,2.13,-.14,.43,.48,.35,navy,g,true);ell(0,2.43,-.02,.4,.18,.32,navy,g,true);
-   for(const side of [-1,1])ell(side*.32,2.1,-.025,.125,.37,.32,navy,g,true);
-   tube(0,1.66,.01,.18,.43,.43,navy,g,10);
+   // Original clay-like scarf folds and open face, inspired by the supplied portrait.
+   const scarf=material('#a9423e',true);scarf.side=THREE.DoubleSide;
+   mesh(hoodGeometry,scarf,0,2.09,-.01,.45,.53,.4);
+   const rim=mesh(new THREE.TorusGeometry(1,.065,6,32),scarf,0,2.09,.213,.373,.44,.32);rim.rotation.z=.02;
+   ell(0,1.65,-.01,.46,.23,.35,scarf);
+   const fold=new THREE.CatmullRomCurve3([new THREE.Vector3(-.35,1.77,.19),new THREE.Vector3(-.14,1.59,.35),new THREE.Vector3(.21,1.63,.32),new THREE.Vector3(.35,1.76,.14)]);mesh(new THREE.TubeGeometry(fold,16,.027,6,false),material('#bd5950',true),0,0,0);
    skirtMesh=tube(0,.65,0,.27,.39,1,navy,g,10);
   }else if(skirt){
    ell(0,2.34,-.025,.38,.19,.33,hair,g,true);ell(-.17,2.25,.25,.23,.14,.13,hair);ell(.17,2.25,.25,.23,.14,.13,hair);

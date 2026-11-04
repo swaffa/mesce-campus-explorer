@@ -1,5 +1,6 @@
 // Asset bytes are embedded by scripts/build-social.mjs for the Worker ESM runtime.
 import { assets } from './assets.js';
+import {academicAreas} from '../public/academic-data.js';
 import {communityRoute} from './community-api.js';
 import {economyRoute} from './economy-api.js';
 import {seatingRoute,campusSeats} from './seating-api.js';
@@ -31,7 +32,7 @@ if(b.vehicle!==null){const i=Number(b.vehicle.split('-')[1]);const x=-84+i*1.85,
 await env.DB.prepare('UPDATE campus_players SET vehicle = NULL WHERE room = ? AND updated_at < ?').bind(p.room,now-LIVE).run();
 try{await env.DB.prepare('UPDATE campus_players SET vehicle = ?, updated_at = ? WHERE id = ?').bind(b.vehicle,now,p.id).run();}catch{fail('Someone is already riding that one. Try another.',409);}return json({vehicle:b.vehicle});}
 if(u.pathname==='/api/state'&&req.method==='POST'){
-const b=await body(req);if(!validPos(b))fail('Invalid player position.');const emote=b.wave===true?now:p.emote_at;const area=['auditorium','library','masjid','women-masjid'].includes(b.area)?b.area:'campus';if(area==='women-masjid'&&p.prayer_space!=='women')fail('This is the women’s prayer space.',403);if(area==='masjid'&&p.prayer_space!=='men')fail('This is the men’s prayer space.',403);if(area!==p.area)await env.DB.prepare('UPDATE campus_players SET area = ?, vehicle = NULL, activity = NULL WHERE id = ?').bind(area,p.id).run();
+const b=await body(req);if(!validPos(b))fail('Invalid player position.');const emote=b.wave===true?now:p.emote_at;const area=['auditorium','library','masjid','women-masjid',...academicAreas].includes(b.area)?b.area:'campus';if(area==='women-masjid'&&p.prayer_space!=='women')fail('This is the women’s prayer space.',403);if(area==='masjid'&&p.prayer_space!=='men')fail('This is the men’s prayer space.',403);if(area!==p.area)await env.DB.prepare('UPDATE campus_players SET area = ?, vehicle = NULL, activity = NULL WHERE id = ?').bind(area,p.id).run();
 const sitting=area===p.area&&campusSeats.find(seat=>'seat-'+seat.id===p.activity);if(sitting){b.x=sitting.x;b.z=sitting.z;b.yaw=sitting.yaw;}
 await env.DB.prepare('UPDATE campus_players SET x = ?, z = ?, yaw = ?, emote_at = ?, updated_at = ? WHERE id = ?').bind(b.x,b.z,b.yaw,emote,now,p.id).run();
 const peers=await env.DB.prepare('SELECT id, name, x, z, yaw, emote_at, vehicle, activity, push_at, member_type, batch, avatar_style, area, voice_on, voice_mode FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40').bind(p.room,now-LIVE).all();const since=Math.max(0,Math.floor(Number(b.since)||0));

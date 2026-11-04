@@ -1,6 +1,6 @@
 // A single eligible action is selected across the existing gameplay modules.
 export function createProximity({player,social,scene,toast,character,sound}){
- const actionIds=['seatAction','interiorDoor','auditoriumDoor','lifeAction','rideBtn','swingControls','guideAction','securityAction'];
+ const actionIds=['seatAction','interiorDoor','auditoriumDoor','academicDoor','academicAction','lifeAction','rideBtn','swingControls','guideAction','securityAction'];
  const guide=character();guide.position.set(-79,0,38);scene.add(guide);let nextIdle=0,gesture=0;
  const button=document.createElement('button');button.id='guideAction';button.hidden=true;button.textContent='E · Say hello';document.body.append(button);
  const lines=['Welcome back. There’s always room for one more at Students’ Corner.','The library is beside the auditorium. Find a chair and stay for a page or two.','A chaya break and a familiar face can make a long day feel shorter.'];let line=0;

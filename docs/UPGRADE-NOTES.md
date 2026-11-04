@@ -40,3 +40,16 @@ Three original security-guard characters now patrol the entrance, raised main-bl
 
 ## Attire selection and shared-campus entry (4 November)
 The welcome menu offers shirt/trousers, braids/skirt and hijab/uniform, with an original 3D thumbnail that updates on selection and a device-saved preference. The hijab variant includes a face-framing navy scarf, long cream sleeves and a long navy skirt; seating/prayer poses preserve its own skirt height. Backend validation and shared presence retain all three outfits independently of the separately chosen prayer space. The campus-room form field is removed. Joining defaults to campus, while existing invitation URLs and isolated local QA links retain their room value.
+
+## Academic blocks and live conversations (4 November)
+Main, CS/BCA/ADS/Cyber, EEE/ECE and Mechanical blocks now have enterable original interiors. Each includes classrooms, a department-specific lab, seminar hall, staffroom, common room, separate men’s/women’s washrooms, drinking-water purifier and a lift connecting three playable floors. Shared classroom/lab/seminar seats remain server-validated and exclusive. Interiors are constructed lazily and static furniture/walls are instanced by material. This is a playable interpretation, not an authenticated college floor plan.
+
+Live voice defaults to nearby people outdoors, fades with distance, and offers a saved Same room mode. Classroom walls, washroom boundaries and floors are enforced in both client eligibility and server signaling. The auditorium always has full-hall audio for opted-in speakers/listeners; live event cards offer a Listen to event action that enters the hall and joins without a microphone. Speaking still requires a microphone gesture/permission. A dedicated TURN service is still pending the user’s account signup; cross-network call success is not claimed.
+
+The hijabi character now has an original smooth red scarf with modeled folds, expressive eyes and a rounded smiling face adapted from the supplied clay portrait, retaining the MESCE uniform.
+
+Each block also has a separate stairwell: shallow walkable steps and an upper landing lead to the next floor; a downstairs action returns to the previous landing so students can walk down the flight. Floor transitions use the same isolated presence spaces as the lift.
+
+Verification: 26 automated tests cover previous progression/social behavior, all academic areas/floors, exclusive seats across floors, proximity/room/auditorium voice eligibility and stair heights. In the running browser, verified entering blocks, walking the corridor, sitting/standing in a classroom, drinking water, lift arrival on the second floor, walking down the stair flight and back up to the next floor. The voice transport remains unchanged from the earlier decoded direct-audio test; no new cross-network audio success is claimed without TURN.
+
+The browser event check also created/started an isolated local event, joined full-hall voice in listen-only mode without requesting microphone access, returned to nearby campus conversation after leaving the hall, left the call and ended the test event. This verifies UI/state flow, not an audible two-person call across external networks.

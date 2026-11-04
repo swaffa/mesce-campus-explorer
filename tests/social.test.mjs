@@ -151,3 +151,25 @@ test('all attire choices survive joining and are visible to friends independentl
  for(const member of members){assert.equal(view.find(p=>p.id===member.id).avatar_style,member.avatar_style);assert(!Object.hasOwn(view.find(p=>p.id===member.id),'prayer_space'));}
  const fallback=(await call('/api/join',{name:'Fallback attire',room:'attire',avatar_style:'unknown'})).data;assert.equal(fallback.avatar_style,'trousers');
 });
+
+test('all academic blocks and lift floors preserve distinct presence and exclusive classroom seats',async()=>{
+ const a=(await call('/api/join',{name:'Classmate A',room:'academic',prayer_space:'women',avatar_style:'hijab'})).data;
+ const b=(await call('/api/join',{name:'Classmate B',room:'academic',prayer_space:'men'})).data;
+ for(const block of ['main','cse','eee','mech'])for(const floor of [0,1,2]){const area='block-'+block+'-'+floor;const state=await call('/api/state',{x:0,z:15,yaw:0,area},a.token);assert.equal(state.r.status,200);assert.equal(state.data.players.find(p=>p.id===a.id).area,area);}
+ for(const p of [a,b])await call('/api/state',{x:-24.5,z:-10,yaw:Math.PI,area:'block-cse-0'},p.token);
+ const seat='block-cse-0-class-0-0';assert.equal((await call('/api/seat',{action:'sit',seat},a.token)).r.status,200);assert.equal((await call('/api/seat',{action:'sit',seat},b.token)).r.status,409);
+ await call('/api/state',{x:-24.5,z:-10,yaw:0,area:'block-cse-1'},b.token);assert.equal((await call('/api/seat',{action:'sit',seat},b.token)).r.status,400);assert.equal((await call('/api/seat',{action:'sit',seat:'block-cse-1-class-0-0'},b.token)).r.status,200);
+ await call('/api/seat',{action:'stand'},a.token);await call('/api/seat',{action:'stand'},b.token);
+});
+test('live conversation signaling respects nearby campus people, classroom walls and full auditorium',async()=>{
+ const a=(await call('/api/join',{name:'Speaker A',room:'acoustic'})).data,b=(await call('/api/join',{name:'Speaker B',room:'acoustic'})).data;
+ for(const p of [a,b])await call('/api/rtc/enable',{enabled:1,mode:'nearby'},p.token);
+ async function place(p,x,z,area){await call('/api/state',{x,z,yaw:0,area},p.token);}
+ const signal=()=>call('/api/rtc/signal',{to:b.id,payload:{type:'offer',call:'voice-space',sdp:'v=0'}},a.token);
+ await place(a,0,0,'campus');await place(b,30,0,'campus');assert.equal((await signal()).r.status,409);
+ await place(b,10,0,'campus');assert.equal((await signal()).r.status,200);
+ await place(a,-15,-8,'block-cse-0');await place(b,-12,-8,'block-cse-0');assert.equal((await signal()).r.status,409);
+ await place(b,-18,-8,'block-cse-0');assert.equal((await signal()).r.status,200);
+ await place(b,-18,-8,'block-cse-1');assert.equal((await signal()).r.status,409);
+ await place(a,-14,18,'auditorium');await place(b,14,-20,'auditorium');assert.equal((await signal()).r.status,200);
+});

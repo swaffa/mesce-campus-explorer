@@ -1,6 +1,8 @@
 import {campusLayout} from './campus-layout.js';
+import {academicAreas,academicSeatSpots} from './academic-data.js';
 export const campusSeats=[];
 function add(id,area,label,x,z,height,yaw=0){campusSeats.push({id,area,label,x,z,height,yaw});}
+for(const area of academicAreas)for(const s of academicSeatSpots)add(area+'-'+s.id,area,s.label,s.x,s.z,s.height,s.yaw);
 for(const [row,z]of [-8.5,-5,-1.5,2,5.5,9].entries())for(const [column,x]of [-12,-9,-6,6,9,12].entries())add(`hall-${row}-${column}`,'auditorium','auditorium chair',x,z,.775,Math.PI);
 for(const [tableX,x]of [28.5,36.5].entries())for(const [tableZ,z]of [26,30].entries())for(const [place,dx]of [-1.5,0,1.5].entries())for(const side of [-1,1])add(`canteen-${tableX}-${tableZ}-${place}-${side}`,'campus','canteen seat',x+dx+campusLayout.canteen.dx,z+side*1.35+campusLayout.canteen.dz,.675,side>0?Math.PI:0);
 for(const [i,[x,z]]of [[-11,-13],[2,-13],[-75,39],[25,37],[44,35],[-58,13]].entries())for(const side of [-1,1])add(`bench-${i}-${side}`,'campus','campus bench',x+side*.7,z+.25,.85);
