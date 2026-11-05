@@ -1,1 +1,29 @@
-{"name":"mesce-campus-explorer","private":true,"type":"module","engines":{"node":">=24.0.0"},"scripts":{"build":"node scripts/build-social.mjs","dev":"node scripts/dev-social.mjs","test":"node --test tests/*.test.mjs"}}
+{
+  "name": "mesce-campus-explorer",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build-social.mjs",
+    "predev": "npm run build",
+    "dev": "node scripts/dev-social.mjs",
+    "pretest": "npm run build",
+    "test": "node --test tests/*.test.mjs",
+    "validate": "node scripts/validate-artifact.mjs",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run check:syntax && npm test && npm run validate"
+  },
+  "description": "A shared 3D campus for MESCE students and alumni.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swaffa/mesce-campus-explorer.git"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "prettier": "3.9.10"
+  }
+}

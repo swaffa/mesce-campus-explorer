@@ -1,92 +1,60 @@
 # MESCE Campus Explorer
 
-A shared 3D browser game for MES College of Engineering students and alumni. Explore a warm, handcrafted campus, meet friends, ride bikes, take group photos and host auditorium events.
+A shared 3D browser game for MES College of Engineering students and alumni. Walk around campus, meet friends, ride bikes, take group photos, and host auditorium events.
 
-[Play MESCE](https://mesce-campus-explorer.swaffaalhuda-mnr.chatgpt.site/?room=campus)
+[Play MESCE](https://mesce-campus-explorer.swaffaalhuda-mnr.chatgpt.site/?room=campus) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md)
 
-The campus and interiors are original stylized interpretations of supplied references, not surveyed floor plans or an official college navigation service.
+## Local development
 
-## Features
-
-- Three attire choices with a 3D preview: shirt/trousers, braids/skirt, and hijab/uniform.
-- Shared student/alumni presence, nicknames, optional batch details, text chat, waves and gathering invitations. Rooms support up to 40 active participants.
-- Main, computing, electrical/electronics and mechanical blocks with classrooms, department-specific labs, seminar halls, staffrooms, common rooms and separate washrooms.
-- Lifts and walkable stairwells connecting three playable floors, drinking-water stations, and shared classroom/lab/seminar seats.
-- Auditorium events open to anyone, an ordered event queue, stage displays and full-hall listening. Event hosts manage their own events.
-- Live WebRTC voice with nearby and same-room scopes, optional microphones, listen-only mode, per-person mute and separate incoming-audio mute. Academic rooms and floors are separate voice spaces.
-- Enterable library with original short books, and separate prayer halls with shared prayer mats. The joining visitor explicitly chooses a prayer space; attire does not determine access.
-- Rideable motorcycles/scooters, shared tree swings, roaming campus dogs and security guards.
-- Canteen and two snack shops, collectible fruit, and a persistent guest points wallet. Points have no cash value.
-- Local group-photo PNG downloads, procedural environmental animation, synthesized ambience and touch controls.
-
-## Run locally
-
-Use **Node.js 24 or newer**. There are no npm runtime dependencies to install; Three.js is vendored in `public/vendor/`.
+Use Node.js 24 (`nvm use` if you use nvm).
 
 ```sh
-npm run build
+npm ci
 npm run dev
 ```
 
-Open **http://localhost:4173**. Local SQLite and uploaded voice-note data are held in memory and reset when the server stops. Browser wallet and appearance preferences persist in browser storage.
+Open [localhost:4173](http://localhost:4173). The dev command builds the Worker and starts a local SQLite-backed preview. Restart it after editing source files. Local database and uploaded media reset when the server stops; browser preferences remain saved.
 
 ```sh
-npm test
-node scripts/validate-artifact.mjs
+npm run check
 ```
 
-Build before testing: the API tests exercise `dist/server/index.js`. The test suite covers shared presence, room isolation, events, points, seats, prayer access, attire, academic floors, stairs, voice signaling and voice-space boundaries.
+This checks formatting and JavaScript syntax, rebuilds the deployment artifact, runs the automated tests, and validates the Worker entry point. CI runs the same command on pushes and pull requests.
 
-For repeatable local navigation checks, add `?room=qa-campus&qa=1`, then open **Menu → Local playtest checkpoints**. These controls are restricted to localhost and are unavailable on the published host.
+## In the campus
+
+- Join as a student or alumnus, choose an outfit, and meet up through text chat, gathering invitations, and live voice.
+- Explore academic blocks with three floors, lifts, stairs, classrooms, labs, seminar halls, staffrooms, and drinking-water stations.
+- Sit together, read original library stories, visit the prayer halls, ride bikes, or help a friend on a tree swing.
+- Collect fruit and attend events to earn guest points, then buy food at the canteen and snack shops.
+- Organize auditorium events with an ordered queue and full-hall listening, or download a group photo locally.
+
+Rooms support up to 40 active participants. The campus is an original stylized interpretation of supplied references; it is not a surveyed floor plan or an official college navigation service.
 
 ## Controls
 
-| Action | Control |
-| --- | --- |
-| Walk / run | WASD or arrow keys / hold Shift |
-| Nearby interaction | E, or the contextual touch button |
-| Shop / collect fruit | F |
-| Sit / stand | B |
-| Pray / finish prayer | P beside a free prayer mat |
-| Read | R in the library |
-| Mount / dismount | R beside a parked vehicle |
-| Ride | W/S throttle and brake; A/D steer |
-| Camera | Drag to rotate; scroll or +/- to zoom; view button |
-| Mobile movement | On-screen thumbstick |
+| Action                  | Control                                            |
+| ----------------------- | -------------------------------------------------- |
+| Walk / run              | WASD or arrow keys / hold Shift                    |
+| Nearby interaction      | E, or the contextual touch button                  |
+| Shop / collect fruit    | F                                                  |
+| Sit / stand             | B                                                  |
+| Pray / finish prayer    | P beside a free prayer mat                         |
+| Read / mount / dismount | R near the relevant object                         |
+| Ride                    | W/S throttle and brake; A/D steer                  |
+| Camera                  | Drag to rotate; scroll or +/- to zoom; view button |
+| Mobile movement         | On-screen thumbstick                               |
 
-## Project structure
+## Stack and deployment
 
-```text
-public/         Three.js frontend, original meshes/textures and interface
-worker/         Shared-campus API and Worker entry point
-drizzle/        Ordered D1/SQLite schema migrations
-scripts/        Build, local preview, validation and ambience export
-tests/          API and WebRTC/voice-space tests
-docs/           Upgrade notes, asset manifest and TURN setup
-dist/           Bundled deployment artifact
-.openai/        Existing Sites hosting configuration
-```
+The client uses vendored Three.js r170 with original procedural geometry and textures. A Cloudflare-compatible Worker serves the client and shared-campus API; D1 stores game state and R2 handles legacy voice-note uploads. Production is currently hosted through Sites.
 
-`npm run build` embeds the public assets and API modules into a Worker ESM artifact. Production requires a Cloudflare-compatible `DB` D1 binding and `BUCKET` R2 binding, with the ordered migrations applied. The current deployment is managed by Sites. This is not a standalone static-only deployment: presence, chat, events and points require the backend.
+`npm run build` generates `dist/server/index.js` and its hosting manifest. Generated output is excluded from Git. Hosting requires the `DB` and `BUCKET` bindings and the ordered SQL migrations in `drizzle/`; a static-only deployment cannot run the shared features. See the [architecture guide](docs/ARCHITECTURE.md) for module boundaries and persistence behavior.
 
-## Voice status and configuration
+## Current limitations
 
-The direct browser audio transport and listen-only event UI have been verified. **A dedicated TURN relay is still required for reliable calls across incompatible Wi-Fi/mobile networks.** The included shared fallback failed the forced-relay audio check and must not be treated as a verified production relay.
+- Live voice has a verified direct browser transport, but a dedicated TURN relay is still needed for reliable connections across incompatible networks. The shared fallback failed forced-relay testing. See [voice setup](docs/VOICE-SETUP.md).
+- Ambience is original synthesized sound design. Authentic Kerala field recordings remain missing and are listed in the [asset manifest](docs/ASSET-MANIFEST.md).
+- Guest nicknames are unverified. Points and event ownership belong to an opaque browser wallet; clearing browser storage loses access to it. Points have no cash value. Live call audio is not recorded by the app.
 
-Configure either Metered, Cloudflare TURN, or an existing ICE-server array through server-side runtime secrets. Never commit provider API keys, TURN credentials, organizer keys or environment files. See [voice setup](docs/VOICE-SETUP.md) for the supported secret names and test procedure.
-
-`/voice-test.html` checks generated audio between two real browser peers without requesting a microphone. Forced-relay success is distinct from a successful direct connection. Live call audio is not recorded or uploaded. The legacy voice-note API remains separate from live calls; new voice-note recording controls are removed.
-
-## Persistence and privacy
-
-Guest nicknames are not verified identities. Text expires from access after 24 hours, and inactive players disappear after 45 seconds. Presence updates approximately once per second. Seats and rides are exclusive per campus room.
-
-An opaque browser wallet restores points and event ownership on later joins. Clearing browser storage loses access to that wallet. The server controls rewards and prices: initial balance 20 points, fruit rewards 10 points per tree per UTC day, and an event attendance reward of 25 points after 60 seconds, once per event and wallet. Group photos download locally rather than being uploaded.
-
-## Assets and known limits
-
-Scene geometry, characters, procedural textures and short library texts are original project assets. No reference-game assets or source code are used. Vendored Three.js and the Gentilis font retain their original embedded license notices.
-
-Audio is original procedural sound design, not authentic Kerala wildlife field recordings. Missing production recordings and their integration points are listed in the [asset manifest](docs/ASSET-MANIFEST.md). Audio/graphics tuning is hidden in the public menu; automatic defaults and the top-level mute control remain.
-
-See [upgrade notes](docs/UPGRADE-NOTES.md) for implementation and verification details.
+Original scene assets are included in source. Third-party components and their licenses are listed in [Third-party notices](THIRD_PARTY_NOTICES.md). Historical implementation and playtest details are in [Upgrade notes](docs/UPGRADE-NOTES.md).

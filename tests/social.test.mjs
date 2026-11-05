@@ -1,175 +1,703 @@
-import {test} from 'node:test';
-import {campusLayout} from '../public/campus-layout.js';
+import { test } from 'node:test';
+import { campusLayout } from '../public/campus-layout.js';
 import assert from 'node:assert/strict';
 import worker from '../dist/server/index.js';
-import {localEnv} from '../scripts/local-env.mjs';
-const env=localEnv();const pending=[];const ctx={waitUntil(p){pending.push(p);}};
-async function call(path,body,token,options={}){const headers={Origin:'https://campus.test',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})};if(body)headers['Content-Type']='application/json';const r=await worker.fetch(new Request('https://campus.test'+path,{method:options.method||'POST',headers,body:options.blob||(body?JSON.stringify(body):undefined)}),env,ctx);const data=r.headers.get('Content-Type')?.includes('application/json')?await r.json():await r.arrayBuffer();return {r,data};}
-const position={x:-67,z:59,yaw:0,since:0};
-test('different students in one room see each other and exchange text',async()=>{const a=(await call('/api/join',{name:'Student One',room:'qa'})).data;const b=(await call('/api/join',{name:'Student Two',room:'qa'})).data;const other=(await call('/api/join',{name:'Elsewhere',room:'other'})).data;const state=await call('/api/state',position,a.token);assert.equal(state.data.players.length,2);assert(!JSON.stringify(state.data).includes(a.token));assert(!JSON.stringify(state.data).includes('token_hash'));await call('/api/message',{text:'Meet at the fountain',kind:'text'},a.token);const read=await call('/api/state',position,b.token);assert.equal(read.data.messages[0].body,'Meet at the fountain');assert.equal(read.data.messages[0].name,'Student One');const isolated=await call('/api/state',position,other.token);assert.equal(isolated.data.messages.length,0);});
-test('position and wave updates are shared without allowing session impersonation',async()=>{const a=(await call('/api/join',{name:'Walker',room:'walk'})).data;const b=(await call('/api/join',{name:'Friend',room:'walk'})).data;await call('/api/state',{x:-50,z:5,yaw:1,wave:true},a.token);const view=(await call('/api/state',position,b.token)).data;const peer=view.players.find(p=>p.id===a.id);assert.equal(peer.x,-50);assert(peer.emote_at>0);assert.equal((await call('/api/state',position,'fake')).r.status,401);assert.equal((await call('/api/state',{x:900,z:0,yaw:0},a.token)).r.status,400);});
-test('voice media can be sent and fetched only by students in the same room',async()=>{const a=(await call('/api/join',{name:'Speaker',room:'voice'})).data;const b=(await call('/api/join',{name:'Listener',room:'voice'})).data;const c=(await call('/api/join',{name:'Outside',room:'outside'})).data;const voice=new Uint8Array(200).fill(5);assert.equal((await call('/api/voice',undefined,a.token,{blob:voice,headers:{'Content-Type':'audio/webm'}})).r.status,200);const list=(await call('/api/state',position,b.token)).data.messages;assert.equal(list[0].kind,'voice');const id=list[0].media_id;assert.equal((await call('/api/media/'+id,undefined,b.token,{method:'GET'})).data.byteLength,200);assert.equal((await call('/api/media/'+id,undefined,c.token,{method:'GET'})).r.status,404);assert.equal((await call('/api/voice',undefined,b.token,{blob:new Uint8Array(524289),headers:{'Content-Type':'audio/webm'}})).r.status,413);});
-test('gathering invitations carry a shared position, and leaving removes presence',async()=>{const a=(await call('/api/join',{name:'Photographer',room:'photo'})).data;const b=(await call('/api/join',{name:'Classmate',room:'photo'})).data;await call('/api/message',{kind:'gather',text:'Group photo here',x:-80,z:40},a.token);const state=(await call('/api/state',position,b.token)).data;assert.equal(state.messages[0].kind,'gather');assert.equal(state.messages[0].x,-80);await call('/api/leave',{},a.token);assert.equal((await call('/api/state',position,b.token)).data.players.length,1);});
-test('old room messages are not returned and requests from other origins are rejected',async()=>{const a=(await call('/api/join',{name:'Expiry',room:'expiry'})).data;env.db.prepare('INSERT INTO campus_messages (room,player_id,name,kind,body,created_at) VALUES (?,?,?,?,?,?)').run('expiry',a.id,a.name,'text','Old message',Date.now()-90000000);assert.equal((await call('/api/state',position,a.token)).data.messages.length,0);const r=await worker.fetch(new Request('https://campus.test/api/join',{method:'POST',headers:{Origin:'https://other.test'},body:JSON.stringify({name:'Intruder',room:'qa'})}),env,ctx);assert.equal(r.status,403);await Promise.allSettled(pending);});
-test('students must approach a vehicle and only one can ride it at a time',async()=>{const a=(await call('/api/join',{name:'Rider A',room:'ride'})).data;const b=(await call('/api/join',{name:'Rider B',room:'ride'})).data;assert.equal((await call('/api/ride',{vehicle:'bike-0'},a.token)).r.status,400);for(const u of [a,b])await call('/api/state',{x:-84,z:55,yaw:0},u.token);assert.equal((await call('/api/ride',{vehicle:'bike-0'},a.token)).r.status,200);assert.equal((await call('/api/ride',{vehicle:'bike-0'},b.token)).r.status,409);const state=(await call('/api/state',position,b.token)).data;assert.equal(state.players.find(p=>p.id===a.id).vehicle,'bike-0');assert.equal((await call('/api/ride',{vehicle:null},a.token)).r.status,200);await call('/api/state',{x:-84,z:55,yaw:0},b.token);assert.equal((await call('/api/ride',{vehicle:'bike-0'},b.token)).r.status,200);});
-test('one student sits while a nearby classmate pushes; standing releases the swing',async()=>{const a=(await call('/api/join',{name:'Swing sitter',room:'swing'})).data;const b=(await call('/api/join',{name:'Swing helper',room:'swing'})).data;assert.equal((await call('/api/swing',{action:'sit',swing:'cs'},a.token)).r.status,400);for(const p of [a,b])await call('/api/state',{x:8,z:-9,yaw:0},p.token);assert.equal((await call('/api/swing',{action:'sit',swing:'cs'},a.token)).r.status,200);assert.equal((await call('/api/swing',{action:'sit',swing:'cs'},b.token)).r.status,409);assert.equal((await call('/api/swing',{action:'push',swing:'cs'},a.token)).r.status,400);assert.equal((await call('/api/swing',{action:'push',swing:'cs'},b.token)).r.status,200);const state=(await call('/api/state',{x:8,z:-9,yaw:0},b.token)).data;const sitter=state.players.find(p=>p.id===a.id);assert.equal(sitter.activity,'swing-cs');assert(sitter.push_at>0);assert.equal((await call('/api/ride',{vehicle:'bike-1'},a.token)).r.status,400);await call('/api/swing',{action:'stand'},a.token);assert.equal((await call('/api/swing',{action:'sit',swing:'cs'},b.token)).r.status,200);});
-test('alumni join the same room with optional batch details',async()=>{const a=(await call('/api/join',{name:'Alumni Friend',room:'alumni',member_type:'alumni',batch:'2018',avatar_style:'braids'})).data;const b=(await call('/api/join',{name:'Current Student',room:'alumni',member_type:'student'})).data;const r=(await call('/api/state',position,b.token)).data;assert.equal(r.players.find(p=>p.id===a.id).member_type,'alumni');assert.equal(r.players.find(p=>p.id===a.id).batch,'2018');assert.equal(r.players.find(p=>p.id===a.id).avatar_style,'braids');assert.equal(r.players.length,2);});
-test('live-voice signals reach only their recipient in the same room and area',async()=>{const a=(await call('/api/join',{name:'Caller',room:'calls'})).data;const b=(await call('/api/join',{name:'Listener',room:'calls'})).data;const c=(await call('/api/join',{name:'Other room',room:'elsewhere'})).data;for(const p of [a,b,c])await call('/api/rtc/enable',{enabled:p===a?1:2,mode:'room'},p.token);assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{type:'offer',call:'qa-call',sdp:'v=0\r\n'}},a.token)).r.status,200);const inbox=(await call('/api/rtc/signals?since=0',undefined,b.token,{method:'GET'})).data;assert.equal(inbox.signals.length,1);assert.equal(inbox.signals[0].sender,a.id);assert.equal((await call('/api/rtc/signals?since=0',undefined,c.token,{method:'GET'})).data.signals.length,0);assert.equal((await call('/api/rtc/signal',{to:c.id,payload:{type:'offer',call:'x',sdp:'v=0'}},a.token)).r.status,409);await call('/api/state',{...position,area:'auditorium'},b.token);assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{type:'offer',call:'x',sdp:'v=0'}},a.token)).r.status,409);await call('/api/rtc/enable',{enabled:0},a.token);assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{type:'hangup',call:'qa-call'}},a.token)).r.status,403);});
-test('voice configuration issues temporary relay credentials without microphone access',async()=>{const p=(await call('/api/join',{name:'Connection test',room:'rtc-config'})).data;const r=(await call('/api/rtc/config',undefined,p.token,{method:'GET'})).data;assert(r.iceServers.some(s=>String(s.urls).includes('turn:')));assert(!JSON.stringify(r).includes('openrelayprojectsecret'));});
-test('anyone can host their own event, while the queue and ownership remain enforced',async()=>{
- const token=crypto.randomUUID()+crypto.randomUUID();
- const a=(await call('/api/join',{name:'New host',room:'events',wallet_token:token})).data;
- const b=(await call('/api/join',{name:'Another host',room:'events'})).data;
- const first=(await call('/api/events/request',{title:'Open reunion',club:'Friends',duration:30},a.token)).data;
- const second=(await call('/api/events/request',{title:'Music evening',club:'Music club',duration:45},b.token)).data;
- assert.equal(first.status,'approved');assert.equal(second.status,'approved');
- const list=(await call('/api/events',undefined,a.token,{method:'GET'})).data.events;
- assert.equal(list.find(e=>e.id===first.id).can_manage,true);assert.equal(list.find(e=>e.id===second.id).can_manage,false);assert(!JSON.stringify(list).includes('owner_wallet_id'));
- assert.equal((await call('/api/events/manage',{id:first.id,action:'start'},b.token)).r.status,403);
- assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},b.token)).r.status,400);
- assert.equal((await call('/api/events/manage',{id:first.id,action:'start'},a.token)).r.status,200);
- assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},b.token)).r.status,400);
- assert.equal((await call('/api/events/manage',{id:first.id,action:'end'},b.token)).r.status,403);
- await call('/api/leave',{},a.token);
- const returned=(await call('/api/join',{name:'Returning host',room:'events',wallet_token:token})).data;
- assert.equal((await call('/api/events/manage',{id:first.id,action:'end'},returned.token)).r.status,200);
- assert.equal((await call('/api/events/manage',{id:second.id,action:'start'},b.token)).r.status,200);
+import { localEnv } from '../scripts/local-env.mjs';
+const env = localEnv();
+const pending = [];
+const ctx = {
+  waitUntil(p) {
+    pending.push(p);
+  },
+};
+async function call(path, body, token, options = {}) {
+  const headers = {
+    Origin: 'https://campus.test',
+    ...(token ? { Authorization: 'Bearer ' + token } : {}),
+    ...(options.headers || {}),
+  };
+  if (body) headers['Content-Type'] = 'application/json';
+  const r = await worker.fetch(
+    new Request('https://campus.test' + path, {
+      method: options.method || 'POST',
+      headers,
+      body: options.blob || (body ? JSON.stringify(body) : undefined),
+    }),
+    env,
+    ctx,
+  );
+  const data = r.headers.get('Content-Type')?.includes('application/json')
+    ? await r.json()
+    : await r.arrayBuffer();
+  return { r, data };
+}
+const position = { x: -67, z: 59, yaw: 0, since: 0 };
+test('different students in one room see each other and exchange text', async () => {
+  const a = (await call('/api/join', { name: 'Student One', room: 'qa' })).data;
+  const b = (await call('/api/join', { name: 'Student Two', room: 'qa' })).data;
+  const other = (await call('/api/join', { name: 'Elsewhere', room: 'other' })).data;
+  const state = await call('/api/state', position, a.token);
+  assert.equal(state.data.players.length, 2);
+  assert(!JSON.stringify(state.data).includes(a.token));
+  assert(!JSON.stringify(state.data).includes('token_hash'));
+  await call('/api/message', { text: 'Meet at the fountain', kind: 'text' }, a.token);
+  const read = await call('/api/state', position, b.token);
+  assert.equal(read.data.messages[0].body, 'Meet at the fountain');
+  assert.equal(read.data.messages[0].name, 'Student One');
+  const isolated = await call('/api/state', position, other.token);
+  assert.equal(isolated.data.messages.length, 0);
+});
+test('position and wave updates are shared without allowing session impersonation', async () => {
+  const a = (await call('/api/join', { name: 'Walker', room: 'walk' })).data;
+  const b = (await call('/api/join', { name: 'Friend', room: 'walk' })).data;
+  await call('/api/state', { x: -50, z: 5, yaw: 1, wave: true }, a.token);
+  const view = (await call('/api/state', position, b.token)).data;
+  const peer = view.players.find((p) => p.id === a.id);
+  assert.equal(peer.x, -50);
+  assert(peer.emote_at > 0);
+  assert.equal((await call('/api/state', position, 'fake')).r.status, 401);
+  assert.equal((await call('/api/state', { x: 900, z: 0, yaw: 0 }, a.token)).r.status, 400);
+});
+test('voice media can be sent and fetched only by students in the same room', async () => {
+  const a = (await call('/api/join', { name: 'Speaker', room: 'voice' })).data;
+  const b = (await call('/api/join', { name: 'Listener', room: 'voice' })).data;
+  const c = (await call('/api/join', { name: 'Outside', room: 'outside' })).data;
+  const voice = new Uint8Array(200).fill(5);
+  assert.equal(
+    (
+      await call('/api/voice', undefined, a.token, {
+        blob: voice,
+        headers: { 'Content-Type': 'audio/webm' },
+      })
+    ).r.status,
+    200,
+  );
+  const list = (await call('/api/state', position, b.token)).data.messages;
+  assert.equal(list[0].kind, 'voice');
+  const id = list[0].media_id;
+  assert.equal(
+    (await call('/api/media/' + id, undefined, b.token, { method: 'GET' })).data.byteLength,
+    200,
+  );
+  assert.equal(
+    (await call('/api/media/' + id, undefined, c.token, { method: 'GET' })).r.status,
+    404,
+  );
+  assert.equal(
+    (
+      await call('/api/voice', undefined, b.token, {
+        blob: new Uint8Array(524289),
+        headers: { 'Content-Type': 'audio/webm' },
+      })
+    ).r.status,
+    413,
+  );
+});
+test('gathering invitations carry a shared position, and leaving removes presence', async () => {
+  const a = (await call('/api/join', { name: 'Photographer', room: 'photo' })).data;
+  const b = (await call('/api/join', { name: 'Classmate', room: 'photo' })).data;
+  await call('/api/message', { kind: 'gather', text: 'Group photo here', x: -80, z: 40 }, a.token);
+  const state = (await call('/api/state', position, b.token)).data;
+  assert.equal(state.messages[0].kind, 'gather');
+  assert.equal(state.messages[0].x, -80);
+  await call('/api/leave', {}, a.token);
+  assert.equal((await call('/api/state', position, b.token)).data.players.length, 1);
+});
+test('old room messages are not returned and requests from other origins are rejected', async () => {
+  const a = (await call('/api/join', { name: 'Expiry', room: 'expiry' })).data;
+  env.db
+    .prepare(
+      'INSERT INTO campus_messages (room,player_id,name,kind,body,created_at) VALUES (?,?,?,?,?,?)',
+    )
+    .run('expiry', a.id, a.name, 'text', 'Old message', Date.now() - 90000000);
+  assert.equal((await call('/api/state', position, a.token)).data.messages.length, 0);
+  const r = await worker.fetch(
+    new Request('https://campus.test/api/join', {
+      method: 'POST',
+      headers: { Origin: 'https://other.test' },
+      body: JSON.stringify({ name: 'Intruder', room: 'qa' }),
+    }),
+    env,
+    ctx,
+  );
+  assert.equal(r.status, 403);
+  await Promise.allSettled(pending);
+});
+test('students must approach a vehicle and only one can ride it at a time', async () => {
+  const a = (await call('/api/join', { name: 'Rider A', room: 'ride' })).data;
+  const b = (await call('/api/join', { name: 'Rider B', room: 'ride' })).data;
+  assert.equal((await call('/api/ride', { vehicle: 'bike-0' }, a.token)).r.status, 400);
+  for (const u of [a, b]) await call('/api/state', { x: -84, z: 55, yaw: 0 }, u.token);
+  assert.equal((await call('/api/ride', { vehicle: 'bike-0' }, a.token)).r.status, 200);
+  assert.equal((await call('/api/ride', { vehicle: 'bike-0' }, b.token)).r.status, 409);
+  const state = (await call('/api/state', position, b.token)).data;
+  assert.equal(state.players.find((p) => p.id === a.id).vehicle, 'bike-0');
+  assert.equal((await call('/api/ride', { vehicle: null }, a.token)).r.status, 200);
+  await call('/api/state', { x: -84, z: 55, yaw: 0 }, b.token);
+  assert.equal((await call('/api/ride', { vehicle: 'bike-0' }, b.token)).r.status, 200);
+});
+test('one student sits while a nearby classmate pushes; standing releases the swing', async () => {
+  const a = (await call('/api/join', { name: 'Swing sitter', room: 'swing' })).data;
+  const b = (await call('/api/join', { name: 'Swing helper', room: 'swing' })).data;
+  assert.equal((await call('/api/swing', { action: 'sit', swing: 'cs' }, a.token)).r.status, 400);
+  for (const p of [a, b]) await call('/api/state', { x: 8, z: -9, yaw: 0 }, p.token);
+  assert.equal((await call('/api/swing', { action: 'sit', swing: 'cs' }, a.token)).r.status, 200);
+  assert.equal((await call('/api/swing', { action: 'sit', swing: 'cs' }, b.token)).r.status, 409);
+  assert.equal((await call('/api/swing', { action: 'push', swing: 'cs' }, a.token)).r.status, 400);
+  assert.equal((await call('/api/swing', { action: 'push', swing: 'cs' }, b.token)).r.status, 200);
+  const state = (await call('/api/state', { x: 8, z: -9, yaw: 0 }, b.token)).data;
+  const sitter = state.players.find((p) => p.id === a.id);
+  assert.equal(sitter.activity, 'swing-cs');
+  assert(sitter.push_at > 0);
+  assert.equal((await call('/api/ride', { vehicle: 'bike-1' }, a.token)).r.status, 400);
+  await call('/api/swing', { action: 'stand' }, a.token);
+  assert.equal((await call('/api/swing', { action: 'sit', swing: 'cs' }, b.token)).r.status, 200);
+});
+test('alumni join the same room with optional batch details', async () => {
+  const a = (
+    await call('/api/join', {
+      name: 'Alumni Friend',
+      room: 'alumni',
+      member_type: 'alumni',
+      batch: '2018',
+      avatar_style: 'braids',
+    })
+  ).data;
+  const b = (
+    await call('/api/join', { name: 'Current Student', room: 'alumni', member_type: 'student' })
+  ).data;
+  const r = (await call('/api/state', position, b.token)).data;
+  assert.equal(r.players.find((p) => p.id === a.id).member_type, 'alumni');
+  assert.equal(r.players.find((p) => p.id === a.id).batch, '2018');
+  assert.equal(r.players.find((p) => p.id === a.id).avatar_style, 'braids');
+  assert.equal(r.players.length, 2);
+});
+test('live-voice signals reach only their recipient in the same room and area', async () => {
+  const a = (await call('/api/join', { name: 'Caller', room: 'calls' })).data;
+  const b = (await call('/api/join', { name: 'Listener', room: 'calls' })).data;
+  const c = (await call('/api/join', { name: 'Other room', room: 'elsewhere' })).data;
+  for (const p of [a, b, c])
+    await call('/api/rtc/enable', { enabled: p === a ? 1 : 2, mode: 'room' }, p.token);
+  assert.equal(
+    (
+      await call(
+        '/api/rtc/signal',
+        { to: b.id, payload: { type: 'offer', call: 'qa-call', sdp: 'v=0\r\n' } },
+        a.token,
+      )
+    ).r.status,
+    200,
+  );
+  const inbox = (await call('/api/rtc/signals?since=0', undefined, b.token, { method: 'GET' }))
+    .data;
+  assert.equal(inbox.signals.length, 1);
+  assert.equal(inbox.signals[0].sender, a.id);
+  assert.equal(
+    (await call('/api/rtc/signals?since=0', undefined, c.token, { method: 'GET' })).data.signals
+      .length,
+    0,
+  );
+  assert.equal(
+    (
+      await call(
+        '/api/rtc/signal',
+        { to: c.id, payload: { type: 'offer', call: 'x', sdp: 'v=0' } },
+        a.token,
+      )
+    ).r.status,
+    409,
+  );
+  await call('/api/state', { ...position, area: 'auditorium' }, b.token);
+  assert.equal(
+    (
+      await call(
+        '/api/rtc/signal',
+        { to: b.id, payload: { type: 'offer', call: 'x', sdp: 'v=0' } },
+        a.token,
+      )
+    ).r.status,
+    409,
+  );
+  await call('/api/rtc/enable', { enabled: 0 }, a.token);
+  assert.equal(
+    (
+      await call(
+        '/api/rtc/signal',
+        { to: b.id, payload: { type: 'hangup', call: 'qa-call' } },
+        a.token,
+      )
+    ).r.status,
+    403,
+  );
+});
+test('voice configuration issues temporary relay credentials without microphone access', async () => {
+  const p = (await call('/api/join', { name: 'Connection test', room: 'rtc-config' })).data;
+  const r = (await call('/api/rtc/config', undefined, p.token, { method: 'GET' })).data;
+  assert(r.iceServers.some((s) => String(s.urls).includes('turn:')));
+  assert(!JSON.stringify(r).includes('openrelayprojectsecret'));
+});
+test('anyone can host their own event, while the queue and ownership remain enforced', async () => {
+  const token = crypto.randomUUID() + crypto.randomUUID();
+  const a = (await call('/api/join', { name: 'New host', room: 'events', wallet_token: token }))
+    .data;
+  const b = (await call('/api/join', { name: 'Another host', room: 'events' })).data;
+  const first = (
+    await call(
+      '/api/events/request',
+      { title: 'Open reunion', club: 'Friends', duration: 30 },
+      a.token,
+    )
+  ).data;
+  const second = (
+    await call(
+      '/api/events/request',
+      { title: 'Music evening', club: 'Music club', duration: 45 },
+      b.token,
+    )
+  ).data;
+  assert.equal(first.status, 'approved');
+  assert.equal(second.status, 'approved');
+  const list = (await call('/api/events', undefined, a.token, { method: 'GET' })).data.events;
+  assert.equal(list.find((e) => e.id === first.id).can_manage, true);
+  assert.equal(list.find((e) => e.id === second.id).can_manage, false);
+  assert(!JSON.stringify(list).includes('owner_wallet_id'));
+  assert.equal(
+    (await call('/api/events/manage', { id: first.id, action: 'start' }, b.token)).r.status,
+    403,
+  );
+  assert.equal(
+    (await call('/api/events/manage', { id: second.id, action: 'start' }, b.token)).r.status,
+    400,
+  );
+  assert.equal(
+    (await call('/api/events/manage', { id: first.id, action: 'start' }, a.token)).r.status,
+    200,
+  );
+  assert.equal(
+    (await call('/api/events/manage', { id: second.id, action: 'start' }, b.token)).r.status,
+    400,
+  );
+  assert.equal(
+    (await call('/api/events/manage', { id: first.id, action: 'end' }, b.token)).r.status,
+    403,
+  );
+  await call('/api/leave', {}, a.token);
+  const returned = (
+    await call('/api/join', { name: 'Returning host', room: 'events', wallet_token: token })
+  ).data;
+  assert.equal(
+    (await call('/api/events/manage', { id: first.id, action: 'end' }, returned.token)).r.status,
+    200,
+  );
+  assert.equal(
+    (await call('/api/events/manage', { id: second.id, action: 'start' }, b.token)).r.status,
+    200,
+  );
 });
 
-const walletToken='aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'+'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
-test('fruit rewards are earned once daily near the matching tree, and food spends a persistent wallet',async()=>{
- const a=(await call('/api/join',{name:'Fruit collector',room:'economy',wallet_token:walletToken})).data;
- assert.equal((await call('/api/life',undefined,a.token,{method:'GET'})).data.points,20);
- assert.equal((await call('/api/life/fruit',{tree:'mango'},a.token)).r.status,400);
- await call('/api/state',{x:28,z:-13,yaw:0},a.token);
- assert.equal((await call('/api/life/fruit',{tree:'mango'},a.token)).data.points,30);
- assert.equal((await call('/api/life/fruit',{tree:'mango'},a.token)).r.status,409);
- assert.equal((await call('/api/life/buy',{shop:'canteen',item:'biriyani'},a.token)).r.status,400);
- await call('/api/state',{x:33+campusLayout.canteen.dx,z:28+campusLayout.canteen.dz,yaw:0},a.token);
- assert.equal((await call('/api/life/buy',{shop:'canteen',item:'biriyani',price:0},a.token)).data.points,12);
- assert.equal((await call('/api/life/buy',{shop:'canteen',item:'biriyani'},a.token)).r.status,409);
- const b=(await call('/api/join',{name:'Returned collector',room:'other-economy',wallet_token:walletToken})).data;
- const pocket=(await call('/api/life',undefined,b.token,{method:'GET'})).data;
- assert.equal(pocket.points,12);assert.equal(pocket.purchases[0].name,'Chicken biriyani');assert.equal(pocket.trees.find(t=>t.id==='mango').ready,false);
- assert(!JSON.stringify((await call('/api/state',position,b.token)).data).includes(walletToken));
+const walletToken = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa' + 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
+test('fruit rewards are earned once daily near the matching tree, and food spends a persistent wallet', async () => {
+  const a = (
+    await call('/api/join', { name: 'Fruit collector', room: 'economy', wallet_token: walletToken })
+  ).data;
+  assert.equal((await call('/api/life', undefined, a.token, { method: 'GET' })).data.points, 20);
+  assert.equal((await call('/api/life/fruit', { tree: 'mango' }, a.token)).r.status, 400);
+  await call('/api/state', { x: 28, z: -13, yaw: 0 }, a.token);
+  assert.equal((await call('/api/life/fruit', { tree: 'mango' }, a.token)).data.points, 30);
+  assert.equal((await call('/api/life/fruit', { tree: 'mango' }, a.token)).r.status, 409);
+  assert.equal(
+    (await call('/api/life/buy', { shop: 'canteen', item: 'biriyani' }, a.token)).r.status,
+    400,
+  );
+  await call(
+    '/api/state',
+    { x: 33 + campusLayout.canteen.dx, z: 28 + campusLayout.canteen.dz, yaw: 0 },
+    a.token,
+  );
+  assert.equal(
+    (await call('/api/life/buy', { shop: 'canteen', item: 'biriyani', price: 0 }, a.token)).data
+      .points,
+    12,
+  );
+  assert.equal(
+    (await call('/api/life/buy', { shop: 'canteen', item: 'biriyani' }, a.token)).r.status,
+    409,
+  );
+  const b = (
+    await call('/api/join', {
+      name: 'Returned collector',
+      room: 'other-economy',
+      wallet_token: walletToken,
+    })
+  ).data;
+  const pocket = (await call('/api/life', undefined, b.token, { method: 'GET' })).data;
+  assert.equal(pocket.points, 12);
+  assert.equal(pocket.purchases[0].name, 'Chicken biriyani');
+  assert.equal(pocket.trees.find((t) => t.id === 'mango').ready, false);
+  assert(!JSON.stringify((await call('/api/state', position, b.token)).data).includes(walletToken));
 });
-test('a minute of actual live-event attendance earns one reward, with no reward outside the hall',async()=>{
- const a=(await call('/api/join',{name:'Event attendee',room:'event-reward'})).data;
- const id=crypto.randomUUID(),now=Date.now();
- env.db.prepare("INSERT INTO campus_events (id,room,owner_id,owner_name,club,title,description,duration,status,created_at,started_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,'event-reward',a.id,a.name,'Alumni','A reunion','',30,'live',now,now);
- assert.equal((await call('/api/life/attend',{event:id},a.token)).r.status,400);
- await call('/api/state',{x:0,z:12,yaw:0,area:'auditorium'},a.token);
- const initial=(await call('/api/life/attend',{event:id,seconds:99999},a.token)).data;assert.equal(initial.rewarded,false);
- const wid=env.db.prepare('SELECT wallet_id FROM campus_players WHERE id = ?').get(a.id).wallet_id;
- env.db.prepare('UPDATE campus_attendance SET attended_ms = 59000, last_seen = ? WHERE wallet_id = ? AND event_id = ?').run(Date.now()-2000,wid,id);
- const earned=(await call('/api/life/attend',{event:id},a.token)).data;assert.equal(earned.earned,25);assert.equal(earned.points,45);
- const repeat=(await call('/api/life/attend',{event:id},a.token)).data;assert.equal(repeat.earned,0);assert.equal(repeat.points,45);
-});
-
-test('shared seats enforce proximity, room ownership, seated position and release',async()=>{
- const a=(await call('/api/join',{name:'Sitter A',room:'seats'})).data;
- const b=(await call('/api/join',{name:'Sitter B',room:'seats'})).data;
- const c=(await call('/api/join',{name:'Other room sitter',room:'other-seats'})).data;
- assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},a.token)).r.status,400);
- for(const p of [a,b,c])await call('/api/state',{x:-6,z:10.5,yaw:0,area:'auditorium'},p.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},a.token)).r.status,200);
- assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},b.token)).r.status,409);
- assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},c.token)).r.status,200);
- const state=(await call('/api/state',{x:0,z:19,yaw:0,area:'auditorium'},a.token)).data;
- const self=state.players.find(p=>p.id===a.id);assert.equal(self.x,-6);assert.equal(self.z,9);assert.equal(self.yaw,Math.PI);assert.equal(self.activity,'seat-hall-5-2');
- assert.equal((await call('/api/swing',{action:'stand'},a.token)).r.status,400);
- const stand=(await call('/api/seat',{action:'stand'},a.token)).data;assert.equal(stand.x,-6);assert.equal(stand.z,10.5);
- assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},b.token)).r.status,200);
- await call('/api/leave',{},b.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'hall-5-2'},a.token)).r.status,200);
- await call('/api/state',{x:-58,z:13,yaw:0,area:'campus'},a.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'bench-5-1'},a.token)).r.status,200);
- await call('/api/seat',{action:'stand'},a.token);
- await call('/api/state',{x:28.5+campusLayout.canteen.dx,z:27.7+campusLayout.canteen.dz,yaw:0},a.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},a.token)).r.status,200);
- assert.equal((await call('/api/life/buy',{shop:'canteen',item:'meals'},a.token)).data.points,8);
-});
-
-test('library seating remains open while each prayer hall enforces the declared prayer space',async()=>{
- const a=(await call('/api/join',{name:'Men visitor',room:'interiors',prayer_space:'men'})).data;
- const b=(await call('/api/join',{name:'Second men visitor',room:'interiors',prayer_space:'men'})).data;
- const c=(await call('/api/join',{name:'Women visitor',room:'interiors',prayer_space:'women'})).data;
- const unknown=(await call('/api/join',{name:'Old client',room:'interiors'})).data;
- assert.equal(a.prayer_space,'men');assert.equal(c.prayer_space,'women');
- for(const p of [a,c])assert.equal((await call('/api/state',{x:-5.9,z:-1.2,yaw:0,area:'library'},p.token)).r.status,200);
- assert.equal((await call('/api/seat',{action:'sit',seat:'library-0-0-1-0'},a.token)).r.status,200);
- await call('/api/seat',{action:'stand'},a.token);
- const deniedWoman=await call('/api/state',{x:0,z:5,yaw:0,area:'masjid'},c.token);assert.equal(deniedWoman.r.status,403);assert.equal(deniedWoman.data.error,'This is the men’s prayer space.');
- const deniedMan=await call('/api/state',{x:0,z:5,yaw:0,area:'women-masjid'},a.token);assert.equal(deniedMan.r.status,403);assert.equal(deniedMan.data.error,'This is the women’s prayer space.');
- assert.equal((await call('/api/state',{x:0,z:5,yaw:0,area:'masjid'},unknown.token)).r.status,403);
- for(const p of [a,b])await call('/api/state',{x:0,z:5,yaw:0,area:'masjid'},p.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},a.token)).r.status,200);
- assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,409);
- await call('/api/state',{x:0,z:5,yaw:0,area:'women-masjid'},c.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-women-masjid-2-1'},c.token)).r.status,200);
- await call('/api/seat',{action:'stand'},a.token);assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-women-masjid-2-1'},a.token)).r.status,403);
- const state=(await call('/api/state',{x:9,z:9,yaw:0,area:'women-masjid'},c.token)).data.players;
- assert.equal(state.find(p=>p.id===c.id).z,4);assert.equal(state.find(p=>p.id===a.id).area,'masjid');assert(!JSON.stringify(state).includes('prayer_space'));
- await call('/api/state',{x:-39,z:64,yaw:0,area:'campus'},a.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'prayer-masjid-2-1'},b.token)).r.status,200);
- await call('/api/seat',{action:'stand'},b.token);
+test('a minute of actual live-event attendance earns one reward, with no reward outside the hall', async () => {
+  const a = (await call('/api/join', { name: 'Event attendee', room: 'event-reward' })).data;
+  const id = crypto.randomUUID(),
+    now = Date.now();
+  env.db
+    .prepare(
+      'INSERT INTO campus_events (id,room,owner_id,owner_name,club,title,description,duration,status,created_at,started_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+    )
+    .run(id, 'event-reward', a.id, a.name, 'Alumni', 'A reunion', '', 30, 'live', now, now);
+  assert.equal((await call('/api/life/attend', { event: id }, a.token)).r.status, 400);
+  await call('/api/state', { x: 0, z: 12, yaw: 0, area: 'auditorium' }, a.token);
+  const initial = (await call('/api/life/attend', { event: id, seconds: 99999 }, a.token)).data;
+  assert.equal(initial.rewarded, false);
+  const wid = env.db
+    .prepare('SELECT wallet_id FROM campus_players WHERE id = ?')
+    .get(a.id).wallet_id;
+  env.db
+    .prepare(
+      'UPDATE campus_attendance SET attended_ms = 59000, last_seen = ? WHERE wallet_id = ? AND event_id = ?',
+    )
+    .run(Date.now() - 2000, wid, id);
+  const earned = (await call('/api/life/attend', { event: id }, a.token)).data;
+  assert.equal(earned.earned, 25);
+  assert.equal(earned.points, 45);
+  const repeat = (await call('/api/life/attend', { event: id }, a.token)).data;
+  assert.equal(repeat.earned, 0);
+  assert.equal(repeat.points, 45);
 });
 
-test('late ICE signals are validated and delivered only to their selected peer',async()=>{
- const a=(await call('/api/join',{name:'ICE sender',room:'late-ice'})).data,b=(await call('/api/join',{name:'ICE receiver',room:'late-ice'})).data,c=(await call('/api/join',{name:'Outside',room:'late-else'})).data;
- for(const p of [a,b,c])await call('/api/rtc/enable',{enabled:1,mode:'room'},p.token);
- const payload={type:'ice',call:'actual-call',candidate:{candidate:'candidate:1 1 udp 2122260223 192.0.2.1 5000 typ host',sdpMid:'0',sdpMLineIndex:0}};
- assert.equal((await call('/api/rtc/signal',{to:b.id,payload},a.token)).r.status,200);
- const signals=(await call('/api/rtc/signals?since=0',undefined,b.token,{method:'GET'})).data.signals;assert.equal(signals.length,1);assert.deepEqual(JSON.parse(signals[0].payload),payload);
- assert.equal((await call('/api/rtc/signal',{to:c.id,payload},a.token)).r.status,409);
- assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{...payload,candidate:{candidate:'x'.repeat(3001)}}},a.token)).r.status,400);
- assert.equal((await call('/api/rtc/signal',{to:b.id,payload:{...payload,candidate:{candidate:'candidate',sdpMLineIndex:-1}}},a.token)).r.status,400);
-});
-test('dedicated relay configuration is validated, and service secrets stay server-side',async()=>{
- const p=(await call('/api/join',{name:'Relay setup',room:'relay-setup'})).data;
- env.VOICE_ICE_SERVERS='invalid-json';assert.equal((await call('/api/rtc/config',undefined,p.token,{method:'GET'})).r.status,503);delete env.VOICE_ICE_SERVERS;
- const original=globalThis.fetch;let request;
- env.CLOUDFLARE_TURN_KEY_ID='test-key-id-123';env.CLOUDFLARE_TURN_API_TOKEN='private-test-token';
- globalThis.fetch=async(url,options)=>{request={url,options};return Response.json({iceServers:[{urls:'turn:relay.example:3478',username:'temporary-user',credential:'temporary-password'}]},{status:201});};
- try{const r=await call('/api/rtc/config',undefined,p.token,{method:'GET'});assert.equal(r.r.status,200);assert.equal(r.data.relay,'dedicated');assert(!JSON.stringify(r.data).includes('private-test-token'));assert.equal(request.options.headers.Authorization,'Bearer private-test-token');assert.equal(JSON.parse(request.options.body).ttl,3600);assert(r.data.expiresAt>Date.now());}finally{globalThis.fetch=original;delete env.CLOUDFLARE_TURN_KEY_ID;delete env.CLOUDFLARE_TURN_API_TOKEN;}
+test('shared seats enforce proximity, room ownership, seated position and release', async () => {
+  const a = (await call('/api/join', { name: 'Sitter A', room: 'seats' })).data;
+  const b = (await call('/api/join', { name: 'Sitter B', room: 'seats' })).data;
+  const c = (await call('/api/join', { name: 'Other room sitter', room: 'other-seats' })).data;
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'hall-5-2' }, a.token)).r.status,
+    400,
+  );
+  for (const p of [a, b, c])
+    await call('/api/state', { x: -6, z: 10.5, yaw: 0, area: 'auditorium' }, p.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'hall-5-2' }, a.token)).r.status,
+    200,
+  );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'hall-5-2' }, b.token)).r.status,
+    409,
+  );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'hall-5-2' }, c.token)).r.status,
+    200,
+  );
+  const state = (await call('/api/state', { x: 0, z: 19, yaw: 0, area: 'auditorium' }, a.token))
+    .data;
+  const self = state.players.find((p) => p.id === a.id);
+  assert.equal(self.x, -6);
+  assert.equal(self.z, 9);
+  assert.equal(self.yaw, Math.PI);
+  assert.equal(self.activity, 'seat-hall-5-2');
+  assert.equal((await call('/api/swing', { action: 'stand' }, a.token)).r.status, 400);
+  const stand = (await call('/api/seat', { action: 'stand' }, a.token)).data;
+  assert.equal(stand.x, -6);
+  assert.equal(stand.z, 10.5);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'hall-5-2' }, b.token)).r.status,
+    200,
+  );
+  await call('/api/leave', {}, b.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'hall-5-2' }, a.token)).r.status,
+    200,
+  );
+  await call('/api/state', { x: -58, z: 13, yaw: 0, area: 'campus' }, a.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'bench-5-1' }, a.token)).r.status,
+    200,
+  );
+  await call('/api/seat', { action: 'stand' }, a.token);
+  await call(
+    '/api/state',
+    { x: 28.5 + campusLayout.canteen.dx, z: 27.7 + campusLayout.canteen.dz, yaw: 0 },
+    a.token,
+  );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'canteen-0-0-1-1' }, a.token)).r.status,
+    200,
+  );
+  assert.equal(
+    (await call('/api/life/buy', { shop: 'canteen', item: 'meals' }, a.token)).data.points,
+    8,
+  );
 });
 
-test('canteen actions follow the relocated building rather than its former footprint',async()=>{
- const p=(await call('/api/join',{name:'Rear canteen visitor',room:'rear-canteen'})).data;
- await call('/api/state',{x:33,z:28,yaw:0},p.token);
- assert.equal((await call('/api/life/buy',{shop:'canteen',item:'lime'},p.token)).r.status,400);
- assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},p.token)).r.status,400);
- await call('/api/state',{x:28.5+campusLayout.canteen.dx,z:27.7+campusLayout.canteen.dz,yaw:0},p.token);
- assert.equal((await call('/api/seat',{action:'sit',seat:'canteen-0-0-1-1'},p.token)).r.status,200);
- assert.equal((await call('/api/life/buy',{shop:'canteen',item:'lime'},p.token)).data.points,15);
+test('library seating remains open while each prayer hall enforces the declared prayer space', async () => {
+  const a = (
+    await call('/api/join', { name: 'Men visitor', room: 'interiors', prayer_space: 'men' })
+  ).data;
+  const b = (
+    await call('/api/join', { name: 'Second men visitor', room: 'interiors', prayer_space: 'men' })
+  ).data;
+  const c = (
+    await call('/api/join', { name: 'Women visitor', room: 'interiors', prayer_space: 'women' })
+  ).data;
+  const unknown = (await call('/api/join', { name: 'Old client', room: 'interiors' })).data;
+  assert.equal(a.prayer_space, 'men');
+  assert.equal(c.prayer_space, 'women');
+  for (const p of [a, c])
+    assert.equal(
+      (await call('/api/state', { x: -5.9, z: -1.2, yaw: 0, area: 'library' }, p.token)).r.status,
+      200,
+    );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'library-0-0-1-0' }, a.token)).r.status,
+    200,
+  );
+  await call('/api/seat', { action: 'stand' }, a.token);
+  const deniedWoman = await call('/api/state', { x: 0, z: 5, yaw: 0, area: 'masjid' }, c.token);
+  assert.equal(deniedWoman.r.status, 403);
+  assert.equal(deniedWoman.data.error, 'This is the men’s prayer space.');
+  const deniedMan = await call('/api/state', { x: 0, z: 5, yaw: 0, area: 'women-masjid' }, a.token);
+  assert.equal(deniedMan.r.status, 403);
+  assert.equal(deniedMan.data.error, 'This is the women’s prayer space.');
+  assert.equal(
+    (await call('/api/state', { x: 0, z: 5, yaw: 0, area: 'masjid' }, unknown.token)).r.status,
+    403,
+  );
+  for (const p of [a, b]) await call('/api/state', { x: 0, z: 5, yaw: 0, area: 'masjid' }, p.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'prayer-masjid-2-1' }, a.token)).r.status,
+    200,
+  );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'prayer-masjid-2-1' }, b.token)).r.status,
+    409,
+  );
+  await call('/api/state', { x: 0, z: 5, yaw: 0, area: 'women-masjid' }, c.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'prayer-women-masjid-2-1' }, c.token)).r.status,
+    200,
+  );
+  await call('/api/seat', { action: 'stand' }, a.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'prayer-women-masjid-2-1' }, a.token)).r.status,
+    403,
+  );
+  const state = (await call('/api/state', { x: 9, z: 9, yaw: 0, area: 'women-masjid' }, c.token))
+    .data.players;
+  assert.equal(state.find((p) => p.id === c.id).z, 4);
+  assert.equal(state.find((p) => p.id === a.id).area, 'masjid');
+  assert(!JSON.stringify(state).includes('prayer_space'));
+  await call('/api/state', { x: -39, z: 64, yaw: 0, area: 'campus' }, a.token);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'prayer-masjid-2-1' }, b.token)).r.status,
+    200,
+  );
+  await call('/api/seat', { action: 'stand' }, b.token);
 });
 
-test('all attire choices survive joining and are visible to friends independently of prayer space',async()=>{
- const members=[];
- for(const [style,prayer]of [['trousers','women'],['braids','men'],['hijab','women']]){const joined=await call('/api/join',{name:'Attire '+style,room:'attire',avatar_style:style,prayer_space:prayer});assert.equal(joined.r.status,200);assert.equal(joined.data.avatar_style,style);assert.equal(joined.data.prayer_space,prayer);members.push(joined.data);}
- const view=(await call('/api/state',position,members[0].token)).data.players;
- for(const member of members){assert.equal(view.find(p=>p.id===member.id).avatar_style,member.avatar_style);assert(!Object.hasOwn(view.find(p=>p.id===member.id),'prayer_space'));}
- const fallback=(await call('/api/join',{name:'Fallback attire',room:'attire',avatar_style:'unknown'})).data;assert.equal(fallback.avatar_style,'trousers');
+test('late ICE signals are validated and delivered only to their selected peer', async () => {
+  const a = (await call('/api/join', { name: 'ICE sender', room: 'late-ice' })).data,
+    b = (await call('/api/join', { name: 'ICE receiver', room: 'late-ice' })).data,
+    c = (await call('/api/join', { name: 'Outside', room: 'late-else' })).data;
+  for (const p of [a, b, c]) await call('/api/rtc/enable', { enabled: 1, mode: 'room' }, p.token);
+  const payload = {
+    type: 'ice',
+    call: 'actual-call',
+    candidate: {
+      candidate: 'candidate:1 1 udp 2122260223 192.0.2.1 5000 typ host',
+      sdpMid: '0',
+      sdpMLineIndex: 0,
+    },
+  };
+  assert.equal((await call('/api/rtc/signal', { to: b.id, payload }, a.token)).r.status, 200);
+  const signals = (await call('/api/rtc/signals?since=0', undefined, b.token, { method: 'GET' }))
+    .data.signals;
+  assert.equal(signals.length, 1);
+  assert.deepEqual(JSON.parse(signals[0].payload), payload);
+  assert.equal((await call('/api/rtc/signal', { to: c.id, payload }, a.token)).r.status, 409);
+  assert.equal(
+    (
+      await call(
+        '/api/rtc/signal',
+        { to: b.id, payload: { ...payload, candidate: { candidate: 'x'.repeat(3001) } } },
+        a.token,
+      )
+    ).r.status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(
+        '/api/rtc/signal',
+        {
+          to: b.id,
+          payload: { ...payload, candidate: { candidate: 'candidate', sdpMLineIndex: -1 } },
+        },
+        a.token,
+      )
+    ).r.status,
+    400,
+  );
+});
+test('dedicated relay configuration is validated, and service secrets stay server-side', async () => {
+  const p = (await call('/api/join', { name: 'Relay setup', room: 'relay-setup' })).data;
+  env.VOICE_ICE_SERVERS = 'invalid-json';
+  assert.equal(
+    (await call('/api/rtc/config', undefined, p.token, { method: 'GET' })).r.status,
+    503,
+  );
+  delete env.VOICE_ICE_SERVERS;
+  const original = globalThis.fetch;
+  let request;
+  env.CLOUDFLARE_TURN_KEY_ID = 'test-key-id-123';
+  env.CLOUDFLARE_TURN_API_TOKEN = 'private-test-token';
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return Response.json(
+      {
+        iceServers: [
+          {
+            urls: 'turn:relay.example:3478',
+            username: 'temporary-user',
+            credential: 'temporary-password',
+          },
+        ],
+      },
+      { status: 201 },
+    );
+  };
+  try {
+    const r = await call('/api/rtc/config', undefined, p.token, { method: 'GET' });
+    assert.equal(r.r.status, 200);
+    assert.equal(r.data.relay, 'dedicated');
+    assert(!JSON.stringify(r.data).includes('private-test-token'));
+    assert.equal(request.options.headers.Authorization, 'Bearer private-test-token');
+    assert.equal(JSON.parse(request.options.body).ttl, 3600);
+    assert(r.data.expiresAt > Date.now());
+  } finally {
+    globalThis.fetch = original;
+    delete env.CLOUDFLARE_TURN_KEY_ID;
+    delete env.CLOUDFLARE_TURN_API_TOKEN;
+  }
 });
 
-test('all academic blocks and lift floors preserve distinct presence and exclusive classroom seats',async()=>{
- const a=(await call('/api/join',{name:'Classmate A',room:'academic',prayer_space:'women',avatar_style:'hijab'})).data;
- const b=(await call('/api/join',{name:'Classmate B',room:'academic',prayer_space:'men'})).data;
- for(const block of ['main','cse','eee','mech'])for(const floor of [0,1,2]){const area='block-'+block+'-'+floor;const state=await call('/api/state',{x:0,z:15,yaw:0,area},a.token);assert.equal(state.r.status,200);assert.equal(state.data.players.find(p=>p.id===a.id).area,area);}
- for(const p of [a,b])await call('/api/state',{x:-24.5,z:-10,yaw:Math.PI,area:'block-cse-0'},p.token);
- const seat='block-cse-0-class-0-0';assert.equal((await call('/api/seat',{action:'sit',seat},a.token)).r.status,200);assert.equal((await call('/api/seat',{action:'sit',seat},b.token)).r.status,409);
- await call('/api/state',{x:-24.5,z:-10,yaw:0,area:'block-cse-1'},b.token);assert.equal((await call('/api/seat',{action:'sit',seat},b.token)).r.status,400);assert.equal((await call('/api/seat',{action:'sit',seat:'block-cse-1-class-0-0'},b.token)).r.status,200);
- await call('/api/seat',{action:'stand'},a.token);await call('/api/seat',{action:'stand'},b.token);
+test('canteen actions follow the relocated building rather than its former footprint', async () => {
+  const p = (await call('/api/join', { name: 'Rear canteen visitor', room: 'rear-canteen' })).data;
+  await call('/api/state', { x: 33, z: 28, yaw: 0 }, p.token);
+  assert.equal(
+    (await call('/api/life/buy', { shop: 'canteen', item: 'lime' }, p.token)).r.status,
+    400,
+  );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'canteen-0-0-1-1' }, p.token)).r.status,
+    400,
+  );
+  await call(
+    '/api/state',
+    { x: 28.5 + campusLayout.canteen.dx, z: 27.7 + campusLayout.canteen.dz, yaw: 0 },
+    p.token,
+  );
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'canteen-0-0-1-1' }, p.token)).r.status,
+    200,
+  );
+  assert.equal(
+    (await call('/api/life/buy', { shop: 'canteen', item: 'lime' }, p.token)).data.points,
+    15,
+  );
 });
-test('live conversation signaling respects nearby campus people, classroom walls and full auditorium',async()=>{
- const a=(await call('/api/join',{name:'Speaker A',room:'acoustic'})).data,b=(await call('/api/join',{name:'Speaker B',room:'acoustic'})).data;
- for(const p of [a,b])await call('/api/rtc/enable',{enabled:1,mode:'nearby'},p.token);
- async function place(p,x,z,area){await call('/api/state',{x,z,yaw:0,area},p.token);}
- const signal=()=>call('/api/rtc/signal',{to:b.id,payload:{type:'offer',call:'voice-space',sdp:'v=0'}},a.token);
- await place(a,0,0,'campus');await place(b,30,0,'campus');assert.equal((await signal()).r.status,409);
- await place(b,10,0,'campus');assert.equal((await signal()).r.status,200);
- await place(a,-15,-8,'block-cse-0');await place(b,-12,-8,'block-cse-0');assert.equal((await signal()).r.status,409);
- await place(b,-18,-8,'block-cse-0');assert.equal((await signal()).r.status,200);
- await place(b,-18,-8,'block-cse-1');assert.equal((await signal()).r.status,409);
- await place(a,-14,18,'auditorium');await place(b,14,-20,'auditorium');assert.equal((await signal()).r.status,200);
+
+test('all attire choices survive joining and are visible to friends independently of prayer space', async () => {
+  const members = [];
+  for (const [style, prayer] of [
+    ['trousers', 'women'],
+    ['braids', 'men'],
+    ['hijab', 'women'],
+  ]) {
+    const joined = await call('/api/join', {
+      name: 'Attire ' + style,
+      room: 'attire',
+      avatar_style: style,
+      prayer_space: prayer,
+    });
+    assert.equal(joined.r.status, 200);
+    assert.equal(joined.data.avatar_style, style);
+    assert.equal(joined.data.prayer_space, prayer);
+    members.push(joined.data);
+  }
+  const view = (await call('/api/state', position, members[0].token)).data.players;
+  for (const member of members) {
+    assert.equal(view.find((p) => p.id === member.id).avatar_style, member.avatar_style);
+    assert(
+      !Object.hasOwn(
+        view.find((p) => p.id === member.id),
+        'prayer_space',
+      ),
+    );
+  }
+  const fallback = (
+    await call('/api/join', { name: 'Fallback attire', room: 'attire', avatar_style: 'unknown' })
+  ).data;
+  assert.equal(fallback.avatar_style, 'trousers');
+});
+
+test('all academic blocks and lift floors preserve distinct presence and exclusive classroom seats', async () => {
+  const a = (
+    await call('/api/join', {
+      name: 'Classmate A',
+      room: 'academic',
+      prayer_space: 'women',
+      avatar_style: 'hijab',
+    })
+  ).data;
+  const b = (
+    await call('/api/join', { name: 'Classmate B', room: 'academic', prayer_space: 'men' })
+  ).data;
+  for (const block of ['main', 'cse', 'eee', 'mech'])
+    for (const floor of [0, 1, 2]) {
+      const area = 'block-' + block + '-' + floor;
+      const state = await call('/api/state', { x: 0, z: 15, yaw: 0, area }, a.token);
+      assert.equal(state.r.status, 200);
+      assert.equal(state.data.players.find((p) => p.id === a.id).area, area);
+    }
+  for (const p of [a, b])
+    await call('/api/state', { x: -24.5, z: -10, yaw: Math.PI, area: 'block-cse-0' }, p.token);
+  const seat = 'block-cse-0-class-0-0';
+  assert.equal((await call('/api/seat', { action: 'sit', seat }, a.token)).r.status, 200);
+  assert.equal((await call('/api/seat', { action: 'sit', seat }, b.token)).r.status, 409);
+  await call('/api/state', { x: -24.5, z: -10, yaw: 0, area: 'block-cse-1' }, b.token);
+  assert.equal((await call('/api/seat', { action: 'sit', seat }, b.token)).r.status, 400);
+  assert.equal(
+    (await call('/api/seat', { action: 'sit', seat: 'block-cse-1-class-0-0' }, b.token)).r.status,
+    200,
+  );
+  await call('/api/seat', { action: 'stand' }, a.token);
+  await call('/api/seat', { action: 'stand' }, b.token);
+});
+test('live conversation signaling respects nearby campus people, classroom walls and full auditorium', async () => {
+  const a = (await call('/api/join', { name: 'Speaker A', room: 'acoustic' })).data,
+    b = (await call('/api/join', { name: 'Speaker B', room: 'acoustic' })).data;
+  for (const p of [a, b]) await call('/api/rtc/enable', { enabled: 1, mode: 'nearby' }, p.token);
+  async function place(p, x, z, area) {
+    await call('/api/state', { x, z, yaw: 0, area }, p.token);
+  }
+  const signal = () =>
+    call(
+      '/api/rtc/signal',
+      { to: b.id, payload: { type: 'offer', call: 'voice-space', sdp: 'v=0' } },
+      a.token,
+    );
+  await place(a, 0, 0, 'campus');
+  await place(b, 30, 0, 'campus');
+  assert.equal((await signal()).r.status, 409);
+  await place(b, 10, 0, 'campus');
+  assert.equal((await signal()).r.status, 200);
+  await place(a, -15, -8, 'block-cse-0');
+  await place(b, -12, -8, 'block-cse-0');
+  assert.equal((await signal()).r.status, 409);
+  await place(b, -18, -8, 'block-cse-0');
+  assert.equal((await signal()).r.status, 200);
+  await place(b, -18, -8, 'block-cse-1');
+  assert.equal((await signal()).r.status, 409);
+  await place(a, -14, 18, 'auditorium');
+  await place(b, 14, -20, 'auditorium');
+  assert.equal((await signal()).r.status, 200);
 });

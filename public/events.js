@@ -1,13 +1,133 @@
-export function createEvents({social,toast,auditorium,liveVoice,setDestination}){
-const $=id=>document.getElementById(id);let isOrganizer=false,events=[],timer=null;
-const button=document.createElement('button');button.id='eventsBtn';button.textContent='▣ Events';$('chatBtn').before(button);
-const dialog=document.createElement('dialog');dialog.id='eventsDialog';dialog.innerHTML='<button class="close" id="closeEvents" aria-label="Close events">×</button><span class="eyebrow">THE STAGE IS OURS</span><h2>Campus events</h2><p>Anyone can create and host an event. Events take turns in the queue. Start your event when it reaches the front, then end it when you finish.</p><button id="enterHall" class="primary">Enter auditorium ↗</button><div id="eventQueue"></div><details><summary>Organize an event</summary><form id="eventForm"><label>Event name<input name="title" maxlength="80" minlength="3" required placeholder="An evening with our alumni"></label><label>Club / group<input name="club" maxlength="60" minlength="2" required placeholder="Club or batch name"></label><label>About the event<textarea name="description" maxlength="500" rows="3" placeholder="What are you planning?"></textarea></label><label>Duration<select name="duration"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></label><button type="submit">Add my event to the queue</button><p id="eventResult" role="status"></p></form></details>';
-document.body.append(dialog);button.onclick=async()=>{dialog.showModal();await refresh();};$('closeEvents').onclick=()=>dialog.close();$('enterHall').onclick=()=>{dialog.close();auditorium.enter();};
-async function action(id,action){try{await social.request('/api/events/manage',{id,action});await refresh();}catch(e){toast(e.message);}}
-function render(){const list=$('eventQueue');list.replaceChildren();const visible=events.filter(e=>['live','approved','pending'].includes(e.status));if(!visible.length){const p=document.createElement('p');p.className='empty-state';p.textContent='No event on stage yet. Organize the first gathering.';list.append(p);}let rank=0;for(const e of visible){const card=document.createElement('article');card.className='event-card '+e.status;const tag=document.createElement('small');tag.textContent=e.status==='approved'?'QUEUED · '+(++rank):e.status.toUpperCase();const h=document.createElement('h3');h.textContent=e.title;const info=document.createElement('p');info.textContent=e.club+' · '+e.duration+' min · Hosted by '+e.owner_name;const desc=document.createElement('p');desc.textContent=e.description;card.append(tag,h,info,desc);const actions=document.createElement('div');const add=(title,kind)=>{const b=document.createElement('button');b.textContent=title;b.onclick=()=>action(e.id,kind);actions.append(b);};if(e.can_manage){if(e.status==='pending'){add('Approve','approve');add('Decline','reject');}if(e.status==='approved'){add('Start event','start');}if(e.status==='live')add('End event','end');}if(e.can_manage&&e.status!=='live')add('Cancel event','cancel');if(e.status==='live'){const b=document.createElement('button');b.textContent='Listen to event in auditorium';b.onclick=async()=>{dialog.close();if(auditorium.enter())await liveVoice.listenInAuditorium();};actions.append(b);}card.append(actions);list.append(card);}}
-async function refresh(){if(!social.isJoined())return;try{const r=await social.request('/api/events',undefined,{method:'GET'});events=r.events;isOrganizer=r.organizer;const current=events.find(e=>e.status==='live');auditorium.setEvent(current);button.textContent=current?'● Event live':'▣ Events';if(dialog.open)render();}catch(e){if(dialog.open)toast(e.message);}}
-$('eventForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,d=new FormData(form);const submit=form.querySelector('button');submit.disabled=true;try{await social.request('/api/events/request',{title:d.get('title'),club:d.get('club'),description:d.get('description'),duration:Number(d.get('duration'))});form.reset();$('eventResult').textContent='Your event is in the queue. You can start it when it reaches the front.';await refresh();}catch(err){$('eventResult').textContent=err.message;}finally{submit.disabled=false;}};
+export function createEvents({ social, toast, auditorium, liveVoice, setDestination }) {
+  const $ = (id) => document.getElementById(id);
+  let isOrganizer = false,
+    events = [],
+    timer = null;
+  const button = document.createElement('button');
+  button.id = 'eventsBtn';
+  button.textContent = '▣ Events';
+  $('chatBtn').before(button);
+  const dialog = document.createElement('dialog');
+  dialog.id = 'eventsDialog';
+  dialog.innerHTML =
+    '<button class="close" id="closeEvents" aria-label="Close events">×</button><span class="eyebrow">THE STAGE IS OURS</span><h2>Campus events</h2><p>Anyone can create and host an event. Events take turns in the queue. Start your event when it reaches the front, then end it when you finish.</p><button id="enterHall" class="primary">Enter auditorium ↗</button><div id="eventQueue"></div><details><summary>Organize an event</summary><form id="eventForm"><label>Event name<input name="title" maxlength="80" minlength="3" required placeholder="An evening with our alumni"></label><label>Club / group<input name="club" maxlength="60" minlength="2" required placeholder="Club or batch name"></label><label>About the event<textarea name="description" maxlength="500" rows="3" placeholder="What are you planning?"></textarea></label><label>Duration<select name="duration"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></label><button type="submit">Add my event to the queue</button><p id="eventResult" role="status"></p></form></details>';
+  document.body.append(dialog);
+  button.onclick = async () => {
+    dialog.showModal();
+    await refresh();
+  };
+  $('closeEvents').onclick = () => dialog.close();
+  $('enterHall').onclick = () => {
+    dialog.close();
+    auditorium.enter();
+  };
+  async function action(id, action) {
+    try {
+      await social.request('/api/events/manage', { id, action });
+      await refresh();
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+  function render() {
+    const list = $('eventQueue');
+    list.replaceChildren();
+    const visible = events.filter((e) => ['live', 'approved', 'pending'].includes(e.status));
+    if (!visible.length) {
+      const p = document.createElement('p');
+      p.className = 'empty-state';
+      p.textContent = 'No event on stage yet. Organize the first gathering.';
+      list.append(p);
+    }
+    let rank = 0;
+    for (const e of visible) {
+      const card = document.createElement('article');
+      card.className = 'event-card ' + e.status;
+      const tag = document.createElement('small');
+      tag.textContent = e.status === 'approved' ? 'QUEUED · ' + ++rank : e.status.toUpperCase();
+      const h = document.createElement('h3');
+      h.textContent = e.title;
+      const info = document.createElement('p');
+      info.textContent = e.club + ' · ' + e.duration + ' min · Hosted by ' + e.owner_name;
+      const desc = document.createElement('p');
+      desc.textContent = e.description;
+      card.append(tag, h, info, desc);
+      const actions = document.createElement('div');
+      const add = (title, kind) => {
+        const b = document.createElement('button');
+        b.textContent = title;
+        b.onclick = () => action(e.id, kind);
+        actions.append(b);
+      };
+      if (e.can_manage) {
+        if (e.status === 'pending') {
+          add('Approve', 'approve');
+          add('Decline', 'reject');
+        }
+        if (e.status === 'approved') {
+          add('Start event', 'start');
+        }
+        if (e.status === 'live') add('End event', 'end');
+      }
+      if (e.can_manage && e.status !== 'live') add('Cancel event', 'cancel');
+      if (e.status === 'live') {
+        const b = document.createElement('button');
+        b.textContent = 'Listen to event in auditorium';
+        b.onclick = async () => {
+          dialog.close();
+          if (auditorium.enter()) await liveVoice.listenInAuditorium();
+        };
+        actions.append(b);
+      }
+      card.append(actions);
+      list.append(card);
+    }
+  }
+  async function refresh() {
+    if (!social.isJoined()) return;
+    try {
+      const r = await social.request('/api/events', undefined, { method: 'GET' });
+      events = r.events;
+      isOrganizer = r.organizer;
+      const current = events.find((e) => e.status === 'live');
+      auditorium.setEvent(current);
+      button.textContent = current ? '● Event live' : '▣ Events';
+      if (dialog.open) render();
+    } catch (e) {
+      if (dialog.open) toast(e.message);
+    }
+  }
+  $('eventForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget,
+      d = new FormData(form);
+    const submit = form.querySelector('button');
+    submit.disabled = true;
+    try {
+      await social.request('/api/events/request', {
+        title: d.get('title'),
+        club: d.get('club'),
+        description: d.get('description'),
+        duration: Number(d.get('duration')),
+      });
+      form.reset();
+      $('eventResult').textContent =
+        'Your event is in the queue. You can start it when it reaches the front.';
+      await refresh();
+    } catch (err) {
+      $('eventResult').textContent = err.message;
+    } finally {
+      submit.disabled = false;
+    }
+  };
 
-let initialized=false;function update(){if(social.isJoined()&&!initialized){initialized=true;refresh();timer=setInterval(refresh,10000);}}
-return {update,refresh,currentEvent:()=>events.find(e=>e.status==='live')};
+  let initialized = false;
+  function update() {
+    if (social.isJoined() && !initialized) {
+      initialized = true;
+      refresh();
+      timer = setInterval(refresh, 10000);
+    }
+  }
+  return { update, refresh, currentEvent: () => events.find((e) => e.status === 'live') };
 }

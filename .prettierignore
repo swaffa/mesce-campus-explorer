@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/vendor/
+public/fonts/
+drizzle/meta/
+package-lock.json
+.openai/

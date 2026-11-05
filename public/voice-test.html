@@ -1,5 +1,94 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MESCE voice transport check</title><style>body{font:16px/1.6 system-ui;background:#f5efde;color:#254b3e;max-width:680px;padding:36px;margin:auto}button{padding:14px 20px;background:#315942;color:#fff;border:0;border-radius:10px;font:inherit;margin:10px 8px 10px 0}pre{white-space:pre-wrap;background:#e3e6d1;padding:20px;border-radius:10px}</style><h1>MESCE voice transport check</h1><p>This sends an original, silent test tone between two browser peers. It never asks for your microphone or records you. Each run uses an isolated test room and removes its test presence afterward.</p><button id="direct">Check direct audio</button><button id="relay">Check relay audio</button><pre id="result" role="status">Ready.</pre><a href="/">Back to MESCE</a><script type="module">
-import {checkVoiceTransport} from './voice-check.js';
-async function check(relay){const output=document.getElementById('result');let context,token;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{const AC=window.AudioContext||window.webkitAudioContext;context=new AC();await context.resume();output.textContent='Checking…';const session=await fetch('/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Audio check',room:'voice-check-'+crypto.randomUUID().slice(0,8)})}).then(r=>r.json());token=session.token;if(!token)throw new Error(session.error);const response=await fetch('/api/rtc/config',{headers:{Authorization:'Bearer '+token}}),config=await response.json();if(!response.ok)throw new Error(config.error);const result=await checkVoiceTransport(relay?config.iceServers:[],{relay,context});output.textContent=(relay?'Relay':'Direct')+' audio passed. Received and decoded '+result.receivedBytes+' audio bytes. No microphone used. Relay configuration: '+config.relay;}catch(e){output.textContent=e.message;context?.close().catch(()=>{});}finally{if(token)await fetch('/api/leave',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'}).catch(()=>{});document.querySelectorAll('button').forEach(b=>b.disabled=false);}}
-document.getElementById('direct').onclick=()=>check(false);document.getElementById('relay').onclick=()=>check(true);
-</script></html>
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  /><title>MESCE voice transport check</title
+  ><style>
+    body {
+      font: 16px/1.6 system-ui;
+      background: #f5efde;
+      color: #254b3e;
+      max-width: 680px;
+      padding: 36px;
+      margin: auto;
+    }
+    button {
+      padding: 14px 20px;
+      background: #315942;
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      font: inherit;
+      margin: 10px 8px 10px 0;
+    }
+    pre {
+      white-space: pre-wrap;
+      background: #e3e6d1;
+      padding: 20px;
+      border-radius: 10px;
+    }
+  </style>
+  <h1>MESCE voice transport check</h1>
+  <p>
+    This sends an original, silent test tone between two browser peers. It never asks for your
+    microphone or records you. Each run uses an isolated test room and removes its test presence
+    afterward.
+  </p>
+  <button id="direct">Check direct audio</button
+  ><button id="relay">Check relay audio</button>
+  <pre id="result" role="status">Ready.</pre>
+  <a href="/">Back to MESCE</a>
+  <script type="module">
+    import { checkVoiceTransport } from './voice-check.js';
+    async function check(relay) {
+      const output = document.getElementById('result');
+      let context, token;
+      document.querySelectorAll('button').forEach((b) => (b.disabled = true));
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        context = new AC();
+        await context.resume();
+        output.textContent = 'Checking…';
+        const session = await fetch('/api/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Audio check',
+            room: 'voice-check-' + crypto.randomUUID().slice(0, 8),
+          }),
+        }).then((r) => r.json());
+        token = session.token;
+        if (!token) throw new Error(session.error);
+        const response = await fetch('/api/rtc/config', {
+            headers: { Authorization: 'Bearer ' + token },
+          }),
+          config = await response.json();
+        if (!response.ok) throw new Error(config.error);
+        const result = await checkVoiceTransport(relay ? config.iceServers : [], {
+          relay,
+          context,
+        });
+        output.textContent =
+          (relay ? 'Relay' : 'Direct') +
+          ' audio passed. Received and decoded ' +
+          result.receivedBytes +
+          ' audio bytes. No microphone used. Relay configuration: ' +
+          config.relay;
+      } catch (e) {
+        output.textContent = e.message;
+        context?.close().catch(() => {});
+      } finally {
+        if (token)
+          await fetch('/api/leave', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: '{}',
+          }).catch(() => {});
+        document.querySelectorAll('button').forEach((b) => (b.disabled = false));
+      }
+    }
+    document.getElementById('direct').onclick = () => check(false);
+    document.getElementById('relay').onclick = () => check(true);
+  </script>
+</html>

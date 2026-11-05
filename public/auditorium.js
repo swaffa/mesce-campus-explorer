@@ -1,21 +1,168 @@
 import * as THREE from './vendor/three.module.js';
-import {campusLayout} from './campus-layout.js';
-export function createAuditorium({player,social,toast,busyActivity,beforeExit}){
-const $=id=>document.getElementById(id);let indoors=false,lastScreen='',liveEvent=null;
-const room=new THREE.Scene();room.background=new THREE.Color('#262b29');room.add(new THREE.HemisphereLight('#fff0d5','#53493e',2));const light=new THREE.DirectionalLight('#fff1db',2.5);light.position.set(-5,13,6);room.add(light);
-const materials={};function box(x,y,z,w,h,d,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),materials[color]||(materials[color]=new THREE.MeshStandardMaterial({color,roughness:.8})));m.position.set(x,y,z);m.receiveShadow=true;m.castShadow=true;room.add(m);return m;}
-box(0,-.2,0,34,.4,48,'#b8a98b');box(-17,5.6,0,.3,11.2,48,'#e9ddc7');box(17,5.6,0,.3,11.2,48,'#e9ddc7');box(0,5.6,-24,34,11.2,.3,'#e4d7c0');box(0,5.6,24,34,11.2,.3,'#e4d7c0');box(0,11.2,0,34,.2,48,'#d5c9b2');
-box(0,.55,-19,30,1.1,9,'#80634e');for(let i=0;i<3;i++)box(0,.18+i*.32,-13.9-i*.55,8,.28,.65,'#9d826a');box(0,5.6,-23.6,30,8.8,.15,'#693a3a');for(const x of [-14,14])box(x,4.5,-21,1.5,8.2,4,'#4c2e30');
-for(const x of [-12,12]){box(x,1.8,-16,1.4,2.5,1,'#242e2c');box(x,3.1,-16,1.2,.1,1,'#496457');}
-for(const z of [-8.5,-5,-1.5,2,5.5,9])for(const x of [-12,-9,-6,6,9,12]){box(x,.65,z,1.65,.25,1.55,'#527463');box(x,1.35,z+.65,1.65,1.25,.18,'#3c5b4d');for(const a of [-.6,.6])box(x+a,.3,z,.13,.6,1.2,'#554f43');}
-for(const z of [-15,-5,5,15])for(const x of [-10,10]){const lamp=new THREE.PointLight('#ffe2ac',24,18,2);lamp.position.set(x,9.8,z);room.add(lamp);box(x,10.6,z,1.7,.12,1,'#fff2cb');}
-const screenCanvas=document.createElement('canvas');screenCanvas.width=1024;screenCanvas.height=384;const screenTex=new THREE.CanvasTexture(screenCanvas);screenTex.colorSpace=THREE.SRGBColorSpace;const screen=new THREE.Mesh(new THREE.PlaneGeometry(18,6.75),new THREE.MeshBasicMaterial({map:screenTex}));screen.position.set(0,6,-23.45);room.add(screen);
-const door=document.createElement('button');door.id='auditoriumDoor';door.hidden=true;door.textContent='Enter auditorium';document.body.append(door);
-function enter(){if(indoors)return true;if(!social.isJoined())return false;if(busyActivity()){toast('Stand up, get off your ride, or leave the current building before entering.');return false;}indoors=true;room.add(player);player.position.set(0,0,19);player.rotation.set(0,Math.PI,0);social.setArea('auditorium');$('cameraBtn').textContent='◉ Hall view';door.textContent='Leave auditorium';toast('Welcome to the auditorium. Voice conversations reach the whole hall.');return true;}
-async function exit(){if(!await beforeExit())return;indoors=false;social.exterior().add(player);player.position.set(campusLayout.auditorium.doorX,2.1,campusLayout.auditorium.doorZ);player.rotation.set(0,Math.PI,0);social.setArea('campus');$('cameraBtn').textContent='◉ Walk';door.textContent='Enter auditorium';toast('Back on campus.');}
-door.onclick=()=>indoors?exit():enter();
-function setEvent(event){liveEvent=event;const key=event?event.id+event.title+event.status:'idle';if(key===lastScreen)return;lastScreen=key;const c=screenCanvas.getContext('2d');c.fillStyle='#163b35';c.fillRect(0,0,1024,384);c.fillStyle='#d7e8ad';c.font='bold 25px sans-serif';c.textAlign='center';c.fillText('MESCE · CAMPUS AUDITORIUM',512,70);c.fillStyle='#fff6e6';c.font='bold 49px serif';c.fillText(event?.title||'A stage for your ideas.',512,170,930);c.font='28px sans-serif';c.fillText(event?.club||'Students & alumni, together.',512,240,920);c.font='21px sans-serif';c.fillStyle='#cedbc4';c.fillText(event?'LIVE NOW · '+event.duration+' MINUTES':'Organize your event from the Events board.',512,318,920);screenTex.needsUpdate=true;}
-setEvent(null);
-function update(started){door.dataset.distance=indoors?'10':Math.hypot(player.position.x-campusLayout.auditorium.doorX,player.position.z-campusLayout.auditorium.doorZ);door.hidden=!started||!!document.querySelector('dialog[open]')||!indoors&&(social.getArea()!=='campus'||Math.hypot(player.position.x-campusLayout.auditorium.doorX,player.position.z-campusLayout.auditorium.doorZ)>3.4);document.querySelector('.minimap').hidden=indoors;if(indoors){player.position.y=player.position.z<-14?1.1:0;room.add(player);}for(const p of social.getPeers().values()){const area=p.area||'campus';p.model.visible=area===social.getArea();if(p.model.visible){const target=indoors?room:social.exterior();if(p.model.parent!==target)target.add(p.model);}}}
-return {active:()=>indoors,scene:room,enter,exit,setEvent,update,blocked:(x,z)=>Math.abs(x)>15.5||z>21.5||z< -22};
+import { campusLayout } from './campus-layout.js';
+export function createAuditorium({ player, social, toast, busyActivity, beforeExit }) {
+  const $ = (id) => document.getElementById(id);
+  let indoors = false,
+    lastScreen = '',
+    liveEvent = null;
+  const room = new THREE.Scene();
+  room.background = new THREE.Color('#262b29');
+  room.add(new THREE.HemisphereLight('#fff0d5', '#53493e', 2));
+  const light = new THREE.DirectionalLight('#fff1db', 2.5);
+  light.position.set(-5, 13, 6);
+  room.add(light);
+  const materials = {};
+  function box(x, y, z, w, h, d, color) {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      materials[color] ||
+        (materials[color] = new THREE.MeshStandardMaterial({ color, roughness: 0.8 })),
+    );
+    m.position.set(x, y, z);
+    m.receiveShadow = true;
+    m.castShadow = true;
+    room.add(m);
+    return m;
+  }
+  box(0, -0.2, 0, 34, 0.4, 48, '#b8a98b');
+  box(-17, 5.6, 0, 0.3, 11.2, 48, '#e9ddc7');
+  box(17, 5.6, 0, 0.3, 11.2, 48, '#e9ddc7');
+  box(0, 5.6, -24, 34, 11.2, 0.3, '#e4d7c0');
+  box(0, 5.6, 24, 34, 11.2, 0.3, '#e4d7c0');
+  box(0, 11.2, 0, 34, 0.2, 48, '#d5c9b2');
+  box(0, 0.55, -19, 30, 1.1, 9, '#80634e');
+  for (let i = 0; i < 3; i++) box(0, 0.18 + i * 0.32, -13.9 - i * 0.55, 8, 0.28, 0.65, '#9d826a');
+  box(0, 5.6, -23.6, 30, 8.8, 0.15, '#693a3a');
+  for (const x of [-14, 14]) box(x, 4.5, -21, 1.5, 8.2, 4, '#4c2e30');
+  for (const x of [-12, 12]) {
+    box(x, 1.8, -16, 1.4, 2.5, 1, '#242e2c');
+    box(x, 3.1, -16, 1.2, 0.1, 1, '#496457');
+  }
+  for (const z of [-8.5, -5, -1.5, 2, 5.5, 9])
+    for (const x of [-12, -9, -6, 6, 9, 12]) {
+      box(x, 0.65, z, 1.65, 0.25, 1.55, '#527463');
+      box(x, 1.35, z + 0.65, 1.65, 1.25, 0.18, '#3c5b4d');
+      for (const a of [-0.6, 0.6]) box(x + a, 0.3, z, 0.13, 0.6, 1.2, '#554f43');
+    }
+  for (const z of [-15, -5, 5, 15])
+    for (const x of [-10, 10]) {
+      const lamp = new THREE.PointLight('#ffe2ac', 24, 18, 2);
+      lamp.position.set(x, 9.8, z);
+      room.add(lamp);
+      box(x, 10.6, z, 1.7, 0.12, 1, '#fff2cb');
+    }
+  const screenCanvas = document.createElement('canvas');
+  screenCanvas.width = 1024;
+  screenCanvas.height = 384;
+  const screenTex = new THREE.CanvasTexture(screenCanvas);
+  screenTex.colorSpace = THREE.SRGBColorSpace;
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(18, 6.75),
+    new THREE.MeshBasicMaterial({ map: screenTex }),
+  );
+  screen.position.set(0, 6, -23.45);
+  room.add(screen);
+  const door = document.createElement('button');
+  door.id = 'auditoriumDoor';
+  door.hidden = true;
+  door.textContent = 'Enter auditorium';
+  document.body.append(door);
+  function enter() {
+    if (indoors) return true;
+    if (!social.isJoined()) return false;
+    if (busyActivity()) {
+      toast('Stand up, get off your ride, or leave the current building before entering.');
+      return false;
+    }
+    indoors = true;
+    room.add(player);
+    player.position.set(0, 0, 19);
+    player.rotation.set(0, Math.PI, 0);
+    social.setArea('auditorium');
+    $('cameraBtn').textContent = '◉ Hall view';
+    door.textContent = 'Leave auditorium';
+    toast('Welcome to the auditorium. Voice conversations reach the whole hall.');
+    return true;
+  }
+  async function exit() {
+    if (!(await beforeExit())) return;
+    indoors = false;
+    social.exterior().add(player);
+    player.position.set(campusLayout.auditorium.doorX, 2.1, campusLayout.auditorium.doorZ);
+    player.rotation.set(0, Math.PI, 0);
+    social.setArea('campus');
+    $('cameraBtn').textContent = '◉ Walk';
+    door.textContent = 'Enter auditorium';
+    toast('Back on campus.');
+  }
+  door.onclick = () => (indoors ? exit() : enter());
+  function setEvent(event) {
+    liveEvent = event;
+    const key = event ? event.id + event.title + event.status : 'idle';
+    if (key === lastScreen) return;
+    lastScreen = key;
+    const c = screenCanvas.getContext('2d');
+    c.fillStyle = '#163b35';
+    c.fillRect(0, 0, 1024, 384);
+    c.fillStyle = '#d7e8ad';
+    c.font = 'bold 25px sans-serif';
+    c.textAlign = 'center';
+    c.fillText('MESCE · CAMPUS AUDITORIUM', 512, 70);
+    c.fillStyle = '#fff6e6';
+    c.font = 'bold 49px serif';
+    c.fillText(event?.title || 'A stage for your ideas.', 512, 170, 930);
+    c.font = '28px sans-serif';
+    c.fillText(event?.club || 'Students & alumni, together.', 512, 240, 920);
+    c.font = '21px sans-serif';
+    c.fillStyle = '#cedbc4';
+    c.fillText(
+      event
+        ? 'LIVE NOW · ' + event.duration + ' MINUTES'
+        : 'Organize your event from the Events board.',
+      512,
+      318,
+      920,
+    );
+    screenTex.needsUpdate = true;
+  }
+  setEvent(null);
+  function update(started) {
+    door.dataset.distance = indoors
+      ? '10'
+      : Math.hypot(
+          player.position.x - campusLayout.auditorium.doorX,
+          player.position.z - campusLayout.auditorium.doorZ,
+        );
+    door.hidden =
+      !started ||
+      !!document.querySelector('dialog[open]') ||
+      (!indoors &&
+        (social.getArea() !== 'campus' ||
+          Math.hypot(
+            player.position.x - campusLayout.auditorium.doorX,
+            player.position.z - campusLayout.auditorium.doorZ,
+          ) > 3.4));
+    document.querySelector('.minimap').hidden = indoors;
+    if (indoors) {
+      player.position.y = player.position.z < -14 ? 1.1 : 0;
+      room.add(player);
+    }
+    for (const p of social.getPeers().values()) {
+      const area = p.area || 'campus';
+      p.model.visible = area === social.getArea();
+      if (p.model.visible) {
+        const target = indoors ? room : social.exterior();
+        if (p.model.parent !== target) target.add(p.model);
+      }
+    }
+  }
+  return {
+    active: () => indoors,
+    scene: room,
+    enter,
+    exit,
+    setEvent,
+    update,
+    blocked: (x, z) => Math.abs(x) > 15.5 || z > 21.5 || z < -22,
+  };
 }

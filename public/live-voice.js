@@ -1,39 +1,446 @@
-import {canHearVoice} from './voice-space.js';
-import {academicZone} from './academic-data.js';
-import {createVoicePeer} from './voice-peer.js';
-import {checkVoiceTransport} from './voice-check.js';
-export function createLiveVoice({social,toast}){
- const $=id=>document.getElementById(id),connections=new Map(),retryAt=new Map();let enabled=0,mode='nearby',stream=null,config=null,configAt=0,cursor=0,polling=false,pollTimer=null,world=[],muted=false,deaf=false,starting=false,lastError='',meterContext=null,meterSource=null,meter=null,meterValues=null;
- const button=document.createElement('button');button.id='liveVoiceBtn';button.textContent='☎ Voice call';$('chatBtn').before(button);
- const panel=document.createElement('section');panel.id='voicePanel';panel.hidden=true;panel.innerHTML='<div class="panel-head"><strong>A call with your campus friends.</strong><button id="closeVoice" aria-label="Close live voice panel">×</button></div><p>Talk live while exploring, or speak to the whole auditorium during an event. Microphones start only when you choose them. Classrooms and floors have separate conversations.</p><label>Talk to<select id="voiceScope"><option value="nearby">Nearby people</option><option value="room">Same room</option></select></label><strong id="voiceSpaceLabel"></strong><div class="voice-actions"><button id="joinMic">Turn on microphone</button><button id="joinListen">Listen only</button><button id="muteMic" hidden>Mute mic</button><button id="deafen" hidden>Mute incoming audio</button><button id="leaveVoice" hidden>Leave call</button></div><label id="micMeterLabel" hidden>Microphone level<meter id="micMeter" min="0" max="1" value="0" aria-label="Microphone level"></meter></label><strong id="voiceStatus" role="status">Not in a call</strong><p id="voiceHelp" role="status"></p><div id="voicePeers"></div><button id="enablePlayback" hidden>Tap to hear your friends</button><details><summary>Connection help</summary><button id="checkVoice">Check relay connection</button><p id="voiceDiagnostic">Calls are live, never added to chat history. If microphone permission is blocked, allow it in your browser’s site settings or use Listen only.</p></details><p class="fine">Up to 8 microphones per room. The campus sound button controls the environment; call audio has its own mute controls.</p>';
- $('socialHUD').append(panel);try{const saved=localStorage.getItem('mesce-voice-scope');if(['nearby','room'].includes(saved))mode=saved;}catch{}$('voiceScope').value=mode;button.onclick=()=>{panel.hidden=!panel.hidden;$('chatPanel').hidden=true;redraw();};$('closeVoice').onclick=()=>panel.hidden=true;
- async function ice(force=false){if(force||!config||Date.now()-configAt>1500000){config=await social.request('/api/rtc/config',undefined,{method:'GET'});configAt=Date.now();}return config;}
- function peerData(id){return world.find(p=>p.id===id);}
- function eligible(p){if(!enabled||!p||p.id===social.sessionId()||!p.voice_on)return false;const me=peerData(social.sessionId());if(!me||p.area!==me.area||enabled===2&&p.voice_on===2)return false;return canHearVoice({...me,voice_mode:mode},p);}
- function redraw(){const me=peerData(social.sessionId());$('voiceSpaceLabel').textContent=me?.area==='auditorium'?'Auditorium · full-hall event audio':me?.area?.startsWith('block-')?'In this '+(academicZone(me.area,me.x,me.z).split(':')[1]||'space').replaceAll('-',' '):mode==='nearby'?'Campus · nearby conversation':'Campus · same-space conversation';const list=$('voicePeers');list.replaceChildren();let connected=0,waiting=0;for(const who of world.filter(eligible)){const entry=connections.get(who.id),state=entry?.link.pc.connectionState;const row=document.createElement('div'),name=document.createElement('span');name.textContent=who.name+' · '+(state==='connected'?'connected':entry?'connecting':'joining');row.append(name);if(state==='connected')connected++;else waiting++;if(entry){const mute=document.createElement('button');mute.textContent=entry.locallyMuted?'Unmute':'Mute';mute.onclick=()=>{entry.locallyMuted=!entry.locallyMuted;entry.audio.muted=deaf||entry.locallyMuted;redraw();};row.append(mute);}list.append(row);}
-  $('voiceStatus').textContent=starting?(starting==='mic'?'Opening your microphone…':'Joining the call…'):!enabled?(lastError||'Not in a call'):(enabled===2?'Listening':muted?'Microphone muted':'Microphone on')+' · '+(connected?connected+' connected':waiting?'connecting to friends':'waiting for friends');
-  $('voiceHelp').textContent=enabled?(lastError||(!connected&&!waiting?'Invite a friend to this room and ask them to join voice.':config?.relay==='shared'?'A shared relay is being used. Some Wi-Fi/mobile networks still need a dedicated relay.':'')):'';
-  button.textContent=enabled?'☎ In call':'☎ Voice call';button.classList.toggle('is-live',!!enabled);$('joinMic').hidden=enabled===1;$('joinListen').hidden=enabled===2;$('joinMic').disabled=starting;$('joinListen').disabled=starting;$('muteMic').hidden=enabled!==1;$('micMeterLabel').hidden=enabled!==1;$('deafen').hidden=!enabled;$('leaveVoice').hidden=!enabled;$('muteMic').textContent=muted?'Unmute mic':'Mute mic';
- }
- async function signal(id,payload){return social.request('/api/rtc/signal',{to:id,payload});}
- function close(id,notify=false){const entry=connections.get(id);if(!entry)return;if(notify)signal(id,{type:'hangup',call:entry.link.call}).catch(()=>{});entry.link.close();entry.audio.pause();entry.audio.srcObject=null;entry.audio.remove();connections.delete(id);}
- function connection(id,call){close(id);const audio=document.createElement('audio');audio.autoplay=true;audio.playsInline=true;document.body.append(audio);const entry={audio,locallyMuted:false,createdAt:Date.now(),link:null};
-  entry.link=createVoicePeer({iceServers:config.iceServers,stream,call,send:payload=>signal(id,payload),onTrack:remote=>{audio.srcObject=remote;audio.muted=deaf||entry.locallyMuted;audio.play().catch(()=>$('enablePlayback').hidden=false);},onState:state=>{if(state==='failed'){lastError='A call could not connect. Check the relay connection below.';retryAt.set(id,Date.now()+12000);close(id);configAt=0;}else if(state==='connected')lastError='';redraw();},onError:()=>{lastError='Connection interrupted. Retrying…';}});connections.set(id,entry);return entry;
- }
- async function offer(p){if(connections.has(p.id)||Date.now()<(retryAt.get(p.id)||0))return;const entry=connection(p.id);try{await entry.link.offer();}catch{retryAt.set(p.id,Date.now()+8000);close(p.id);}redraw();}
- async function receive(id,payload){if(payload.type==='hangup'){if(connections.get(id)?.link.call===payload.call)close(id);return;}if(!eligible(peerData(id)))return;let entry=connections.get(id);if(payload.type==='offer'){if(id.localeCompare(social.sessionId())>0)return;entry=connection(id,payload.call);}if(!entry||entry.link.call!==payload.call)return;await entry.link.receive(payload);}
- async function poll(){if(!enabled||polling)return;polling=true;try{const r=await social.request('/api/rtc/signals?since='+cursor,undefined,{method:'GET'});for(const s of r.signals){cursor=Math.max(cursor,s.id);try{await receive(s.sender,JSON.parse(s.payload));}catch{retryAt.set(s.sender,Date.now()+6000);close(s.sender);}}}catch{lastError='Voice reconnecting…';}finally{polling=false;redraw();}}
- function stopMeter(){meterSource?.disconnect();meterSource=null;meter=null;meterValues=null;meterContext?.close().catch(()=>{});meterContext=null;}
- function startMeter(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC||!stream)return;meterContext=new AC();meterSource=meterContext.createMediaStreamSource(stream);meter=meterContext.createAnalyser();meter.fftSize=256;meterValues=new Float32Array(meter.fftSize);meterSource.connect(meter);meterContext.resume().catch(()=>{});}
- async function leave(announce=true){clearInterval(pollTimer);pollTimer=null;for(const id of [...connections.keys()])close(id,true);enabled=0;stream?.getTracks().forEach(t=>{t.onended=null;t.stop();});stream=null;stopMeter();muted=false;lastError='';await social.request('/api/rtc/enable',{enabled:0,mode}).catch(()=>{});redraw();if(announce)toast('You left the call. Your microphone is off.');}
- async function join(withMic){if(starting)return;starting=withMic?'mic':'listen';lastError='';redraw();try{if(!social.isJoined())throw new Error('Enter the campus first.');if(!window.RTCPeerConnection)throw new Error('Open the campus in Safari, Chrome or Firefox for voice calls.');if(enabled)await leave(false);mode=$('voiceScope').value;
-   if(withMic){if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open the HTTPS campus link in a browser that supports microphone access.');stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});if(!stream.getAudioTracks().some(t=>t.readyState==='live'))throw new Error('No working microphone was found.');for(const track of stream.getAudioTracks())track.onended=()=>leave(false);startMeter();}
-   await ice();const choice=withMic?1:2;await social.request('/api/rtc/enable',{enabled:choice,mode});enabled=choice;muted=false;cursor=0;world=social.people();pollTimer=setInterval(poll,650);await social.syncNow();await poll();toast(withMic?'Microphone on. Friends in this voice space can hear you once connected.':'Listening only. Your microphone stays off.');
-  }catch(e){stream?.getTracks().forEach(t=>{t.onended=null;t.stop();});stream=null;stopMeter();enabled=0;lastError=e.name==='NotAllowedError'?'Microphone blocked. Allow it in browser site settings, then try again.':e.name==='NotFoundError'?'No microphone found. Connect one or choose Listen only.':e.name==='NotReadableError'?'Your microphone is busy in another app. Close it there and try again.':e.message;toast(lastError);}finally{starting=false;redraw();}}
- $('joinMic').onclick=()=>join(true);$('joinListen').onclick=()=>join(false);$('leaveVoice').onclick=()=>leave();$('muteMic').onclick=()=>{muted=!muted;stream?.getAudioTracks().forEach(t=>t.enabled=!muted);redraw();};$('deafen').onclick=()=>{deaf=!deaf;for(const entry of connections.values())entry.audio.muted=deaf||entry.locallyMuted;$('deafen').textContent=deaf?'Hear conversation':'Mute incoming audio';};$('enablePlayback').onclick=()=>{let blocked=false;Promise.all([...connections.values()].map(entry=>entry.audio.play().catch(()=>{blocked=true;}))).then(()=>$('enablePlayback').hidden=!blocked);};
- $('voiceScope').onchange=async()=>{mode=$('voiceScope').value;try{localStorage.setItem('mesce-voice-scope',mode);}catch{}redraw();if(enabled){await social.request('/api/rtc/enable',{enabled,mode}).catch(e=>toast(e.message));await social.syncNow();}};
- $('checkVoice').onclick=async()=>{$('checkVoice').disabled=true;$('voiceDiagnostic').textContent='Checking relay audio with a silent test tone. Your microphone is not used…';let context;try{const AC=window.AudioContext||window.webkitAudioContext;context=new AC();await context.resume();const c=await ice(true);const result=await checkVoiceTransport(c.iceServers,{relay:true,context});$('voiceDiagnostic').textContent='Relay audio confirmed: '+result.receivedBytes+' bytes received and decoded. No microphone was used.';}catch(e){context?.close().catch(()=>{});$('voiceDiagnostic').textContent=e.message;}finally{$('checkVoice').disabled=false;}};
- function onState(r){world=r.players;if(!enabled)return;for(const [id,entry]of [...connections]){if(!eligible(peerData(id)))close(id,true);else if(entry.link.pc.connectionState!=='connected'&&Date.now()-entry.createdAt>20000){retryAt.set(id,Date.now()+8000);close(id,true);configAt=0;}}for(const p of world)if(eligible(p)&&social.sessionId().localeCompare(p.id)<0)ice().then(()=>offer(p)).catch(()=>{});redraw();}
- function update(dt=.016){if(meter&&meterValues){meter.getFloatTimeDomainData(meterValues);let total=0;for(const v of meterValues)total+=v*v;$('micMeter').value=muted?0:Math.min(1,Math.sqrt(total/meterValues.length)*5);}const me=peerData(social.sessionId());if(!me)return;for(const [id,entry]of connections){const p=peerData(id);if(!p)continue;const full=me.area==='auditorium'||mode==='room'&&p.voice_mode==='room';const desired=canHearVoice({...me,voice_mode:mode},p)?(full?1:Math.max(0,1-Math.hypot(p.x-me.x,p.z-me.z)/22)**1.5):0;entry.audio.volume+=(desired-entry.audio.volume)*Math.min(1,dt*7);}}
- addEventListener('pagehide',()=>{clearInterval(pollTimer);stream?.getTracks().forEach(t=>{t.onended=null;t.stop();});stopMeter();for(const entry of connections.values())entry.link.close();});return {onState,update,isActive:()=>!!enabled,listenInAuditorium:async()=>{panel.hidden=false;$('chatPanel').hidden=true;await join(false);},open:()=>{panel.hidden=false;redraw();}};
+import { canHearVoice } from './voice-space.js';
+import { academicZone } from './academic-data.js';
+import { createVoicePeer } from './voice-peer.js';
+import { checkVoiceTransport } from './voice-check.js';
+export function createLiveVoice({ social, toast }) {
+  const $ = (id) => document.getElementById(id),
+    connections = new Map(),
+    retryAt = new Map();
+  let enabled = 0,
+    mode = 'nearby',
+    stream = null,
+    config = null,
+    configAt = 0,
+    cursor = 0,
+    polling = false,
+    pollTimer = null,
+    world = [],
+    muted = false,
+    deaf = false,
+    starting = false,
+    lastError = '',
+    meterContext = null,
+    meterSource = null,
+    meter = null,
+    meterValues = null;
+  const button = document.createElement('button');
+  button.id = 'liveVoiceBtn';
+  button.textContent = '☎ Voice call';
+  $('chatBtn').before(button);
+  const panel = document.createElement('section');
+  panel.id = 'voicePanel';
+  panel.hidden = true;
+  panel.innerHTML =
+    '<div class="panel-head"><strong>A call with your campus friends.</strong><button id="closeVoice" aria-label="Close live voice panel">×</button></div><p>Talk live while exploring, or speak to the whole auditorium during an event. Microphones start only when you choose them. Classrooms and floors have separate conversations.</p><label>Talk to<select id="voiceScope"><option value="nearby">Nearby people</option><option value="room">Same room</option></select></label><strong id="voiceSpaceLabel"></strong><div class="voice-actions"><button id="joinMic">Turn on microphone</button><button id="joinListen">Listen only</button><button id="muteMic" hidden>Mute mic</button><button id="deafen" hidden>Mute incoming audio</button><button id="leaveVoice" hidden>Leave call</button></div><label id="micMeterLabel" hidden>Microphone level<meter id="micMeter" min="0" max="1" value="0" aria-label="Microphone level"></meter></label><strong id="voiceStatus" role="status">Not in a call</strong><p id="voiceHelp" role="status"></p><div id="voicePeers"></div><button id="enablePlayback" hidden>Tap to hear your friends</button><details><summary>Connection help</summary><button id="checkVoice">Check relay connection</button><p id="voiceDiagnostic">Calls are live, never added to chat history. If microphone permission is blocked, allow it in your browser’s site settings or use Listen only.</p></details><p class="fine">Up to 8 microphones per room. The campus sound button controls the environment; call audio has its own mute controls.</p>';
+  $('socialHUD').append(panel);
+  try {
+    const saved = localStorage.getItem('mesce-voice-scope');
+    if (['nearby', 'room'].includes(saved)) mode = saved;
+  } catch {}
+  $('voiceScope').value = mode;
+  button.onclick = () => {
+    panel.hidden = !panel.hidden;
+    $('chatPanel').hidden = true;
+    redraw();
+  };
+  $('closeVoice').onclick = () => (panel.hidden = true);
+  async function ice(force = false) {
+    if (force || !config || Date.now() - configAt > 1500000) {
+      config = await social.request('/api/rtc/config', undefined, { method: 'GET' });
+      configAt = Date.now();
+    }
+    return config;
+  }
+  function peerData(id) {
+    return world.find((p) => p.id === id);
+  }
+  function eligible(p) {
+    if (!enabled || !p || p.id === social.sessionId() || !p.voice_on) return false;
+    const me = peerData(social.sessionId());
+    if (!me || p.area !== me.area || (enabled === 2 && p.voice_on === 2)) return false;
+    return canHearVoice({ ...me, voice_mode: mode }, p);
+  }
+  function redraw() {
+    const me = peerData(social.sessionId());
+    $('voiceSpaceLabel').textContent =
+      me?.area === 'auditorium'
+        ? 'Auditorium · full-hall event audio'
+        : me?.area?.startsWith('block-')
+          ? 'In this ' +
+            (academicZone(me.area, me.x, me.z).split(':')[1] || 'space').replaceAll('-', ' ')
+          : mode === 'nearby'
+            ? 'Campus · nearby conversation'
+            : 'Campus · same-space conversation';
+    const list = $('voicePeers');
+    list.replaceChildren();
+    let connected = 0,
+      waiting = 0;
+    for (const who of world.filter(eligible)) {
+      const entry = connections.get(who.id),
+        state = entry?.link.pc.connectionState;
+      const row = document.createElement('div'),
+        name = document.createElement('span');
+      name.textContent =
+        who.name + ' · ' + (state === 'connected' ? 'connected' : entry ? 'connecting' : 'joining');
+      row.append(name);
+      if (state === 'connected') connected++;
+      else waiting++;
+      if (entry) {
+        const mute = document.createElement('button');
+        mute.textContent = entry.locallyMuted ? 'Unmute' : 'Mute';
+        mute.onclick = () => {
+          entry.locallyMuted = !entry.locallyMuted;
+          entry.audio.muted = deaf || entry.locallyMuted;
+          redraw();
+        };
+        row.append(mute);
+      }
+      list.append(row);
+    }
+    $('voiceStatus').textContent = starting
+      ? starting === 'mic'
+        ? 'Opening your microphone…'
+        : 'Joining the call…'
+      : !enabled
+        ? lastError || 'Not in a call'
+        : (enabled === 2 ? 'Listening' : muted ? 'Microphone muted' : 'Microphone on') +
+          ' · ' +
+          (connected
+            ? connected + ' connected'
+            : waiting
+              ? 'connecting to friends'
+              : 'waiting for friends');
+    $('voiceHelp').textContent = enabled
+      ? lastError ||
+        (!connected && !waiting
+          ? 'Invite a friend to this room and ask them to join voice.'
+          : config?.relay === 'shared'
+            ? 'A shared relay is being used. Some Wi-Fi/mobile networks still need a dedicated relay.'
+            : '')
+      : '';
+    button.textContent = enabled ? '☎ In call' : '☎ Voice call';
+    button.classList.toggle('is-live', !!enabled);
+    $('joinMic').hidden = enabled === 1;
+    $('joinListen').hidden = enabled === 2;
+    $('joinMic').disabled = starting;
+    $('joinListen').disabled = starting;
+    $('muteMic').hidden = enabled !== 1;
+    $('micMeterLabel').hidden = enabled !== 1;
+    $('deafen').hidden = !enabled;
+    $('leaveVoice').hidden = !enabled;
+    $('muteMic').textContent = muted ? 'Unmute mic' : 'Mute mic';
+  }
+  async function signal(id, payload) {
+    return social.request('/api/rtc/signal', { to: id, payload });
+  }
+  function close(id, notify = false) {
+    const entry = connections.get(id);
+    if (!entry) return;
+    if (notify) signal(id, { type: 'hangup', call: entry.link.call }).catch(() => {});
+    entry.link.close();
+    entry.audio.pause();
+    entry.audio.srcObject = null;
+    entry.audio.remove();
+    connections.delete(id);
+  }
+  function connection(id, call) {
+    close(id);
+    const audio = document.createElement('audio');
+    audio.autoplay = true;
+    audio.playsInline = true;
+    document.body.append(audio);
+    const entry = { audio, locallyMuted: false, createdAt: Date.now(), link: null };
+    entry.link = createVoicePeer({
+      iceServers: config.iceServers,
+      stream,
+      call,
+      send: (payload) => signal(id, payload),
+      onTrack: (remote) => {
+        audio.srcObject = remote;
+        audio.muted = deaf || entry.locallyMuted;
+        audio.play().catch(() => ($('enablePlayback').hidden = false));
+      },
+      onState: (state) => {
+        if (state === 'failed') {
+          lastError = 'A call could not connect. Check the relay connection below.';
+          retryAt.set(id, Date.now() + 12000);
+          close(id);
+          configAt = 0;
+        } else if (state === 'connected') lastError = '';
+        redraw();
+      },
+      onError: () => {
+        lastError = 'Connection interrupted. Retrying…';
+      },
+    });
+    connections.set(id, entry);
+    return entry;
+  }
+  async function offer(p) {
+    if (connections.has(p.id) || Date.now() < (retryAt.get(p.id) || 0)) return;
+    const entry = connection(p.id);
+    try {
+      await entry.link.offer();
+    } catch {
+      retryAt.set(p.id, Date.now() + 8000);
+      close(p.id);
+    }
+    redraw();
+  }
+  async function receive(id, payload) {
+    if (payload.type === 'hangup') {
+      if (connections.get(id)?.link.call === payload.call) close(id);
+      return;
+    }
+    if (!eligible(peerData(id))) return;
+    let entry = connections.get(id);
+    if (payload.type === 'offer') {
+      if (id.localeCompare(social.sessionId()) > 0) return;
+      entry = connection(id, payload.call);
+    }
+    if (!entry || entry.link.call !== payload.call) return;
+    await entry.link.receive(payload);
+  }
+  async function poll() {
+    if (!enabled || polling) return;
+    polling = true;
+    try {
+      const r = await social.request('/api/rtc/signals?since=' + cursor, undefined, {
+        method: 'GET',
+      });
+      for (const s of r.signals) {
+        cursor = Math.max(cursor, s.id);
+        try {
+          await receive(s.sender, JSON.parse(s.payload));
+        } catch {
+          retryAt.set(s.sender, Date.now() + 6000);
+          close(s.sender);
+        }
+      }
+    } catch {
+      lastError = 'Voice reconnecting…';
+    } finally {
+      polling = false;
+      redraw();
+    }
+  }
+  function stopMeter() {
+    meterSource?.disconnect();
+    meterSource = null;
+    meter = null;
+    meterValues = null;
+    meterContext?.close().catch(() => {});
+    meterContext = null;
+  }
+  function startMeter() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || !stream) return;
+    meterContext = new AC();
+    meterSource = meterContext.createMediaStreamSource(stream);
+    meter = meterContext.createAnalyser();
+    meter.fftSize = 256;
+    meterValues = new Float32Array(meter.fftSize);
+    meterSource.connect(meter);
+    meterContext.resume().catch(() => {});
+  }
+  async function leave(announce = true) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    for (const id of [...connections.keys()]) close(id, true);
+    enabled = 0;
+    stream?.getTracks().forEach((t) => {
+      t.onended = null;
+      t.stop();
+    });
+    stream = null;
+    stopMeter();
+    muted = false;
+    lastError = '';
+    await social.request('/api/rtc/enable', { enabled: 0, mode }).catch(() => {});
+    redraw();
+    if (announce) toast('You left the call. Your microphone is off.');
+  }
+  async function join(withMic) {
+    if (starting) return;
+    starting = withMic ? 'mic' : 'listen';
+    lastError = '';
+    redraw();
+    try {
+      if (!social.isJoined()) throw new Error('Enter the campus first.');
+      if (!window.RTCPeerConnection)
+        throw new Error('Open the campus in Safari, Chrome or Firefox for voice calls.');
+      if (enabled) await leave(false);
+      mode = $('voiceScope').value;
+      if (withMic) {
+        if (!navigator.mediaDevices?.getUserMedia)
+          throw new Error(
+            'Open the HTTPS campus link in a browser that supports microphone access.',
+          );
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: false,
+        });
+        if (!stream.getAudioTracks().some((t) => t.readyState === 'live'))
+          throw new Error('No working microphone was found.');
+        for (const track of stream.getAudioTracks()) track.onended = () => leave(false);
+        startMeter();
+      }
+      await ice();
+      const choice = withMic ? 1 : 2;
+      await social.request('/api/rtc/enable', { enabled: choice, mode });
+      enabled = choice;
+      muted = false;
+      cursor = 0;
+      world = social.people();
+      pollTimer = setInterval(poll, 650);
+      await social.syncNow();
+      await poll();
+      toast(
+        withMic
+          ? 'Microphone on. Friends in this voice space can hear you once connected.'
+          : 'Listening only. Your microphone stays off.',
+      );
+    } catch (e) {
+      stream?.getTracks().forEach((t) => {
+        t.onended = null;
+        t.stop();
+      });
+      stream = null;
+      stopMeter();
+      enabled = 0;
+      lastError =
+        e.name === 'NotAllowedError'
+          ? 'Microphone blocked. Allow it in browser site settings, then try again.'
+          : e.name === 'NotFoundError'
+            ? 'No microphone found. Connect one or choose Listen only.'
+            : e.name === 'NotReadableError'
+              ? 'Your microphone is busy in another app. Close it there and try again.'
+              : e.message;
+      toast(lastError);
+    } finally {
+      starting = false;
+      redraw();
+    }
+  }
+  $('joinMic').onclick = () => join(true);
+  $('joinListen').onclick = () => join(false);
+  $('leaveVoice').onclick = () => leave();
+  $('muteMic').onclick = () => {
+    muted = !muted;
+    stream?.getAudioTracks().forEach((t) => (t.enabled = !muted));
+    redraw();
+  };
+  $('deafen').onclick = () => {
+    deaf = !deaf;
+    for (const entry of connections.values()) entry.audio.muted = deaf || entry.locallyMuted;
+    $('deafen').textContent = deaf ? 'Hear conversation' : 'Mute incoming audio';
+  };
+  $('enablePlayback').onclick = () => {
+    let blocked = false;
+    Promise.all(
+      [...connections.values()].map((entry) =>
+        entry.audio.play().catch(() => {
+          blocked = true;
+        }),
+      ),
+    ).then(() => ($('enablePlayback').hidden = !blocked));
+  };
+  $('voiceScope').onchange = async () => {
+    mode = $('voiceScope').value;
+    try {
+      localStorage.setItem('mesce-voice-scope', mode);
+    } catch {}
+    redraw();
+    if (enabled) {
+      await social.request('/api/rtc/enable', { enabled, mode }).catch((e) => toast(e.message));
+      await social.syncNow();
+    }
+  };
+  $('checkVoice').onclick = async () => {
+    $('checkVoice').disabled = true;
+    $('voiceDiagnostic').textContent =
+      'Checking relay audio with a silent test tone. Your microphone is not used…';
+    let context;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      context = new AC();
+      await context.resume();
+      const c = await ice(true);
+      const result = await checkVoiceTransport(c.iceServers, { relay: true, context });
+      $('voiceDiagnostic').textContent =
+        'Relay audio confirmed: ' +
+        result.receivedBytes +
+        ' bytes received and decoded. No microphone was used.';
+    } catch (e) {
+      context?.close().catch(() => {});
+      $('voiceDiagnostic').textContent = e.message;
+    } finally {
+      $('checkVoice').disabled = false;
+    }
+  };
+  function onState(r) {
+    world = r.players;
+    if (!enabled) return;
+    for (const [id, entry] of [...connections]) {
+      if (!eligible(peerData(id))) close(id, true);
+      else if (
+        entry.link.pc.connectionState !== 'connected' &&
+        Date.now() - entry.createdAt > 20000
+      ) {
+        retryAt.set(id, Date.now() + 8000);
+        close(id, true);
+        configAt = 0;
+      }
+    }
+    for (const p of world)
+      if (eligible(p) && social.sessionId().localeCompare(p.id) < 0)
+        ice()
+          .then(() => offer(p))
+          .catch(() => {});
+    redraw();
+  }
+  function update(dt = 0.016) {
+    if (meter && meterValues) {
+      meter.getFloatTimeDomainData(meterValues);
+      let total = 0;
+      for (const v of meterValues) total += v * v;
+      $('micMeter').value = muted ? 0 : Math.min(1, Math.sqrt(total / meterValues.length) * 5);
+    }
+    const me = peerData(social.sessionId());
+    if (!me) return;
+    for (const [id, entry] of connections) {
+      const p = peerData(id);
+      if (!p) continue;
+      const full = me.area === 'auditorium' || (mode === 'room' && p.voice_mode === 'room');
+      const desired = canHearVoice({ ...me, voice_mode: mode }, p)
+        ? full
+          ? 1
+          : Math.max(0, 1 - Math.hypot(p.x - me.x, p.z - me.z) / 22) ** 1.5
+        : 0;
+      entry.audio.volume += (desired - entry.audio.volume) * Math.min(1, dt * 7);
+    }
+  }
+  addEventListener('pagehide', () => {
+    clearInterval(pollTimer);
+    stream?.getTracks().forEach((t) => {
+      t.onended = null;
+      t.stop();
+    });
+    stopMeter();
+    for (const entry of connections.values()) entry.link.close();
+  });
+  return {
+    onState,
+    update,
+    isActive: () => !!enabled,
+    listenInAuditorium: async () => {
+      panel.hidden = false;
+      $('chatPanel').hidden = true;
+      await join(false);
+    },
+    open: () => {
+      panel.hidden = false;
+      redraw();
+    },
+  };
 }

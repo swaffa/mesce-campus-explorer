@@ -1,16 +1,146 @@
-import {campusSeats} from './seat-data.js';
-export function createSeating({player,social,toast,busyActivity}){
- const button=document.createElement('button');button.id='seatAction';button.hidden=true;document.body.append(button);
- let current=null,near=null,busy=false,people=[],selfId=null;
- function reset(model){model.position.y=0;model.rotation.x=0;model.userData.legs.forEach(l=>l.rotation.x=0);model.userData.knees?.forEach(k=>k.rotation.x=0);model.userData.arms.forEach(a=>a.rotation.x=0);if(model.userData.skirt){model.userData.skirt.rotation.x=0;model.userData.skirt.position.y=model.userData.skirtRestY??.83;}model.userData.seated=false;}
- function pose(model,seat){if(seat.kind==='prayer'){model.position.set(seat.x,-.48,seat.z);model.rotation.set(.08,seat.yaw,0);model.userData.legs.forEach(l=>l.rotation.x=-.9);model.userData.knees?.forEach(k=>k.rotation.x=2.25);model.userData.arms.forEach(a=>{a.rotation.x=-.65;a.rotation.z=0;});if(model.userData.skirt){model.userData.skirt.rotation.x=-.3;model.userData.skirt.position.y=(model.userData.skirtRestY??.83)+.05;}model.userData.seated=true;return;}model.position.set(seat.x,seat.height-.86,seat.z);model.rotation.set(0,seat.yaw,0);model.userData.legs.forEach(l=>l.rotation.x=-Math.PI/2);model.userData.knees?.forEach(k=>k.rotation.x=Math.PI/2);model.userData.arms.forEach(a=>a.rotation.x=-.35);if(model.userData.skirt){model.userData.skirt.rotation.x=-.35;model.userData.skirt.position.y=(model.userData.skirtRestY??.83)+.11;}model.userData.seated=true;}
- function reconcile(players,id){people=players;selfId=id;const activity=players.find(p=>p.id===id)?.activity;const next=campusSeats.find(s=>'seat-'+s.id===activity)||null;if(current&&!next)reset(player);current=next;}
- async function stand(){if(!current||busy)return false;busy=true;try{const r=await social.request('/api/seat',{action:'stand'});current=null;reset(player);player.position.set(r.x,0,r.z);await social.syncNow();toast('Back on your feet.');return true;}catch(e){toast(e.message);return false;}finally{busy=false;}}
- async function sit(){if(!near||busy||!social.isJoined())return;busy=true;try{if(busyActivity())throw new Error('Get off your ride or swing first.');await social.syncNow();const r=await social.request('/api/seat',{action:'sit',seat:near.id});current=r.seat;pose(player,current);await social.syncNow();toast(current.kind==='prayer'?'A quiet moment for prayer. Tap Finish prayer whenever you’re ready.':'Take a seat. Press B or tap Stand up when you’re ready.');}catch(e){toast(e.message);}finally{busy=false;}}
- button.onclick=()=>current?stand():sit();addEventListener('keydown',e=>{if((['b','p'].includes(e.key.toLowerCase()))&&!e.repeat&&!['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();current?stand():sit();}});
- function update(started){if(current)pose(player,current);for(const peer of social.getPeers().values()){const seat=campusSeats.find(s=>'seat-'+s.id===peer.activity);if(seat)pose(peer.model,seat);else if(peer.model.userData.seated)reset(peer.model);}
-  near=null;let closest=2.4;const occupied=new Set(people.filter(p=>p.id!==selfId).map(p=>p.activity));for(const seat of campusSeats){if(seat.area!==social.getArea()||occupied.has('seat-'+seat.id))continue;const distance=Math.hypot(player.position.x-seat.x,player.position.z-seat.z);if(distance<closest){near=seat;closest=distance;}}
-  button.hidden=!started||!!document.querySelector('dialog[open]')||(!current&&(!near||busyActivity()));button.dataset.distance=current?'0':closest;button.disabled=busy;button.textContent=current?(current.kind==='prayer'?'P · Finish prayer':'B · Stand up'):near?(near.kind==='prayer'?'P · Pray here':'B · Sit on '+near.label):'';
- }
- return {update,reconcile,stand,active:()=>!!current};
+import { campusSeats } from './seat-data.js';
+export function createSeating({ player, social, toast, busyActivity }) {
+  const button = document.createElement('button');
+  button.id = 'seatAction';
+  button.hidden = true;
+  document.body.append(button);
+  let current = null,
+    near = null,
+    busy = false,
+    people = [],
+    selfId = null;
+  function reset(model) {
+    model.position.y = 0;
+    model.rotation.x = 0;
+    model.userData.legs.forEach((l) => (l.rotation.x = 0));
+    model.userData.knees?.forEach((k) => (k.rotation.x = 0));
+    model.userData.arms.forEach((a) => (a.rotation.x = 0));
+    if (model.userData.skirt) {
+      model.userData.skirt.rotation.x = 0;
+      model.userData.skirt.position.y = model.userData.skirtRestY ?? 0.83;
+    }
+    model.userData.seated = false;
+  }
+  function pose(model, seat) {
+    if (seat.kind === 'prayer') {
+      model.position.set(seat.x, -0.48, seat.z);
+      model.rotation.set(0.08, seat.yaw, 0);
+      model.userData.legs.forEach((l) => (l.rotation.x = -0.9));
+      model.userData.knees?.forEach((k) => (k.rotation.x = 2.25));
+      model.userData.arms.forEach((a) => {
+        a.rotation.x = -0.65;
+        a.rotation.z = 0;
+      });
+      if (model.userData.skirt) {
+        model.userData.skirt.rotation.x = -0.3;
+        model.userData.skirt.position.y = (model.userData.skirtRestY ?? 0.83) + 0.05;
+      }
+      model.userData.seated = true;
+      return;
+    }
+    model.position.set(seat.x, seat.height - 0.86, seat.z);
+    model.rotation.set(0, seat.yaw, 0);
+    model.userData.legs.forEach((l) => (l.rotation.x = -Math.PI / 2));
+    model.userData.knees?.forEach((k) => (k.rotation.x = Math.PI / 2));
+    model.userData.arms.forEach((a) => (a.rotation.x = -0.35));
+    if (model.userData.skirt) {
+      model.userData.skirt.rotation.x = -0.35;
+      model.userData.skirt.position.y = (model.userData.skirtRestY ?? 0.83) + 0.11;
+    }
+    model.userData.seated = true;
+  }
+  function reconcile(players, id) {
+    people = players;
+    selfId = id;
+    const activity = players.find((p) => p.id === id)?.activity;
+    const next = campusSeats.find((s) => 'seat-' + s.id === activity) || null;
+    if (current && !next) reset(player);
+    current = next;
+  }
+  async function stand() {
+    if (!current || busy) return false;
+    busy = true;
+    try {
+      const r = await social.request('/api/seat', { action: 'stand' });
+      current = null;
+      reset(player);
+      player.position.set(r.x, 0, r.z);
+      await social.syncNow();
+      toast('Back on your feet.');
+      return true;
+    } catch (e) {
+      toast(e.message);
+      return false;
+    } finally {
+      busy = false;
+    }
+  }
+  async function sit() {
+    if (!near || busy || !social.isJoined()) return;
+    busy = true;
+    try {
+      if (busyActivity()) throw new Error('Get off your ride or swing first.');
+      await social.syncNow();
+      const r = await social.request('/api/seat', { action: 'sit', seat: near.id });
+      current = r.seat;
+      pose(player, current);
+      await social.syncNow();
+      toast(
+        current.kind === 'prayer'
+          ? 'A quiet moment for prayer. Tap Finish prayer whenever you’re ready.'
+          : 'Take a seat. Press B or tap Stand up when you’re ready.',
+      );
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      busy = false;
+    }
+  }
+  button.onclick = () => (current ? stand() : sit());
+  addEventListener('keydown', (e) => {
+    if (
+      ['b', 'p'].includes(e.key.toLowerCase()) &&
+      !e.repeat &&
+      !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) &&
+      !document.querySelector('dialog[open]')
+    ) {
+      e.preventDefault();
+      current ? stand() : sit();
+    }
+  });
+  function update(started) {
+    if (current) pose(player, current);
+    for (const peer of social.getPeers().values()) {
+      const seat = campusSeats.find((s) => 'seat-' + s.id === peer.activity);
+      if (seat) pose(peer.model, seat);
+      else if (peer.model.userData.seated) reset(peer.model);
+    }
+    near = null;
+    let closest = 2.4;
+    const occupied = new Set(people.filter((p) => p.id !== selfId).map((p) => p.activity));
+    for (const seat of campusSeats) {
+      if (seat.area !== social.getArea() || occupied.has('seat-' + seat.id)) continue;
+      const distance = Math.hypot(player.position.x - seat.x, player.position.z - seat.z);
+      if (distance < closest) {
+        near = seat;
+        closest = distance;
+      }
+    }
+    button.hidden =
+      !started ||
+      !!document.querySelector('dialog[open]') ||
+      (!current && (!near || busyActivity()));
+    button.dataset.distance = current ? '0' : closest;
+    button.disabled = busy;
+    button.textContent = current
+      ? current.kind === 'prayer'
+        ? 'P · Finish prayer'
+        : 'B · Stand up'
+      : near
+        ? near.kind === 'prayer'
+          ? 'P · Pray here'
+          : 'B · Sit on ' + near.label
+        : '';
+  }
+  return { update, reconcile, stand, active: () => !!current };
 }

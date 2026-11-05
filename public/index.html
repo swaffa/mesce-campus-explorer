@@ -1,12 +1,182 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="theme-color" content="#173d37"><title>MESCE</title><meta name="description" content="Take the scenic route. A playful 3D campus exploration game inspired by MES College of Engineering, Kuttippuram."><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="social.css"><link rel="stylesheet" href="community.css"></head>
-<body><canvas id="world" aria-label="Interactive 3D MES college campus"></canvas>
-<header><a class="brand" href="#" aria-label="MESCE home"><span class="seal">M</span><span>MESCE<small>OUR CAMPUS, TOGETHER</small></span></a><div class="top-right"><span class="pill"><i></i> Kuttippuram, Kerala</span><button id="sound" title="Toggle ambient sound" aria-label="Turn ambient sound on">♪</button><button id="menuBtn" aria-label="Open game menu">☰</button></div></header>
-<section id="welcome" class="welcome"><div class="eyebrow">YOUR PEOPLE. YOUR CAMPUS.</div><h1>Welcome to<br><em>MESCE.</em></h1><p>Past the fountain. Around the lawn. Back to your favourite corner.<br>Students and alumni. Old friends and new memories.</p><div class="join-fields"><label>Your name<input id="nickname" maxlength="24" minlength="2" placeholder="Enter your name" autocomplete="nickname"></label><label for="memberType">I am joining as<select id="memberType"><option value="student">Student</option><option value="alumni">Alumnus / Alumna</option></select></label><label for="batchYear">Batch / year (optional)<input id="batchYear" maxlength="4" inputmode="numeric" placeholder="e.g. 2018"></label><label for="prayerSpace">Prayer space<select id="prayerSpace"><option value="men">Men’s prayer space</option><option value="women">Women’s prayer space</option></select></label><div class="attire-field"><label for="characterStyle">Your attire<select id="characterStyle"><option value="trousers">Shirt &amp; trousers</option><option value="braids">Braids &amp; skirt</option><option value="hijab">Hijab &amp; uniform</option></select></label><canvas id="attirePreview" role="img" aria-label="Attire preview"></canvas></div><small>Meet students and alumni on campus. Share the campus link with friends.</small></div><p id="joinError" role="alert"></p><button class="primary" id="start">Join the campus <span>↗</span></button><div class="welcome-foot">WASD / arrow keys to move <b>·</b> live conversations · club events · group photos</div></section>
-<div class="scene-note" id="sceneNote"><span>01 / A FAMILIAR FEELING</span><strong>Some places stay with you.</strong><small>A campus made for wandering.</small></div>
-<div id="hud" hidden><aside class="trail"><div class="eyebrow">YOUR CAMPUS TRAIL <span id="count">0 / 9</span></div><h2>Explore together.</h2><div id="stamps"></div><button id="trailToggle">Show places ↗</button><div id="places" hidden></div></aside><div class="location"><i></i><span id="locationText">College entrance</span></div><div class="minimap"><canvas id="map" width="204" height="136" aria-label="Campus minimap"></canvas><span>MESCE <b>MAP</b></span></div><div class="bottom"><span><kbd>W A S D</kbd> walk <kbd>SHIFT</kbd> run <kbd>E</kbd> interact</span><div><button id="zoomOut" aria-label="Zoom out">−</button><button id="cameraBtn">◉ Walk</button><button id="zoomIn" aria-label="Zoom in">+</button></div></div><div id="prompt" hidden><button id="interact">E · Explore this place</button></div><div id="joystick"><div></div></div><button id="touchAction" aria-label="Interact with nearby landmark">E</button></div>
-<div id="socialHUD" hidden><div class="social-bar"><span id="connection"><i></i><span id="connectionText">Connecting…</span></span><button id="onlineCount" title="Students in this room">1 online</button><button id="shareRoom">↗ Invite friends</button><button id="waveBtn">👋 Wave</button><button id="gatherBtn">⌖ Gather here</button><button id="photoBtn">📷 Group photo</button><button id="chatBtn">☏ Chat</button></div><section id="chatPanel" hidden aria-label="Campus room chat"><div class="chat-head"><strong>Campus commons</strong><button id="closeChat" aria-label="Close chat">×</button></div><div id="roster"></div><p class="chat-notice">This is a public room. Text messages expire after 24h. Display names and batch details are not verified.</p><div id="messages" aria-live="polite"></div><form id="chatForm"><input id="chatInput" placeholder="Say something to the room…" maxlength="400" aria-label="Chat message" autocomplete="off"><button type="submit">Send ↗</button></form></section></div>
-<dialog id="photoDialog"><button id="closePhoto" class="close" aria-label="Close group photo">×</button><span class="eyebrow">A CAMPUS MEMORY</span><h2>Everyone, say MESCE.</h2><img id="groupPhoto" alt="Your campus group photo"><p id="photoCount"></p><a id="downloadPhoto" class="primary" download="mesce-group-photo.png">Download photo ↓</a><p class="fine">Saved to your device, not uploaded. Invite friends to gather nearby, then take another.</p></dialog>
-<dialog id="card"><button class="close" id="closeCard" aria-label="Close location">×</button><span class="eyebrow" id="cardTag">A PLACE ON YOUR TRAIL</span><div class="card-icon" id="cardIcon"></div><h2 id="cardTitle"></h2><p id="cardText"></p><div id="cardExtra"></div><button class="primary" id="keepGoing">Keep wandering ↗</button></dialog>
-<dialog id="menu"><button class="close" id="closeMenu" aria-label="Close menu">×</button><span class="eyebrow">MAKE YOURSELF AT HOME</span><h2>MESCE</h2><p>WASD or arrows to walk. Hold Shift to run. Press E for the nearby action. Press F at a shop or fruit tree. Press B beside a seat to sit or stand. Press P on a prayer mat, or R to read in the library. Drag to orbit the camera. Scroll to zoom. Use the View button to switch between walk, close, and aerial cameras. On mobile, use the thumbstick and contextual action button.</p><button id="homeBtn">↩ Back to the entrance</button><button id="resetBtn">↺ Start a fresh campus trail</button><p class="fine">An independent, stylized campus recreation based on supplied references. Explore campus, the auditorium, library, and prayer halls. Public campus rooms: your nickname and position are visible to others in the same room. Chat expires after 24 hours. Live voice is optional and not recorded. Photos download locally. Not an official navigation map.</p></dialog>
-<div id="toast" role="status"></div><div id="loading"><span class="seal">M</span><p>Opening the college gates…</p></div><script type="module" src="game.js"></script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <meta name="theme-color" content="#173d37" />
+    <title>MESCE</title>
+    <meta
+      name="description"
+      content="Take the scenic route. A playful 3D campus exploration game inspired by MES College of Engineering, Kuttippuram."
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="social.css" />
+    <link rel="stylesheet" href="community.css" />
+  </head>
+  <body>
+    <canvas id="world" aria-label="Interactive 3D MES college campus"></canvas>
+    <header>
+      <a class="brand" href="#" aria-label="MESCE home"
+        ><span class="seal">M</span><span>MESCE<small>OUR CAMPUS, TOGETHER</small></span></a
+      >
+      <div class="top-right">
+        <span class="pill"><i></i> Kuttippuram, Kerala</span
+        ><button id="sound" title="Toggle ambient sound" aria-label="Turn ambient sound on">
+          ♪</button
+        ><button id="menuBtn" aria-label="Open game menu">☰</button>
+      </div>
+    </header>
+    <section id="welcome" class="welcome">
+      <div class="eyebrow">YOUR PEOPLE. YOUR CAMPUS.</div>
+      <h1>Welcome to<br /><em>MESCE.</em></h1>
+      <p>
+        Past the fountain. Around the lawn. Back to your favourite corner.<br />Students and alumni.
+        Old friends and new memories.
+      </p>
+      <div class="join-fields">
+        <label
+          >Your name<input
+            id="nickname"
+            maxlength="24"
+            minlength="2"
+            placeholder="Enter your name"
+            autocomplete="nickname" /></label
+        ><label for="memberType"
+          >I am joining as<select id="memberType">
+            <option value="student">Student</option>
+            <option value="alumni">Alumnus / Alumna</option>
+          </select></label
+        ><label for="batchYear"
+          >Batch / year (optional)<input
+            id="batchYear"
+            maxlength="4"
+            inputmode="numeric"
+            placeholder="e.g. 2018" /></label
+        ><label for="prayerSpace"
+          >Prayer space<select id="prayerSpace">
+            <option value="men">Men’s prayer space</option>
+            <option value="women">Women’s prayer space</option>
+          </select></label
+        >
+        <div class="attire-field">
+          <label for="characterStyle"
+            >Your attire<select id="characterStyle">
+              <option value="trousers">Shirt &amp; trousers</option>
+              <option value="braids">Braids &amp; skirt</option>
+              <option value="hijab">Hijab &amp; uniform</option>
+            </select></label
+          ><canvas id="attirePreview" role="img" aria-label="Attire preview"></canvas>
+        </div>
+        <small>Meet students and alumni on campus. Share the campus link with friends.</small>
+      </div>
+      <p id="joinError" role="alert"></p>
+      <button class="primary" id="start">Join the campus <span>↗</span></button>
+      <div class="welcome-foot">
+        WASD / arrow keys to move <b>·</b> live conversations · club events · group photos
+      </div>
+    </section>
+    <div class="scene-note" id="sceneNote">
+      <span>01 / A FAMILIAR FEELING</span><strong>Some places stay with you.</strong
+      ><small>A campus made for wandering.</small>
+    </div>
+    <div id="hud" hidden>
+      <aside class="trail">
+        <div class="eyebrow">YOUR CAMPUS TRAIL <span id="count">0 / 9</span></div>
+        <h2>Explore together.</h2>
+        <div id="stamps"></div>
+        <button id="trailToggle">Show places ↗</button>
+        <div id="places" hidden></div>
+      </aside>
+      <div class="location"><i></i><span id="locationText">College entrance</span></div>
+      <div class="minimap">
+        <canvas id="map" width="204" height="136" aria-label="Campus minimap"></canvas
+        ><span>MESCE <b>MAP</b></span>
+      </div>
+      <div class="bottom">
+        <span><kbd>W A S D</kbd> walk <kbd>SHIFT</kbd> run <kbd>E</kbd> interact</span>
+        <div>
+          <button id="zoomOut" aria-label="Zoom out">−</button><button id="cameraBtn">◉ Walk</button
+          ><button id="zoomIn" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+      <div id="prompt" hidden><button id="interact">E · Explore this place</button></div>
+      <div id="joystick"><div></div></div>
+      <button id="touchAction" aria-label="Interact with nearby landmark">E</button>
+    </div>
+    <div id="socialHUD" hidden>
+      <div class="social-bar">
+        <span id="connection"><i></i><span id="connectionText">Connecting…</span></span
+        ><button id="onlineCount" title="Students in this room">1 online</button
+        ><button id="shareRoom">↗ Invite friends</button><button id="waveBtn">👋 Wave</button
+        ><button id="gatherBtn">⌖ Gather here</button><button id="photoBtn">📷 Group photo</button
+        ><button id="chatBtn">☏ Chat</button>
+      </div>
+      <section id="chatPanel" hidden aria-label="Campus room chat">
+        <div class="chat-head">
+          <strong>Campus commons</strong><button id="closeChat" aria-label="Close chat">×</button>
+        </div>
+        <div id="roster"></div>
+        <p class="chat-notice">
+          This is a public room. Text messages expire after 24h. Display names and batch details are
+          not verified.
+        </p>
+        <div id="messages" aria-live="polite"></div>
+        <form id="chatForm">
+          <input
+            id="chatInput"
+            placeholder="Say something to the room…"
+            maxlength="400"
+            aria-label="Chat message"
+            autocomplete="off"
+          /><button type="submit">Send ↗</button>
+        </form>
+      </section>
+    </div>
+    <dialog id="photoDialog">
+      <button id="closePhoto" class="close" aria-label="Close group photo">×</button
+      ><span class="eyebrow">A CAMPUS MEMORY</span>
+      <h2>Everyone, say MESCE.</h2>
+      <img id="groupPhoto" alt="Your campus group photo" />
+      <p id="photoCount"></p>
+      <a id="downloadPhoto" class="primary" download="mesce-group-photo.png">Download photo ↓</a>
+      <p class="fine">
+        Saved to your device, not uploaded. Invite friends to gather nearby, then take another.
+      </p>
+    </dialog>
+    <dialog id="card">
+      <button class="close" id="closeCard" aria-label="Close location">×</button
+      ><span class="eyebrow" id="cardTag">A PLACE ON YOUR TRAIL</span>
+      <div class="card-icon" id="cardIcon"></div>
+      <h2 id="cardTitle"></h2>
+      <p id="cardText"></p>
+      <div id="cardExtra"></div>
+      <button class="primary" id="keepGoing">Keep wandering ↗</button>
+    </dialog>
+    <dialog id="menu">
+      <button class="close" id="closeMenu" aria-label="Close menu">×</button
+      ><span class="eyebrow">MAKE YOURSELF AT HOME</span>
+      <h2>MESCE</h2>
+      <p>
+        WASD or arrows to walk. Hold Shift to run. Press E for the nearby action. Press F at a shop
+        or fruit tree. Press B beside a seat to sit or stand. Press P on a prayer mat, or R to read
+        in the library. Drag to orbit the camera. Scroll to zoom. Use the View button to switch
+        between walk, close, and aerial cameras. On mobile, use the thumbstick and contextual action
+        button.
+      </p>
+      <button id="homeBtn">↩ Back to the entrance</button
+      ><button id="resetBtn">↺ Start a fresh campus trail</button>
+      <p class="fine">
+        An independent, stylized campus recreation based on supplied references. Explore campus, the
+        auditorium, library, and prayer halls. Public campus rooms: your nickname and position are
+        visible to others in the same room. Chat expires after 24 hours. Live voice is optional and
+        not recorded. Photos download locally. Not an official navigation map.
+      </p>
+    </dialog>
+    <div id="toast" role="status"></div>
+    <div id="loading">
+      <span class="seal">M</span>
+      <p>Opening the college gates…</p>
+    </div>
+    <script type="module" src="game.js"></script>
+  </body>
+</html>

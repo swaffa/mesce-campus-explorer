@@ -1,0 +1,4 @@
+* text=auto eol=lf
+public/vendor/** linguist-vendored
+public/fonts/** linguist-vendored
+dist/** linguist-generated
