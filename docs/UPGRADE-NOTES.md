@@ -1,5 +1,13 @@
 # MESCE atmosphere upgrade
 
+## Repository and joining checks (5 November)
+
+Authored source now follows a consistent formatter configuration. The Worker build uses esbuild module resolution, development tools are pinned with a lockfile, generated bundles are excluded from Git, and CI runs the same formatting, syntax, build, test, and artifact checks used locally. Architecture and contribution guides describe the existing systems and their limits.
+
+The joining screen now validates short or empty nicknames before making a request. Browser API handling distinguishes server validation, temporary gateway errors, rate limits, timeouts, and network failures, while preserving raw media responses. Failed writes are not automatically retried. A reported hosted connection error was not reproducible during inspection: the live server accepted a valid nickname and returned its specific validation error for a one-character nickname. This update improves recovery guidance; it does not establish the cause of the earlier transient failure.
+
+Verification: 35 automated tests pass, including packaged-asset serving and API error handling. The repository setup also passed from a fresh source copy using `npm ci`. Browser checks verified the hosted join, the updated local short-name message, and successful joining after correcting the name.
+
 ## Existing stack retained
 
 - Engine/rendering: vendored Three.js, WebGLRenderer, ACES tone mapping, PCF soft shadows, procedural BufferGeometry/primitive meshes, no framework or downloaded scene packs.

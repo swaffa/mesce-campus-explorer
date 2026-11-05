@@ -8,6 +8,7 @@ test('built Worker serves the game and its browser runtime dependencies without 
   const resources = [
     ['/', 'text/html'],
     ['/game.js', 'text/javascript'],
+    ['/api-client.js', 'text/javascript'],
     ['/style.css', 'text/css'],
     ['/vendor/three.module.js', 'text/javascript'],
     ['/fonts/gentilis_bold.typeface.json', 'application/json'],

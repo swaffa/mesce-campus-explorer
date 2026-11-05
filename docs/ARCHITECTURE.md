@@ -26,6 +26,7 @@ The main systems are grouped into modules:
 | Characters and world detail   | `campus-characters.js`, `cozy-world.js`, `realism.js`, `department-details.js` |
 | Academic interiors and floors | `academic-blocks.js`, `academic-world.js`, `academic-data.js`                  |
 | Social presence and interface | `social.js`, `community-visuals.js`, `events.js`                               |
+| Browser API requests          | `api-client.js`: timeouts, response decoding, and connection errors            |
 | Proximity and shared seats    | `proximity.js`, `seating.js`, `seat-data.js`                                   |
 | Campus activities             | `riding.js`, `swings.js`, `campus-life.js`, `campus-interiors.js`              |
 | Live voice                    | `live-voice.js`, `voice-peer.js`, `voice-space.js`                             |

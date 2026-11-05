@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { requestCampus } from './api-client.js';
 const $ = (id) => document.getElementById(id);
 export function createSocial({
   scene,
@@ -39,6 +40,10 @@ export function createSocial({
   try {
     $('nickname').value = localStorage.getItem('mesce-nickname') || '';
   } catch {}
+  $('nickname').addEventListener('input', () => {
+    $('nickname').removeAttribute('aria-invalid');
+    $('joinError').textContent = '';
+  });
   function nameTag(name, member = 'student', batch = '') {
     const cv = document.createElement('canvas');
     cv.width = 384;
@@ -75,20 +80,15 @@ export function createSocial({
     };
     const method = options.method || 'POST';
     if (data !== undefined && !options.blob) headers['Content-Type'] = 'application/json';
-    const r = await fetch(path, {
-      method,
-      headers,
-      body: options.blob || (data !== undefined ? JSON.stringify(data) : undefined),
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!r.ok) {
-      let e;
-      try {
-        e = await r.json();
-      } catch {}
-      throw new Error(e?.error || 'Campus connection unavailable.');
-    }
-    return options.raw ? r : r.json();
+    return requestCampus(
+      path,
+      {
+        method,
+        headers,
+        body: options.blob || (data !== undefined ? JSON.stringify(data) : undefined),
+      },
+      options.raw,
+    );
   }
   function status(text, ok) {
     $('connectionText').textContent = text;
@@ -180,8 +180,17 @@ export function createSocial({
     }
   }
   async function join() {
-    const name = $('nickname').value.trim();
+    const name = $('nickname')
+      .value.replace(/[\u0000-\u001f\u007f]/g, '')
+      .trim();
     $('joinError').textContent = '';
+    if (name.length < 2) {
+      $('joinError').textContent = 'Enter a name with at least 2 characters to join campus.';
+      $('nickname').setAttribute('aria-invalid', 'true');
+      $('nickname').focus();
+      return false;
+    }
+    $('nickname').removeAttribute('aria-invalid');
     $('start').disabled = true;
     $('start').textContent = 'Joining campus…';
     try {
