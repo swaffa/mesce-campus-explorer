@@ -6,6 +6,8 @@ export function localPlaytest({
   resetCamera,
   beforeMove = async () => true,
   inAcademic = () => false,
+  previewTouch = () => {},
+  diagnostics = () => ({}),
 }) {
   const panel = document.createElement('details');
   panel.id = 'localPlaytest';
@@ -70,5 +72,22 @@ export function localPlaytest({
     toast('Local checkpoint: ' + name);
   };
   panel.append(label, select, go);
+  const touchLabel = document.createElement('label');
+  const touch = document.createElement('input');
+  touch.type = 'checkbox';
+  touch.checked = document.body.classList.contains('touch-controls');
+  touchLabel.append(touch, ' Preview tablet controls');
+  touch.onchange = () => previewTouch(touch.checked);
+  const readout = document.createElement('output');
+  readout.id = 'localDiagnostics';
+  readout.setAttribute('aria-label', 'Local game diagnostics');
+  readout.style.cssText =
+    'position:fixed;left:20px;top:140px;pointer-events:none;background:#faf5e9d9;color:#234b3e;padding:6px 10px;border-radius:6px;font:10px monospace;z-index:3';
+  document.body.append(readout);
+  const timer = setInterval(() => {
+    readout.textContent = JSON.stringify(diagnostics());
+  }, 200);
+  addEventListener('pagehide', () => clearInterval(timer), { once: true });
+  panel.append(touchLabel);
   document.getElementById('menu').append(panel);
 }

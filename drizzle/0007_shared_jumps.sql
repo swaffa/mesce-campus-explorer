@@ -1,0 +1,1 @@
+ALTER TABLE campus_players ADD COLUMN jump_at INTEGER NOT NULL DEFAULT 0;

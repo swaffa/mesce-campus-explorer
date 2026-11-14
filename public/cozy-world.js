@@ -1,9 +1,24 @@
 import { campusLayout } from './campus-layout.js';
 import * as THREE from './vendor/three.module.js';
-export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball, mat }) {
+export function cozyWorld({
+  scene,
+  renderer,
+  sun,
+  player,
+  camera,
+  box,
+  cyl,
+  ball,
+  mat,
+  floor = () => 0,
+}) {
   let quality = 'high',
     reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  quality = innerWidth < 700 ? 'low' : 'high';
+  const touchDevice = navigator.maxTouchPoints > 0 || matchMedia('(any-pointer: coarse)').matches;
+  quality =
+    touchDevice || document.body.classList.contains('touch-controls') || innerWidth < 700
+      ? 'low'
+      : 'high';
   const panel = document.createElement('fieldset');
   panel.className = 'world-settings';
   panel.innerHTML =
@@ -13,8 +28,8 @@ export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball
   select.value = quality;
   motion.checked = reduced;
   function apply() {
-    renderer.setPixelRatio(Math.min(devicePixelRatio, quality === 'low' ? 1 : 1.6));
-    sun.shadow.mapSize.set(quality === 'low' ? 1024 : 2048, quality === 'low' ? 1024 : 2048);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, quality === 'low' ? 1.2 : 1.6));
+    sun.shadow.mapSize.set(quality === 'low' ? 1536 : 2048, quality === 'low' ? 1536 : 2048);
     sun.shadow.map?.dispose();
     sun.shadow.map = null;
     sun.shadow.needsUpdate = true;
@@ -32,6 +47,16 @@ export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball
     apply();
   };
   apply();
+  addEventListener('mesce-touch-mode', (event) => {
+    if (event.detail && quality !== 'low') {
+      quality = 'low';
+      select.value = quality;
+      apply();
+    }
+  });
+  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (event) => {
+    reduced = event.matches;
+  });
   // Students' Corner is the representative material and prop composition.
   const pots = [
     [-90, 31],
@@ -276,12 +301,16 @@ export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball
   let frames = 0,
     elapsed = 0,
     lastShadow = { x: Infinity, z: Infinity };
-  function update(time, dt, inside, paused) {
+  function update(time, dt, inside, paused, renderDelta = dt) {
     herbTime.value = time;
     herbStrength.value = reduced ? 0 : 1;
     herbs.count = quality === 'low' ? Math.floor(herbCount * 0.55) : herbCount;
     contact.visible = !inside;
-    contact.position.set(player.position.x, 0.245, player.position.z);
+    const ground = floor(player.position.x, player.position.z);
+    contact.position.set(player.position.x, ground + 0.245, player.position.z);
+    const height = Math.max(0, player.position.y - ground);
+    contact.scale.setScalar(1 + height * 0.25);
+    contact.material.opacity = 1 / (1 + height * 0.8);
     mote.visible = !inside && !reduced && quality === 'high';
     if (mote.visible)
       for (let i = 0; i < offsets.length; i++) {
@@ -329,9 +358,16 @@ export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball
       c.scale.copy(o.scale);
       if (c !== cue && !c.isSprite) c.visible = o.visible;
     }
-    frames++;
-    elapsed += dt;
+    if (!paused) {
+      frames++;
+      elapsed += Math.min(renderDelta, 1);
+    }
     if (elapsed > 2) {
+      if (time > 5 && !paused && quality === 'high' && frames / elapsed < 38) {
+        quality = 'low';
+        select.value = quality;
+        apply();
+      }
       panel.querySelector('#performanceReadout').textContent =
         Math.round(frames / elapsed) +
         ' fps · ' +
@@ -347,7 +383,13 @@ export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball
   function batch() {
     const buckets = new Map();
     for (const o of [...scene.children]) {
-      if (!o.isMesh || o.isInstancedMesh || o.geometry?.type !== 'BoxGeometry') continue;
+      if (
+        !o.isMesh ||
+        o.isInstancedMesh ||
+        o.userData.cameraFade ||
+        o.geometry?.type !== 'BoxGeometry'
+      )
+        continue;
       const materials = Array.isArray(o.material) ? o.material : [o.material],
         key = materials.map((m) => m.uuid).join(',');
       if (!buckets.has(key)) buckets.set(key, []);
@@ -368,5 +410,11 @@ export function cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball
       scene.add(mesh);
     }
   }
-  return { update, batch, reducedMotion: () => reduced, lowQuality: () => quality === 'low' };
+  return {
+    update,
+    batch,
+    reducedMotion: () => reduced,
+    lowQuality: () => quality === 'low',
+    performance: () => panel.querySelector('#performanceReadout').textContent,
+  };
 }

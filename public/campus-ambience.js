@@ -1,5 +1,6 @@
 import { campusLayout } from './campus-layout.js';
 import { renderKeralaAmbience } from './audio-synthesis.js';
+import { readAudioPreferences } from './audio-preferences.js';
 export function createAmbience({
   player,
   indoors,
@@ -10,6 +11,7 @@ export function createAmbience({
   toast,
   isPaused = () => false,
   isSeated = () => false,
+  isAirborne = () => false,
   getArea = () => (indoors() ? 'auditorium' : 'campus'),
   getHeading = () => 0,
 }) {
@@ -27,15 +29,17 @@ export function createAmbience({
     nextBird = 0,
     nextVillage = 0,
     nextClink = 0,
-    active = false;
+    active = false,
+    wasActive = false;
   const loops = [],
     voices = new Set(),
     locals = [];
-  let prefs = { master: 0.72, ambience: 0.66, effects: 0.55, music: 0, muted: false };
+  let prefs = readAudioPreferences(null);
   try {
-    prefs.muted = JSON.parse(localStorage.getItem('mesce-audio') || '{}').muted === true;
-    if (localStorage.getItem('mesce-ambience') === 'off' && !localStorage.getItem('mesce-audio'))
-      prefs.muted = true;
+    prefs = readAudioPreferences(
+      localStorage.getItem('mesce-audio'),
+      localStorage.getItem('mesce-ambience'),
+    );
   } catch {}
   const button = document.getElementById('sound'),
     panel = document.createElement('fieldset');
@@ -55,7 +59,12 @@ export function createAmbience({
           ' volume"></label>',
       )
       .join('') +
-    '<small id="audioStatus">Sound starts with your first tap. Live voice has separate controls.</small>';
+    '<button type="button" id="muteEnvironment">Mute environment</button><small id="audioStatus">Sound starts with your first tap. Live voice has separate controls.</small>';
+  const details = document.createElement('details');
+  details.className = 'sound-settings';
+  details.innerHTML = '<summary>Sound & ambience</summary>';
+  details.append(panel);
+  document.getElementById('menu').insertBefore(details, document.querySelector('#menu .fine'));
   const save = () => {
     try {
       localStorage.setItem('mesce-audio', JSON.stringify(prefs));
@@ -65,11 +74,16 @@ export function createAmbience({
     button.classList.toggle('is-live', !prefs.muted);
     button.setAttribute('aria-label', prefs.muted ? 'Unmute game audio' : 'Mute game audio');
     button.title = prefs.muted ? 'Game audio muted' : 'Game audio on';
+    panel.querySelector('#muteEnvironment').textContent = prefs.muted
+      ? 'Unmute environment'
+      : 'Mute environment';
+    panel.querySelector('#muteEnvironment').setAttribute('aria-pressed', String(prefs.muted));
   }
   for (const key of ['master', 'ambience', 'effects', 'music']) {
     const input = panel.querySelector('#audio-' + key);
     input.value = Math.round(prefs[key] * 100);
     input.oninput = () => {
+      unlock();
       prefs[key] = Number(input.value) / 100;
       save();
       apply();
@@ -163,9 +177,9 @@ export function createAmbience({
     setup();
     context?.resume().catch(() => {});
   }
-  function tone(from, to, duration, volume, bus = effects, pan = 0, type = 'sine') {
+  function tone(from, to, duration, volume, bus = effects, pan = 0, type = 'sine', delay = 0) {
     if (!context || voices.size >= 8 || document.hidden) return;
-    const t = context.currentTime,
+    const t = context.currentTime + delay,
       o = context.createOscillator(),
       g = context.createGain(),
       p = context.createStereoPanner();
@@ -184,7 +198,7 @@ export function createAmbience({
       g.disconnect();
       p.disconnect();
     };
-    o.start();
+    o.start(t);
     o.stop(t + duration + 0.025);
   }
   function transient(volume, filter = 650, duration = 0.1) {
@@ -211,21 +225,30 @@ export function createAmbience({
   }
   function effect(kind) {
     if (!context || !active || prefs.muted) return;
-    if (kind === 'greeting') tone(460, 540, 0.18, 0.014);
+    if (kind === 'landing') transient(0.035, 480, 0.085);
+    else if (kind === 'greeting') tone(460, 540, 0.18, 0.014);
     else if (kind === 'rustle') transient(0.035, 2300, 0.16);
     else tone(640 + Math.random() * 30, 500, 0.055, 0.009);
   }
-  button.onclick = () => {
+  function toggleMute() {
     unlock();
     prefs.muted = !prefs.muted;
     save();
     apply();
     appearance();
     toast(prefs.muted ? 'Game audio muted.' : 'Game audio on.');
-  };
+  }
+  button.onclick = toggleMute;
+  panel.querySelector('#muteEnvironment').onclick = toggleMute;
   function update(started, time, dt) {
     if (!context) return;
     active = started && !isPaused() && !document.hidden;
+    if (active && !wasActive) {
+      nextBird = time + 8 + Math.random() * 12;
+      nextVillage = time + 25 + Math.random() * 20;
+      nextClink = time + 10 + Math.random() * 12;
+    }
+    wasActive = active;
     const inside = indoors(),
       dx = player.position.x - last.x,
       dz = player.position.z - last.z,
@@ -242,7 +265,8 @@ export function createAmbience({
         z = local.z - player.position.z,
         d = Math.hypot(x, z),
         a = Math.max(0, 1 - d / local.range);
-      local.level.gain.setTargetAtTime(inside ? 0 : local.volume * a * a, t, 0.6);
+      const breeze = 0.88 + Math.sin(time * 0.13 + local.x * 0.07 + local.z * 0.04) * 0.12;
+      local.level.gain.setTargetAtTime(inside ? 0 : local.volume * a * a * breeze, t, 0.6);
       local.pan.pan.setTargetAtTime(
         Math.max(
           -0.9,
@@ -268,6 +292,17 @@ export function createAmbience({
         ambience,
         pan,
       );
+      if (Math.random() > 0.45)
+        tone(
+          base * 0.94,
+          base * 0.78,
+          0.12 + Math.random() * 0.08,
+          0.005,
+          ambience,
+          pan,
+          'sine',
+          0.23,
+        );
     }
     if (!inside && time > nextVillage) {
       nextVillage = time + 27 + Math.random() * 25;
@@ -284,7 +319,7 @@ export function createAmbience({
       nextClink = time + 12 + Math.random() * 19;
       tone(1250, 1190, 0.1, 0.006, ambience, -0.3);
     }
-    if (moving && !isRiding() && !isSwinging() && !isSeated()) {
+    if (moving && !isRiding() && !isSwinging() && !isSeated() && !isAirborne()) {
       stepDistance += distance;
       const stride = Math.PI / 1.65;
       if (stepDistance > stride) {
@@ -318,6 +353,9 @@ export function createAmbience({
     }
     context?.close().catch(() => {});
     context = null;
+    loops.length = 0;
+    voices.clear();
+    locals.length = 0;
   }
   addEventListener('pagehide', dispose);
   addEventListener(

@@ -2,7 +2,7 @@
 
 A shared 3D browser game for MES College of Engineering students and alumni. Walk around campus, meet friends, ride bikes, take group photos, and host auditorium events.
 
-[Play MESCE](https://mesce-campus-explorer.swaffaalhuda-mnr.chatgpt.site/?room=campus) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md)
+[Play on Vercel](https://mesce-campus-explorer.vercel.app/?room=campus) · [Original host](https://mesce-campus-explorer.swaffaalhuda-mnr.chatgpt.site/?room=campus) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md)
 
 ## Local development
 
@@ -31,11 +31,18 @@ This checks formatting and JavaScript syntax, rebuilds the deployment artifact, 
 
 Rooms support up to 40 active participants. The campus is an original stylized interpretation of supplied references; it is not a surveyed floor plan or an official college navigation service.
 
+## Tablet play and atmosphere
+
+Touch controls appear on touch-capable devices at any screen width. Use the left stick to move, drag the world to orbit, pinch to zoom, and tap Run or Jump. Menu → Touch controls provides a saved manual choice for hybrid devices. The social dock scrolls on smaller screens, with chat and voice placed first. Keyboard controls remain available.
+
+The campus uses an elevated perspective camera, warm light, procedural weathered surfaces, instanced foliage, and independently phased wind. Device-aware detail and reduced motion keep the scene readable. Menu → Sound & ambience exposes the saved master, ambience, effects, music, and mute controls; the current atmosphere contains no music.
+
 ## Controls
 
 | Action                  | Control                                            |
 | ----------------------- | -------------------------------------------------- |
 | Walk / run              | WASD or arrow keys / hold Shift                    |
+| Jump outside            | Space / touch Jump                                 |
 | Nearby interaction      | E, or the contextual touch button                  |
 | Shop / collect fruit    | F                                                  |
 | Sit / stand             | B                                                  |
@@ -47,7 +54,7 @@ Rooms support up to 40 active participants. The campus is an original stylized i
 
 ## Stack and deployment
 
-The client uses vendored Three.js r170 with original procedural geometry and textures. A Cloudflare-compatible Worker serves the client and shared-campus API; D1 stores game state and R2 handles legacy voice-note uploads. Production is currently hosted through Sites.
+The client uses vendored Three.js r170 with original procedural geometry and textures. A Cloudflare-compatible Worker serves the client and shared-campus API; D1 stores game state and R2 handles legacy voice-note uploads. The Sites Worker remains the authoritative backend; Vercel serves a second frontend through a same-origin API bridge. See [deployment](docs/DEPLOYMENT.md) for both configurations.
 
 `npm run build` generates `dist/server/index.js` and its hosting manifest. Generated output is excluded from Git. Hosting requires the `DB` and `BUCKET` bindings and the ordered SQL migrations in `drizzle/`; a static-only deployment cannot run the shared features. See the [architecture guide](docs/ARCHITECTURE.md) for module boundaries and persistence behavior.
 

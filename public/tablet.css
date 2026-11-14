@@ -1,0 +1,325 @@
+/* Touch capability, rather than screen width, includes iPad and large Android tablets. */
+#touchMovement {
+  display: none;
+}
+#joystick small {
+  display: none;
+}
+.touch-controls {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+.touch-controls button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.touch-controls input,
+.touch-controls select,
+.touch-controls textarea {
+  font-size: 16px;
+}
+.touch-controls header {
+  top: max(18px, env(safe-area-inset-top));
+  left: max(22px, var(--safe-left));
+  right: max(22px, var(--safe-right));
+}
+.touch-controls .welcome {
+  max-height: calc(100dvh - 110px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.touch-controls .join-fields input,
+.touch-controls .join-fields select {
+  min-height: 48px;
+  font-size: 16px;
+}
+.touch-controls .primary {
+  min-height: 52px;
+}
+.playing.touch-controls #joystick {
+  display: block;
+  position: fixed;
+  left: calc(28px + var(--safe-left));
+  bottom: calc(100px + var(--safe-bottom));
+  width: 116px;
+  height: 116px;
+  border: 1px solid #f8f4eac9;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f8f5e657, #24423614);
+  box-shadow:
+    inset 0 0 18px #fff3,
+    0 5px 22px #162c1826;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 5;
+}
+.playing.touch-controls #joystick > div {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  left: 34px;
+  top: 34px;
+  background: #345b4abf;
+  border: 1px solid #fff9;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.playing.touch-controls #joystick small {
+  display: block;
+  position: absolute;
+  width: 100%;
+  bottom: -23px;
+  text-align: center;
+  color: #f7f3de;
+  text-shadow: 0 1px 6px #173a30;
+  letter-spacing: 2px;
+  font-size: 9px;
+  pointer-events: none;
+}
+.playing.touch-controls #touchMovement {
+  display: flex;
+  position: fixed;
+  right: calc(24px + var(--safe-right));
+  bottom: calc(110px + var(--safe-bottom));
+  gap: 16px;
+  align-items: end;
+  z-index: 5;
+}
+#touchMovement button {
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  border: 1px solid #fff9;
+  border-radius: 50%;
+  color: #fff7e4;
+  background: #244a3bd9;
+  box-shadow: 0 6px 22px #19372525;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#touchMovement button b {
+  font: 26px sans-serif;
+  line-height: 1;
+}
+#touchMovement button span {
+  font-size: 10px;
+}
+#runButton {
+  width: 56px;
+  height: 56px;
+}
+#jumpButton {
+  width: 72px;
+  height: 72px;
+}
+#runButton[aria-pressed='true'] {
+  color: #233b29;
+  background: #d4e4abf0;
+}
+#jumpButton:disabled {
+  opacity: 0.4;
+}
+.touch-controls .social-bar {
+  position: fixed;
+  bottom: calc(12px + var(--safe-bottom));
+  width: max-content;
+  max-width: calc(100% - 32px - var(--safe-left) - var(--safe-right));
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 6px;
+  gap: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.touch-controls .social-bar button,
+.touch-controls .social-bar > span {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 11px 12px;
+}
+.touch-controls .social-bar::-webkit-scrollbar {
+  display: none;
+}
+.touch-controls .bottom {
+  position: fixed;
+  bottom: calc(214px + var(--safe-bottom));
+  left: auto;
+  right: calc(24px + var(--safe-right));
+}
+.touch-controls .bottom > span {
+  display: none;
+}
+.touch-controls .bottom button {
+  min-width: 44px;
+  font-size: 12px;
+}
+.touch-controls .minimap {
+  top: 145px;
+  bottom: auto;
+  right: calc(24px + var(--safe-right));
+  width: 142px;
+  opacity: 0.83;
+}
+.touch-controls .minimap canvas {
+  width: 126px;
+  height: 84px;
+}
+.touch-controls .contextual-action {
+  position: fixed;
+  bottom: calc(248px + var(--safe-bottom));
+  max-width: min(400px, 74vw);
+  min-height: 48px;
+  padding: 13px 20px;
+  white-space: normal;
+  text-align: center;
+  font-size: 14px;
+  z-index: 5;
+}
+.touch-controls #chatPanel,
+.touch-controls #voicePanel {
+  bottom: calc(255px + var(--safe-bottom));
+  top: auto;
+  max-height: calc(100dvh - 350px);
+  width: min(390px, calc(100vw - 40px));
+  overflow-y: auto;
+}
+.touch-controls #toast {
+  top: 90px;
+  max-width: min(480px, 86vw);
+  font-size: 13px;
+}
+.touch-controls dialog {
+  max-height: 85dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.touch-controls #academicInfo {
+  top: 94px;
+  left: 22px;
+  max-width: 58%;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .touch-controls .minimap {
+    display: none;
+  }
+  .touch-controls #joystick {
+    left: calc(20px + var(--safe-left));
+  }
+  .touch-controls #connection {
+    max-width: 125px;
+  }
+  .touch-controls .social-bar {
+    left: 16px;
+    right: 16px;
+    transform: none;
+    width: auto;
+  }
+  .touch-controls #chatPanel,
+  .touch-controls #voicePanel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  .touch-controls .welcome {
+    top: 76px;
+    max-height: calc(100dvh - 90px);
+    padding: 20px 26px;
+  }
+  .touch-controls .welcome h1 {
+    font-size: 34px;
+  }
+  .touch-controls .welcome p {
+    font-size: 12px;
+  }
+  .touch-controls .minimap {
+    top: 112px;
+    width: 112px;
+  }
+  .touch-controls .minimap canvas {
+    width: 96px;
+    height: 64px;
+  }
+  .touch-controls .brand small,
+  .touch-controls .top-right .pill {
+    display: none;
+  }
+}
+.sound-settings {
+  text-align: left;
+  margin: 20px 0;
+  border-top: 1px solid #adb69e66;
+  padding-top: 16px;
+}
+.sound-settings summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 0;
+}
+.sound-settings .world-settings {
+  margin-top: 10px;
+}
+.sound-settings button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #dce4ce;
+  margin-bottom: 12px;
+}
+#audioStatus {
+  display: block;
+}
+.contextual-action {
+  box-shadow:
+    0 5px 24px #173d3726,
+    0 0 0 1px #fff5;
+}
+.touch-controls #connection {
+  order: 0;
+}
+.touch-controls #chatBtn {
+  order: 1;
+}
+.touch-controls #liveVoiceBtn {
+  order: 2;
+}
+.touch-controls #eventsBtn {
+  order: 3;
+}
+.touch-controls #onlineCount {
+  order: 4;
+}
+.touch-controls #photoBtn {
+  order: 5;
+}
+.touch-controls #gatherBtn {
+  order: 6;
+}
+.touch-controls #waveBtn {
+  order: 7;
+}
+.touch-controls #shareRoom {
+  order: 8;
+}
+.control-preference {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  margin: 18px 0;
+  border: 1px solid #aeb99e55;
+  border-radius: 9px;
+  font-size: 13px;
+  text-align: left;
+}
+.control-preference input {
+  width: 20px;
+  height: 20px;
+  accent-color: #496f48;
+}

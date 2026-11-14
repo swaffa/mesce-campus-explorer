@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { requestCampus } from './api-client.js';
+import { jumpDuration, jumpHeight } from './input-math.js';
 const $ = (id) => document.getElementById(id);
 export function createSocial({
   scene,
@@ -16,6 +17,7 @@ export function createSocial({
   onCommunityState,
   getActiveScene,
   setStyle,
+  getFloor = () => 0,
 }) {
   let session = null,
     online = false,
@@ -23,6 +25,7 @@ export function createSocial({
     timer = null,
     busy = false,
     wave = false,
+    jumpPending = false,
     failures = 0,
     recording = null,
     recorded = null,
@@ -112,12 +115,15 @@ export function createSocial({
     if (!session || busy || document.hidden) return;
     busy = true;
     try {
+      const jump = jumpPending;
+      jumpPending = false;
       const r = await api('/api/state', {
         x: player.position.x,
         z: player.position.z,
         yaw: player.rotation.y,
         since,
         wave,
+        jump,
         area,
       });
       wave = false;
@@ -151,6 +157,8 @@ export function createSocial({
         }
         peer.activity = p.activity;
         peer.area = p.area || 'campus';
+        if (p.jump_at && p.jump_at !== peer.jumpAt && r.now - p.jump_at < 2000) peer.hopAge = 0;
+        peer.jumpAt = p.jump_at;
         peer.model.visible = peer.area === area;
       }
       for (const [id, p] of peers)
@@ -438,8 +446,13 @@ export function createSocial({
           tag.scale.set(width, (width * 80) / 384, 1);
         }
     for (const p of peers.values()) {
-      const movement = p.model.position.distanceTo(p.target);
+      const movement = Math.hypot(p.model.position.x - p.target.x, p.model.position.z - p.target.z);
       p.model.position.lerp(p.target, 1 - Math.exp(-dt * 8));
+      p.hopAge = (p.hopAge ?? Infinity) + dt;
+      if (!p.vehicle && !p.activity)
+        p.model.position.y =
+          getFloor(p.area, p.model.position.x, p.model.position.z) +
+          (p.area === 'campus' ? jumpHeight(p.hopAge) : 0);
       let angle = Math.atan2(
         Math.sin(p.yaw - p.model.rotation.y),
         Math.cos(p.yaw - p.model.rotation.y),
@@ -481,6 +494,10 @@ export function createSocial({
     update,
     request: api,
     syncNow: sync,
+    jump: () => {
+      jumpPending = true;
+      sync();
+    },
     sessionId: () => session?.id,
     people: () => lastPlayers,
     prayerSpace: () => session?.prayer_space || 'unset',

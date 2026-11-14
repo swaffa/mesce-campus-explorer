@@ -92,6 +92,7 @@ export function createProximity({ player, social, scene, toast, character, sound
     const candidates = actionIds
       .map((id) => document.getElementById(id))
       .filter((n) => n && !n.hidden);
+    const previous = selected;
     selected = null;
     if (started && !document.querySelector('dialog[open]')) {
       candidates.sort((a, b) => Number(a.dataset.distance || 2) - Number(b.dataset.distance || 2));
@@ -99,6 +100,14 @@ export function createProximity({ player, social, scene, toast, character, sound
         candidates.find((n) => /Stand up|Finish prayer|Get off/.test(n.textContent)) ||
         candidates[0] ||
         null;
+      if (
+        previous &&
+        selected &&
+        candidates.includes(previous) &&
+        !/Stand up|Finish prayer|Get off/.test(selected.textContent) &&
+        Number(previous.dataset.distance || 2) <= Number(selected.dataset.distance || 2) + 0.65
+      )
+        selected = previous;
     }
     for (const n of candidates) {
       n.style.visibility = n === selected ? 'visible' : 'hidden';

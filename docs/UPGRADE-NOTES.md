@@ -1,5 +1,17 @@
 # MESCE atmosphere upgrade
 
+## Tablet, Vercel, and atmosphere pass (15 November)
+
+The Vercel frontend was serving game assets but returning a platform 404 for `/api/join`. The checked-in build configuration and same-origin bridge now connect it to the existing Worker. A production GET now returns the expected JSON authentication response. Integration tests verify joining, validation, shared presence across hosts, raw media, and cookie isolation.
+
+The existing Three.js procedural stack is retained. The visual pass adds wood/bark grain, soft plaster and ground variation, sky reflections, fine instanced leaves/branches, grounded contact shadows, entrance-beam fading, and an elevated follow camera. Wind uses separate phases; foliage respects reduced motion and device detail. Students’ Corner is the representative composition, with the same materials and environment used around department blocks and in interiors.
+
+Touch controls now use device capability rather than a 700px width cutoff. Separate pointer tracking supports moving and looking together; pinch zoom is bounded. Run, outdoor jump, clear nearby actions, and a scrollable social dock support tablets in either orientation. Jump state is shared and rate limited through migration 0007; wallet keys, prices, rewards, controls, and previous migrations remain compatible.
+
+Audio preferences now restore every bus, rather than only mute. The menu exposes the requested sound controls in a collapsible section. The layered synthesized bed, positional sounds, independent event timing, voice ducking, hidden-tab handling, and cleanup remain active. Footsteps stop in mid-air and landing feedback is restrained. The generated 75-second stereo mix and separate bed/bird/village stems are original procedural audio, not authentic field recordings.
+
+Automated checks cover 48 tests. The 75-second exports have no clipping; mix peak is -19 dBFS, RMS -33.5 dBFS, and the measured wrap delta is approximately 0.001. Sparse event stems have silent boundaries. Desktop-browser QA at tablet dimensions verified controls, movement/release, the representative area, NPC interaction, and restored volume/mute choices. One balanced Students’ Corner sample observed 60 fps, 591 draw calls, and 151k triangles. This is not a physical-tablet benchmark.
+
 ## Repository and joining checks (5 November)
 
 Authored source now follows a consistent formatter configuration. The Worker build uses esbuild module resolution, development tools are pinned with a lockfile, generated bundles are excluded from Git, and CI runs the same formatting, syntax, build, test, and artifact checks used locally. Architecture and contribution guides describe the existing systems and their limits.

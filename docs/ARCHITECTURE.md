@@ -15,6 +15,16 @@ MESCE is a browser client and a same-origin Worker API. Rendering and input run 
 | `.openai/` | Existing Sites hosting configuration                                |
 | `dist/`    | Generated deployment output, excluded from Git                      |
 
+## Tablet and atmosphere upgrade
+
+`touch-controls.js` owns independent joystick and camera pointers. `input-math.js` provides deadzone handling, bounded pinch zoom, gesture tracking, and the jump arc. Touch capability determines the HUD; the saved `mesce-controls` preference allows a manual choice. Jump timestamps are shared through presence and do not award points or bypass horizontal collision checks.
+
+`natural-world.js` adds original instanced leaf blades/branches, a procedural reflection environment, and camera clearance around the entrance lintel. `realism.js` supplies local wood, bark, plaster, ground, and paving textures. The existing scene geometry and characters remain in use. The balanced preset reduces pixel ratio, foliage density, and shadow refresh work; reduced motion follows the OS setting.
+
+`audio-preferences.js` validates all saved sound buses. `campus-ambience.js` retains one context, crossfades the quiet bed and local sources, schedules sparse events with quiet gaps, and separates ambience mute from live voice. Footsteps pause while the player is airborne.
+
+`api/campus.js` and `server/campus-proxy.js` support the Vercel frontend while keeping state in the existing Worker. See [deployment](DEPLOYMENT.md).
+
 ## Browser client
 
 `public/index.html` loads `game.js`, which creates the renderer, scene, camera, input handling, and main update loop. The scene uses procedural meshes and canvas textures with a warm palette, ACES tone mapping, soft shadows, and distance fog. No downloaded scene pack or reference-game assets are used.

@@ -32,6 +32,26 @@ async function call(path, body, token, options = {}) {
   return { r, data };
 }
 const position = { x: -67, z: 59, yaw: 0, since: 0 };
+test('outdoor jumps are shared, rate limited, and suppressed inside academic blocks', async () => {
+  const jumper = (await call('/api/join', { name: 'Jumping student', room: 'jump-sync' })).data;
+  const friend = (await call('/api/join', { name: 'Classmate', room: 'jump-sync' })).data;
+  const first = (
+    await call('/api/state', { ...position, jump: true }, jumper.token)
+  ).data.players.find((p) => p.id === jumper.id).jump_at;
+  assert(first > 0);
+  const seen = (await call('/api/state', position, friend.token)).data.players.find(
+    (p) => p.id === jumper.id,
+  );
+  assert.equal(seen.jump_at, first);
+  const repeat = (
+    await call('/api/state', { ...position, jump: true }, jumper.token)
+  ).data.players.find((p) => p.id === jumper.id);
+  assert.equal(repeat.jump_at, first);
+  const inside = (
+    await call('/api/state', { x: 0, z: 0, yaw: 0, area: 'block-cse-0', jump: true }, jumper.token)
+  ).data.players.find((p) => p.id === jumper.id);
+  assert.equal(inside.jump_at, first);
+});
 test('different students in one room see each other and exchange text', async () => {
   const a = (await call('/api/join', { name: 'Student One', room: 'qa' })).data;
   const b = (await call('/api/join', { name: 'Student Two', room: 'qa' })).data;

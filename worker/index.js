@@ -253,13 +253,22 @@ export default {
           b.z = sitting.z;
           b.yaw = sitting.yaw;
         }
+        const jumpAt =
+          b.jump === true &&
+          area === 'campus' &&
+          p.area === 'campus' &&
+          !p.vehicle &&
+          !p.activity &&
+          now - p.jump_at > 850
+            ? now
+            : p.jump_at;
         await env.DB.prepare(
-          'UPDATE campus_players SET x = ?, z = ?, yaw = ?, emote_at = ?, updated_at = ? WHERE id = ?',
+          'UPDATE campus_players SET x = ?, z = ?, yaw = ?, emote_at = ?, jump_at = ?, updated_at = ? WHERE id = ?',
         )
-          .bind(b.x, b.z, b.yaw, emote, now, p.id)
+          .bind(b.x, b.z, b.yaw, emote, jumpAt, now, p.id)
           .run();
         const peers = await env.DB.prepare(
-          'SELECT id, name, x, z, yaw, emote_at, vehicle, activity, push_at, member_type, batch, avatar_style, area, voice_on, voice_mode FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40',
+          'SELECT id, name, x, z, yaw, emote_at, jump_at, vehicle, activity, push_at, member_type, batch, avatar_style, area, voice_on, voice_mode FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40',
         )
           .bind(p.room, now - LIVE)
           .all();

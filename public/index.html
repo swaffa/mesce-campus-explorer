@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="#173d37" />
     <title>MESCE</title>
     <meta
@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="social.css" />
     <link rel="stylesheet" href="community.css" />
+    <link rel="stylesheet" href="tablet.css" />
   </head>
   <body>
     <canvas id="world" aria-label="Interactive 3D MES college campus"></canvas>
@@ -73,7 +74,7 @@
       </div>
       <p id="joinError" role="alert"></p>
       <button class="primary" id="start">Join the campus <span>↗</span></button>
-      <div class="welcome-foot">
+      <div class="welcome-foot" id="welcomeControls">
         WASD / arrow keys to move <b>·</b> live conversations · club events · group photos
       </div>
     </section>
@@ -102,7 +103,18 @@
         </div>
       </div>
       <div id="prompt" hidden><button id="interact">E · Explore this place</button></div>
-      <div id="joystick"><div></div></div>
+      <div id="joystick" role="group" aria-label="Movement joystick" tabindex="0">
+        <div></div>
+        <small>MOVE</small>
+      </div>
+      <div id="touchMovement" aria-label="Character actions">
+        <button id="runButton" aria-label="Toggle running" aria-pressed="false">
+          <b aria-hidden="true">⇧</b><span>Run</span>
+        </button>
+        <button id="jumpButton" aria-label="Jump">
+          <b aria-hidden="true">↑</b><span>Jump</span>
+        </button>
+      </div>
       <button id="touchAction" aria-label="Interact with nearby landmark">E</button>
     </div>
     <div id="socialHUD" hidden>
@@ -159,12 +171,16 @@
       ><span class="eyebrow">MAKE YOURSELF AT HOME</span>
       <h2>MESCE</h2>
       <p>
-        WASD or arrows to walk. Hold Shift to run. Press E for the nearby action. Press F at a shop
-        or fruit tree. Press B beside a seat to sit or stand. Press P on a prayer mat, or R to read
-        in the library. Drag to orbit the camera. Scroll to zoom. Use the View button to switch
-        between walk, close, and aerial cameras. On mobile, use the thumbstick and contextual action
-        button.
+        WASD or arrows to walk. Hold Shift to run and press Space to jump outside. Press E for the
+        nearby action. Press F at a shop or fruit tree. Press B beside a seat to sit or stand. Press
+        P on a prayer mat, or R to read in the library. Drag to orbit the camera. Scroll to zoom.
+        Use the View button to switch between follow, close, and aerial cameras. On tablets and
+        phones, use the left thumbstick to walk, drag anywhere on the world to look around, pinch to
+        zoom, and tap Run or Jump. Nearby actions appear as a single touch button.
       </p>
+      <label class="control-preference"
+        ><input id="touchPreference" type="checkbox" /> Touch controls</label
+      >
       <button id="homeBtn">↩ Back to the entrance</button
       ><button id="resetBtn">↺ Start a fresh campus trail</button>
       <p class="fine">

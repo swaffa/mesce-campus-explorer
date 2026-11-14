@@ -29,3 +29,7 @@ The procedural sound design is working temporary audio. No licensed field record
 | footsteps-paving-01..04.ogg | Shoes on stone/paving                                             | One-shots, no leading delay  | Surface footsteps transient                                   |
 
 Original generated WAVs need no third-party recording license. Their synthesis source is included for editing and reproduction.
+
+## 15 November visual and audio delivery
+
+The current visual pass uses original canvas-generated wood grain, bark, plaster variation, leaf veins, and sky reflection lighting, plus instanced mesh leaves and branches. No reference-game assets were copied. The four stereo WAV stems were regenerated in the workspace output folder for review. The game synthesizes its bed at runtime to avoid a large audio download on tablets. Master, ambience, effects, music, and mute preferences now restore on reload; the music bus has no source. Natural Kerala field recordings remain missing and temporary synthesis remains clearly identified above.

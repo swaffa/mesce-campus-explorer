@@ -24,6 +24,10 @@ import { createAcademicBlocks } from './academic-blocks.js';
 import { createProximity } from './proximity.js';
 import { cozyWorld } from './cozy-world.js';
 import { departmentDetails } from './department-details.js';
+import { createTouchControls } from './touch-controls.js';
+import { pinchZoom, jumpDuration, jumpHeight } from './input-math.js';
+import { academicStairHeight } from './academic-data.js';
+import { naturalWorld } from './natural-world.js';
 const $ = (id) => document.getElementById(id),
   canvas = $('world');
 const renderer = new THREE.WebGLRenderer({
@@ -57,7 +61,7 @@ Object.assign(sun.shadow.camera, {
 sun.shadow.normalBias = 0.08;
 scene.add(sun);
 scene.add(sun.target);
-const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 500);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 500);
 const mats = {};
 const mat = (c) =>
   mats[c] || (mats[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }));
@@ -84,7 +88,11 @@ function box(x, y, z, w, h, d, c, parent = scene) {
   return m;
 }
 function cyl(x, y, z, r, h, c, parent = scene, r2 = r, n = 12) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r, h, n), mat(c));
+  const bark = c === '#77634c' || c === '#87715a';
+  const m = new THREE.Mesh(
+    new THREE.CylinderGeometry(r2, r, h, n),
+    bark ? surface(c, r * 6, h, r * 6, mat(c))[0] : mat(c),
+  );
   m.position.set(x, y, z);
   m.castShadow = true;
   m.receiveShadow = true;
@@ -299,6 +307,7 @@ function tree(x, z, s = 1) {
     foliage.add(m);
   }
   foliage.userData.windCanopy = { phase: x * 0.13 + z * 0.19 };
+  foliage.userData.crownScale = s;
   scene.add(foliage);
 }
 for (let x = -94; x < 96; x += 12) {
@@ -492,7 +501,11 @@ let started = false,
   zoom = 18,
   menuOpen = false,
   time = 0;
-let viewMode = 0;
+let viewMode = 0,
+  jumpCount = 0,
+  cameraTilt = 0,
+  jumpAge = Infinity,
+  walkBob = 0;
 const target = new THREE.Vector3(-8, 0, 0),
   desired = new THREE.Vector3(),
   camDesired = new THREE.Vector3();
@@ -547,10 +560,11 @@ function blocked(x, z) {
 }
 function resize() {
   renderer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight;
+  camera.aspect = innerWidth / Math.max(1, innerHeight);
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
+window.visualViewport?.addEventListener('resize', resize);
 resize();
 async function begin() {
   ambience.unlock();
@@ -559,7 +573,8 @@ async function begin() {
   attirePreview.dispose();
   document.body.classList.add('playing');
   $('hud').hidden = false;
-  zoom = 18;
+  zoom = 16;
+  $('cameraBtn').textContent = '◉ Follow';
   target.copy(player.position);
   target.y = 1.5;
   toast('You’re on campus. Invite friends to the same room!');
@@ -622,10 +637,10 @@ $('places').onclick = (e) => {
 let destination = null;
 $('cameraBtn').onclick = () => {
   viewMode = (viewMode + 1) % 3;
-  $('cameraBtn').textContent = ['◉ Walk', '◉ Close', '◉ Aerial'][viewMode];
+  $('cameraBtn').textContent = ['◉ Follow', '◉ Close', '◉ Aerial'][viewMode];
   toast(
     [
-      'Walk view · drag to look around',
+      'Follow view · drag to look around',
       'Close view · feel the campus scale',
       'Aerial view · see the whole layout',
     ][viewMode],
@@ -637,6 +652,7 @@ addEventListener('keydown', (e) => {
   if (['INPUT', 'TEXTAREA', 'AUDIO', 'SELECT'].includes(document.activeElement?.tagName)) return;
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
   keys[e.key.toLowerCase()] = true;
+  if (e.code === 'Space' && !e.repeat && e.target.tagName !== 'BUTTON') tryJump();
   if (e.key.toLowerCase() === 'e' && !e.repeat) interact();
 });
 addEventListener('keyup', (e) => (keys[e.key.toLowerCase()] = false));
@@ -644,19 +660,30 @@ addEventListener('blur', () => {
   keys = {};
   joy = { x: 0, y: 0 };
 });
-let drag = null;
-canvas.addEventListener('pointerdown', (e) => {
-  drag = { x: e.clientX, id: e.pointerId };
-  canvas.setPointerCapture(e.pointerId);
+function canJump() {
+  return started && !indoors() && !riding.active() && !swings.active() && !seating.active();
+}
+function tryJump() {
+  if (!canJump() || document.querySelector('dialog[open]') || jumpAge < jumpDuration + 0.1) return;
+  jumpAge = 0;
+  jumpCount++;
+  social.jump();
+}
+const touchControls = createTouchControls({
+  canvas,
+  enabled: () => started && !document.hidden && !document.querySelector('dialog[open]'),
+  onMove: (value) => {
+    joy = value;
+  },
+  onOrbit: (dx, dy) => {
+    yaw -= dx * 0.005;
+    cameraTilt = THREE.MathUtils.clamp(cameraTilt + dy * 0.0025, -0.25, 0.65);
+  },
+  onPinch: (before, after) => {
+    zoom = pinchZoom(zoom, before, after);
+  },
+  onJump: tryJump,
 });
-canvas.addEventListener('pointermove', (e) => {
-  if (drag) {
-    yaw -= (e.clientX - drag.x) * 0.006;
-    drag.x = e.clientX;
-  }
-});
-canvas.addEventListener('pointerup', () => (drag = null));
-canvas.addEventListener('pointercancel', () => (drag = null));
 canvas.addEventListener(
   'wheel',
   (e) => {
@@ -665,28 +692,6 @@ canvas.addEventListener(
   },
   { passive: false },
 );
-const joystick = $('joystick');
-function joyMove(e) {
-  const r = joystick.getBoundingClientRect();
-  let x = (e.clientX - r.left - r.width / 2) / 38,
-    y = (e.clientY - r.top - r.height / 2) / 38;
-  const m = Math.max(1, Math.hypot(x, y));
-  joy = { x: x / m, y: y / m };
-  joystick.firstElementChild.style.transform = `translate(${joy.x * 28}px,${joy.y * 28}px)`;
-}
-joystick.onpointerdown = (e) => {
-  joystick.setPointerCapture(e.pointerId);
-  joyMove(e);
-};
-joystick.onpointermove = (e) => {
-  if (joystick.hasPointerCapture(e.pointerId)) joyMove(e);
-};
-function joyStop() {
-  joy = { x: 0, y: 0 };
-  joystick.firstElementChild.style.transform = '';
-}
-joystick.onpointerup = joyStop;
-joystick.onpointercancel = joyStop;
 const mapCtx = $('map').getContext('2d');
 function mini() {
   const c = mapCtx;
@@ -732,7 +737,8 @@ let frames = 0;
 let wasIndoor = false;
 function animate(now) {
   requestAnimationFrame(animate);
-  const dt = Math.min((now - last) / 1000, 0.04);
+  const renderDelta = Math.max(0, (now - last) / 1000);
+  const dt = Math.min(renderDelta, 0.04);
   last = now;
   time += dt;
   const paused = document.hidden || !!document.querySelector('dialog[open]');
@@ -740,6 +746,14 @@ function animate(now) {
     velocity.set(0, 0);
     keys = {};
     joy = { x: 0, y: 0 };
+    touchControls.reset();
+  }
+  touchControls.update(canJump());
+  if (!canJump()) jumpAge = Infinity;
+  else if (!paused) {
+    const before = jumpAge;
+    jumpAge += dt;
+    if (before < jumpDuration && jumpAge >= jumpDuration) ambience.effect('landing');
   }
   if (started && !paused) {
     if (swings.active() || seating.active()) {
@@ -753,7 +767,7 @@ function animate(now) {
       let sx = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0) + joy.x,
         sy = (keys.s || keys.arrowdown ? 1 : 0) - (keys.w || keys.arrowup ? 1 : 0) + joy.y;
       const len = Math.hypot(sx, sy),
-        speed = keys.shift ? 12 : 6.5;
+        speed = keys.shift || touchControls.running() ? 12 : 6.5;
       sx /= Math.max(1, len);
       sy /= Math.max(1, len);
       const vx = (Math.cos(yaw) * sx + Math.sin(yaw) * sy) * speed,
@@ -781,7 +795,15 @@ function animate(now) {
       player.userData.arms.forEach(
         (a, i) => (a.rotation.x = -Math.sin(walkPhase + i * Math.PI) * 0.3 * stride),
       );
-      player.position.y = cozy.reducedMotion() ? 0 : Math.abs(Math.sin(walkPhase)) * 0.035 * stride;
+      walkBob = cozy.reducedMotion() ? 0 : Math.abs(Math.sin(walkPhase)) * 0.035 * stride;
+      if (jumpAge < jumpDuration) {
+        player.userData.legs.forEach((leg) => {
+          leg.rotation.x *= 0.35;
+        });
+        player.userData.arms.forEach((arm) => {
+          arm.rotation.x = -0.35;
+        });
+      }
     }
 
     let closest = null,
@@ -802,9 +824,10 @@ function animate(now) {
     water[i].position.y = 2.7 + Math.sin(time * 3 + i * 0.8) * 0.2;
   if (started) {
     if (academic.active() && !seating.active())
-      player.position.y = academic.height(player.position.x, player.position.z);
+      player.position.y = academic.height(player.position.x, player.position.z) + walkBob;
     if (!indoors() && !seating.active() && !riding.active() && !swings.active())
-      player.position.y = campusFloor(player.position.x, player.position.z);
+      player.position.y =
+        campusFloor(player.position.x, player.position.z) + walkBob + jumpHeight(jumpAge);
     desired.copy(player.position);
     desired.y = player.position.y + 1.5;
     if (indoors()) target.copy(desired);
@@ -813,7 +836,7 @@ function animate(now) {
     desired.set(-8, 1, 0);
     target.lerp(desired, 0.03);
   }
-  if (started && riding.active() && !drag) {
+  if (started && riding.active() && !touchControls.isLooking()) {
     const heading = player.rotation.y - Math.PI;
     const turn = Math.atan2(Math.sin(heading - yaw), Math.cos(heading - yaw));
     yaw += turn * Math.min(1, dt * 2);
@@ -823,7 +846,7 @@ function animate(now) {
     camera.fov = 60;
     camera.updateProjectionMatrix();
   } else if (!indoors() && wasIndoor) {
-    camera.fov = 40;
+    camera.fov = 42;
     camera.updateProjectionMatrix();
   }
   const distance = started
@@ -833,7 +856,13 @@ function animate(now) {
         Math.max(1, Math.min(1.65, 1 / camera.aspect))
     : 145;
   const welcomeOffset = started ? 0 : innerWidth > 700 ? -34 : 0;
-  const elevation = started ? (viewMode === 2 ? 0.85 : viewMode === 1 ? 0.3 : 0.66) : 0.72;
+  const elevation = started
+    ? THREE.MathUtils.clamp(
+        (viewMode === 2 ? 0.85 : viewMode === 1 ? 0.28 : 0.62) + cameraTilt,
+        0.18,
+        1.3,
+      )
+    : 0.72;
   camDesired.set(
     target.x + Math.sin(yaw) * distance + welcomeOffset,
     target.y + distance * elevation,
@@ -883,7 +912,14 @@ function animate(now) {
   liveVoice.update(dt);
   ambience.update(started, time, dt);
   visuals.update(time, dt, player, indoors(), cozy.reducedMotion());
-  cozy.update(time, dt, indoors(), paused);
+  cozy.update(time, dt, indoors(), paused, renderDelta);
+  natural.update(time, dt, {
+    inside: indoors(),
+    low: cozy.lowQuality(),
+    reduced: cozy.reducedMotion(),
+    paused,
+  });
+  natural.environmentFor(activeScene());
   dogs.update(started, dt, indoors());
   security.update(started, dt, indoors(), paused);
   life.update(started, time, dt);
@@ -952,6 +988,12 @@ const social = createSocial({
     seating.reconcile(r.players, social.sessionId());
   },
   setStyle: (style) => restyleCharacter(player, style),
+  getFloor: (space, x, z) =>
+    space === 'campus'
+      ? campusFloor(x, z)
+      : space.startsWith('block-')
+        ? academicStairHeight(x, z)
+        : 0,
   onVehicleState: (players, id) => riding.reconcile(players, id),
   onSwingState: (players, id) => swings.reconcile(players, id),
 });
@@ -1045,12 +1087,24 @@ const ambience = createAmbience({
   isRaining: () => visuals.isRaining(),
   isPaused: () => document.hidden || !!document.querySelector('dialog[open]'),
   isSeated: () => seating.active(),
+  isAirborne: () => jumpAge < jumpDuration,
   getArea: () => social.getArea(),
   getHeading: () => yaw,
   toast,
 });
 const visuals = communityVisuals({ scene, sun, box });
-const cozy = cozyWorld({ scene, renderer, sun, player, camera, box, cyl, ball, mat });
+const cozy = cozyWorld({
+  scene,
+  renderer,
+  sun,
+  player,
+  camera,
+  box,
+  cyl,
+  ball,
+  mat,
+  floor: campusFloor,
+});
 const dogs = createCampusDogs({ scene, player, reducedMotion: () => cozy.reducedMotion() });
 const security = createCampusSecurity({
   scene,
@@ -1076,6 +1130,7 @@ const life = campusLife({
   indoors,
   getEvent: () => events.currentEvent(),
 });
+const natural = naturalWorld({ scene, renderer, sun, player, camera });
 cozy.batch();
 camera.position.set(100, 130, 180);
 requestAnimationFrame(animate);
@@ -1083,7 +1138,7 @@ $('loading').remove();
 // Read-only state makes gameplay verification possible without hidden mutations.
 window.mesceState = () => ({
   started,
-  position: { x: player.position.x, z: player.position.z },
+  position: { x: player.position.x, y: player.position.y, z: player.position.z },
   nearby: active?.id || null,
   visited: [...visited],
   area: social.getArea(),
@@ -1092,6 +1147,10 @@ window.mesceState = () => ({
   collisionCount: collisions.length,
   viewMode,
   renderStyle: 'textured-3d',
+  touchControls: touchControls.isTouch(),
+  running: touchControls.running() || !!keys.shift,
+  jumping: jumpAge < jumpDuration,
+  camera: { yaw, zoom, tilt: cameraTilt },
 });
 if (
   ['localhost', '127.0.0.1'].includes(location.hostname) &&
@@ -1101,6 +1160,19 @@ if (
     localPlaytest({
       player,
       toast,
+      previewTouch: touchControls.previewTouch,
+      diagnostics: () => ({
+        x: player.position.x.toFixed(1),
+        y: player.position.y.toFixed(2),
+        z: player.position.z.toFixed(1),
+        zoom: zoom.toFixed(1),
+        yaw: yaw.toFixed(2),
+        jump: jumpAge < jumpDuration,
+        jumps: jumpCount,
+        detail: cozy.lowQuality() ? 'balanced' : 'full',
+        draws: renderer.info.render.calls,
+        performance: cozy.performance(),
+      }),
       inAcademic: () => academic.active(),
       beforeMove: async () => {
         if (seating.active() && !(await seating.stand())) return false;

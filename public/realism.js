@@ -17,9 +17,44 @@ function texture(type) {
     grass: '#7c8c53',
     paving: '#b8a18b',
     tile: '#a44f34',
+    wood: '#846044',
+    bark: '#74634d',
   }[type];
   c.fillStyle = base;
   c.fillRect(0, 0, 512, 512);
+  if (type === 'grass' || type === 'plaster') {
+    for (let i = 0; i < 65; i++) {
+      const x = random() * 512,
+        y = random() * 512,
+        radius = 25 + random() * 95;
+      const stain = c.createRadialGradient(x, y, 0, x, y, radius);
+      stain.addColorStop(
+        0,
+        type === 'grass' ? (random() > 0.5 ? '#b0a77535' : '#3d5c3a30') : '#817a6512',
+      );
+      stain.addColorStop(1, '#817a6500');
+      c.fillStyle = stain;
+      c.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    }
+  }
+  if (type === 'wood' || type === 'bark') {
+    for (let i = 0; i < 150; i++) {
+      const x = random() * 512;
+      c.strokeStyle = random() > 0.5 ? '#39291e50' : '#c0a78140';
+      c.lineWidth = 0.5 + random() * (type === 'bark' ? 4 : 1.5);
+      c.beginPath();
+      c.moveTo(x, 0);
+      c.bezierCurveTo(
+        x + random() * 22 - 11,
+        160,
+        x + random() * 30 - 15,
+        350,
+        x + random() * 12 - 6,
+        512,
+      );
+      c.stroke();
+    }
+  }
   if (type === 'brick') {
     for (let y = 0; y < 16; y++)
       for (let x = -1; x < 9; x++) {
@@ -73,7 +108,10 @@ function texture(type) {
   return t;
 }
 const textures = Object.fromEntries(
-  ['brick', 'plaster', 'road', 'grass', 'paving', 'tile'].map((t) => [t, texture(t)]),
+  ['brick', 'plaster', 'road', 'grass', 'paving', 'tile', 'wood', 'bark'].map((t) => [
+    t,
+    texture(t),
+  ]),
 );
 const types = {
   '#ae5342': 'brick',
@@ -83,21 +121,49 @@ const types = {
   '#9eaf6a': 'grass',
   '#d9bd93': 'paving',
   '#81877e': 'road',
+  '#78523b': 'wood',
+  '#8d6042': 'wood',
+  '#765444': 'wood',
+  '#795f42': 'wood',
+  '#77634c': 'bark',
+  '#87715a': 'bark',
 };
 const cache = new Map();
 function material(type, w, h) {
   const key = `${type}:${w.toFixed(1)}:${h.toFixed(1)}`;
   if (cache.has(key)) return cache.get(key);
   const t = textures[type].clone();
-  const unit = { brick: 2.4, plaster: 8, road: 4, grass: 4, paving: 3.2, tile: 4 }[type];
+  const unit = {
+    brick: 2.4,
+    plaster: 8,
+    road: 4,
+    grass: 4,
+    paving: 3.2,
+    tile: 4,
+    wood: 2,
+    bark: 2,
+  }[type];
   t.repeat.set(Math.max(0.1, w / unit), Math.max(0.1, h / unit));
   t.needsUpdate = true;
   const m = new THREE.MeshStandardMaterial({
     map: t,
     bumpMap: t,
-    bumpScale: type === 'brick' ? 0.045 : 0.025,
-    roughness: type === 'road' ? 0.96 : 0.83,
+    bumpScale: type === 'bark' ? 0.09 : type === 'brick' ? 0.045 : 0.025,
+    roughness: type === 'road' || type === 'bark' ? 0.96 : type === 'plaster' ? 0.94 : 0.83,
   });
+  if (type === 'grass')
+    m.onBeforeCompile = (shader) => {
+      shader.vertexShader = 'varying vec3 naturalGround;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nmat4 groundMatrix=modelMatrix;\n#ifdef USE_INSTANCING\ngroundMatrix=groundMatrix*instanceMatrix;\n#endif\nnaturalGround=(groundMatrix*vec4(position,1.)).xyz;',
+      );
+      shader.fragmentShader = 'varying vec3 naturalGround;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        '#include <color_fragment>\nfloat groundVariation=sin(naturalGround.x*.17+sin(naturalGround.z*.11))*sin(naturalGround.z*.2);diffuseColor.rgb*=.94+groundVariation*.12;',
+      );
+    };
   cache.set(key, m);
   return m;
 }
@@ -255,27 +321,7 @@ export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
       o.material = material('tile', 14, 10);
     }
   });
-  // Ground contact shadows beneath characters and trees.
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = 64;
-  const c = cv.getContext('2d'),
-    g = c.createRadialGradient(32, 32, 2, 32, 32, 32);
-  g.addColorStop(0, '#00000065');
-  g.addColorStop(1, '#00000000');
-  c.fillStyle = g;
-  c.fillRect(0, 0, 64, 64);
-  const shadowTex = new THREE.CanvasTexture(cv);
-  scene.children
-    .filter((o) => o.isGroup)
-    .forEach((o) => {
-      const s = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.5, 1.5),
-        new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }),
-      );
-      s.rotation.x = -Math.PI / 2;
-      s.position.y = 0.22;
-      o.add(s);
-    });
+  // The player contact shadow is grounded in cozy-world.js; trees use the sun's shadow map.
   // Water surface uses animated highlights and expanding ripples.
   const waterMat = new THREE.MeshPhysicalMaterial({
     color: '#4c939d',
