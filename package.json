@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "node scripts/build-social.mjs",
+    "build:vercel": "node scripts/build-vercel.mjs",
     "predev": "npm run build",
     "dev": "node scripts/dev-social.mjs",
     "pretest": "npm run build",
@@ -15,7 +16,7 @@
     "check:syntax": "node scripts/check-syntax.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && npm run check:syntax && npm test && npm run validate"
+    "check": "npm run format:check && npm run check:syntax && npm test && npm run build:vercel && npm run validate"
   },
   "description": "A shared 3D campus for MESCE students and alumni.",
   "repository": {

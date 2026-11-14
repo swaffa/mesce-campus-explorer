@@ -17,7 +17,8 @@ function collect(directory) {
   }
 }
 
-for (const directory of ['public', 'worker', 'scripts', 'tests']) collect(directory);
+for (const directory of ['public', 'worker', 'server', 'api', 'scripts', 'tests'])
+  collect(directory);
 
 let failed = false;
 for (const source of sources.sort()) {
