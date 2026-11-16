@@ -133,7 +133,7 @@ export function communityVisuals({ scene, sun, box }) {
   };
   for (const [x, z, w, d] of [
     [-6, -42, 14, 2],
-    [-90, 40, 12, 3],
+    [-96, 38, 1.5, 10],
     [42, 36, 9, 2],
     [-61, -12, 2, 10],
     [26, -12, 2, 10],

@@ -32,3 +32,28 @@ export const rearPaths = [
   { x: -77, z: -49, width: 27, depth: 3 },
   { x: -94, z: -33, width: 7, depth: 13 },
 ];
+
+export const studentsCorner = {
+  x: -87,
+  z: 39,
+  tiers: [
+    { radius: 6.2, height: 0.24 },
+    { radius: 5, height: 0.48 },
+    { radius: 3.8, height: 0.72 },
+  ],
+  benches: [
+    [-76, 40],
+    [-73, 45],
+  ],
+  tables: [
+    [-76, 28],
+    [-70, 33],
+  ],
+};
+
+export function cornerGroundHeight(x, z) {
+  const radius = Math.hypot(x - studentsCorner.x, z - studentsCorner.z);
+  for (let i = studentsCorner.tiers.length - 1; i >= 0; i--)
+    if (radius <= studentsCorner.tiers[i].radius) return studentsCorner.tiers[i].height;
+  return 0;
+}

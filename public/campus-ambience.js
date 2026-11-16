@@ -1,4 +1,4 @@
-import { campusLayout, rearPaths } from './campus-layout.js';
+import { campusLayout, rearPaths, studentsCorner, cornerGroundHeight } from './campus-layout.js';
 import { renderKeralaAmbience } from './audio-synthesis.js';
 import { readAudioPreferences } from './audio-preferences.js';
 export function createAmbience({
@@ -158,7 +158,7 @@ export function createAmbience({
     loops.push(bed);
     rainGain = loopNoise(1100, 'highpass', ambience);
     localNoise(-51, 0, 23, 0.09, 1200);
-    localNoise(-93, 43, 20, 0.018, 650);
+    localNoise(studentsCorner.x, studentsCorner.z, 20, 0.018, 650);
     localNoise(61, -13, 22, 0.015, 750);
     localNoise(-8, -35, 12, 0.009, 1500);
     engine = context.createOscillator();
@@ -327,6 +327,7 @@ export function createAmbience({
         const road =
             !inside &&
             (Math.abs(player.position.z) < 4 ||
+              Math.abs(player.position.z - 77) < 2.5 ||
               Math.abs(player.position.x + 51) < 7 ||
               (Math.abs(player.position.x - campusLayout.parking.x) <
                 campusLayout.parking.width / 2 &&
@@ -335,6 +336,7 @@ export function createAmbience({
           grass =
             !inside &&
             !road &&
+            !cornerGroundHeight(player.position.x, player.position.z) &&
             player.position.z < 30 &&
             !rearPaths.some(
               (p) =>

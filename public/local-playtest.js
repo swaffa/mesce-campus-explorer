@@ -1,4 +1,4 @@
-import { campusLayout } from './campus-layout.js';
+import { campusLayout, studentsCorner } from './campus-layout.js';
 // Local-only doorway checkpoints. Never active on the published host.
 export function localPlaytest({
   player,
@@ -22,11 +22,14 @@ export function localPlaytest({
     ['Enter EEE Block', 40, -14],
     ['Enter Mechanical Block', 68, -14],
     ['Entrance guard', -56.3, 58],
+    ['Gate road', -56, 77],
+    ['Roads overview', -70, 78],
     ['Main block guard', -55, -7],
     ['Parking guard', campusLayout.parking.x + 20, 20],
     ['Campus dogs', -73, 50],
     ['Fountain steps', -51, 15.4],
-    ['Students’ Corner', -81, 38],
+    ['Corner middle step', studentsCorner.x, studentsCorner.z + 4.45],
+    ['Students’ Corner', studentsCorner.x, studentsCorner.z + 7.2],
     ['Main masjid', -39, 64],
     ['Women’s masjid', -3.4, 64],
     ['Library door', campusLayout.library.doorX, campusLayout.library.doorZ],

@@ -61,7 +61,7 @@ export function cozyWorld({
   const pots = [
     [-90, 31],
     [-77, 31],
-    [-91, 37],
+    [-95, 33],
     [-78, 38],
     [-9, -33],
     [15, -14],
@@ -125,8 +125,8 @@ export function cozyWorld({
     180,
   );
   const regions = [
-    [-93, 38, 7, 2],
-    [-82, 46, 12, 2],
+    [-96, 38, 1.5, 10],
+    [-82, 49, 12, 1],
     [6, -12, 3, 7],
     [22, -14, 3, 7],
     [35, -12, 3, 7],
@@ -171,8 +171,8 @@ export function cozyWorld({
   );
   let herbCount = 0;
   for (const [x, z, w, d] of [
-    [-93, 38, 6, 3],
-    [-75, 37, 3, 9],
+    [-96, 38, 2, 9],
+    [-67, 37, 2, 9],
     [-84, 47, 17, 2],
     [5, -12, 4, 8],
     [22, -12, 3, 8],
@@ -387,6 +387,7 @@ export function cozyWorld({
         !o.isMesh ||
         o.isInstancedMesh ||
         o.userData.cameraFade ||
+        o.userData.distantScenery ||
         o.geometry?.type !== 'BoxGeometry'
       )
         continue;

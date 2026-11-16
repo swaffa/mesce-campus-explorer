@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { campusLayout } from './campus-layout.js';
+import { campusLayout, studentsCorner } from './campus-layout.js';
 import { surface } from './realism.js';
 import { rectangularHipRoof } from './roof-geometry.js';
 export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, moveFacility }) {
@@ -24,7 +24,22 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     parent.add(m);
     return m;
   }
-  // Existing Students' Corner pavilion is a working little Kerala snack shop.
+  // A small snack shop sits beside the open tree gathering area.
+  box(-85, 1.55, 27.5, 12, 3.1, 3, colors.cream);
+  solid(-85, 27.5, 12, 3, 3.5);
+  box(-85, 0.15, 28.5, 13, 0.3, 7, colors.path);
+  const shopRoof = new THREE.Mesh(
+    rectangularHipRoof(13, 7, 1.6, 5),
+    surface(colors.roof, 13, 1, 7, mat(colors.roof))[2],
+  );
+  shopRoof.position.set(-85, 3.4, 28.5);
+  shopRoof.castShadow = true;
+  scene.add(shopRoof);
+  for (const x of [-90.7, -79.3]) cyl(x, 1.65, 31.2, 0.16, 3.3, colors.cream);
+  for (const [x, z] of studentsCorner.tables) {
+    box(x, 1.1, z, 2.7, 0.18, 1.6, '#765444');
+    for (const side of [-1, 1]) box(x, 0.6, z + side, 2.7, 0.3, 0.5, '#5b7052');
+  }
   box(-85, 1.05, 30.3, 10, 1.6, 0.7, '#82694f');
   box(-85, 1.9, 30.3, 10.3, 0.15, 0.9, '#b4b6a1');
   for (const y of [1.1, 1.8, 2.5]) box(-85, y, 28.3, 11, 0.13, 0.7, '#6b5743');
@@ -49,33 +64,69 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   box(-89, 1.1, 32, 2.9, 1.6, 1.5, '#e4ded1');
   box(-89, 1.95, 32, 3, 0.15, 1.6, '#72a7b0');
   board('ICE CREAM', -89, 1.23, 32.78, 2.6, 0.5, '#ad5f64');
-  board('CHAYA · SNACKS · DRINKS', -85, 3.4, 30.9, 9, 0.7, '#405b49');
-  // Large shade tree and circular seating for the corner's conversations.
-  cyl(-93, 2.5, 43, 0.55, 5, '#756148');
-  const branch = cyl(-92.2, 4.2, 43, 0.25, 3, '#756148');
-  branch.rotation.z = -0.5;
-  for (let i = 0; i < 12; i++) {
-    const a = i * 2.4;
-    ball(
-      -93 + Math.cos(a) * ((i % 3) + 1) * 1.15,
-      6 + (i % 4) * 0.42,
-      43 + Math.sin(a) * ((i % 3) + 1) * 1.1,
-      2.6,
-      ['#54713b', '#68834a', '#789150'][i % 3],
+  board('CHAYA · SNACKS · DRINKS', -85, 2.8, 31.8, 9, 0.7, '#405b49');
+  // Three broad stone steps encircle the tree; each tier matches the walkable floor and seats.
+  const corner = studentsCorner;
+  for (const [i, tier] of corner.tiers.entries()) {
+    cyl(
+      corner.x,
+      tier.height / 2,
+      corner.z,
+      tier.radius,
+      tier.height,
+      ['#999b88', '#a5a58f', '#b3b19a'][i],
       scene,
-      0.85,
+      tier.radius,
+      64,
+    );
+    const edge = new THREE.Mesh(
+      new THREE.RingGeometry(tier.radius - 0.08, tier.radius, 64),
+      new THREE.MeshStandardMaterial({ color: '#c5c1a8', roughness: 1, side: THREE.DoubleSide }),
+    );
+    edge.rotation.x = -Math.PI / 2;
+    edge.position.set(corner.x, tier.height + 0.005, corner.z);
+    scene.add(edge);
+    for (let n = 0; n < 24; n++) {
+      const angle = (n * Math.PI) / 12;
+      const radius = tier.radius - 0.55;
+      const joint = box(
+        corner.x + Math.sin(angle) * radius,
+        tier.height + 0.008,
+        corner.z + Math.cos(angle) * radius,
+        0.018,
+        0.009,
+        1,
+        '#858a78',
+      );
+      joint.rotation.y = angle;
+    }
+  }
+  cyl(corner.x, 0.74, corner.z, 0.95, 0.08, '#756b50');
+  cyl(corner.x, 4.05, corner.z, 0.6, 6.7, '#756148');
+  for (const side of [-1, 1]) {
+    const branch = cyl(corner.x + side * 0.75, 5.5, corner.z, 0.28, 3.7, '#756148');
+    branch.rotation.z = side * 0.55;
+  }
+  const canopy = new THREE.Group();
+  canopy.position.set(corner.x, 7.5, corner.z);
+  canopy.userData.windCanopy = { phase: 2.8 };
+  canopy.userData.crownScale = 2.1;
+  scene.add(canopy);
+  for (let i = 0; i < 16; i++) {
+    const angle = i * 2.4,
+      radius = 1.5 + (i % 3);
+    ball(
+      Math.cos(angle) * radius,
+      (i % 4) * 0.45,
+      Math.sin(angle) * radius,
+      2.9,
+      ['#54713b', '#68834a', '#789150'][i % 3],
+      canopy,
+      0.8,
     );
   }
-  const seat = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.35, 8, 32), mat('#a59b84'));
-  seat.rotation.x = Math.PI / 2;
-  seat.position.set(-93, 0.6, 43);
-  seat.castShadow = true;
-  scene.add(seat);
-  solid(-93, 43, 1.3, 1.3, 8.5);
-  for (const [x, z] of [
-    [-89, 45],
-    [-88, 40],
-  ]) {
+  solid(corner.x, corner.z, 1.3, 1.3, 11.5);
+  for (const [x, z] of corner.benches) {
     box(x, 0.8, z, 3, 0.18, 1, '#856348');
     box(x - 1, 0.4, z, 0.18, 0.8, 0.7, '#4e5e4b');
     box(x + 1, 0.4, z, 0.18, 0.8, 0.7, '#4e5e4b');
@@ -314,8 +365,8 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   board('MEN’S MASJID', -35.2, 4.45, 64, 6, 0.65, '#456356').rotation.y = -Math.PI / 2;
   box(-3.4, 0.13, 62.8, 2.5, 0.26, 5, colors.path);
   // The sculptural landmark is geometry, not a floating building label.
-  box(-82.5, 0.4, 44, 15, 0.8, 1.35, '#262b2b');
-  solid(-82.5, 44, 15, 1.5, 3.6);
+  box(-82.5, 0.4, 48, 15, 0.8, 1.35, '#262b2b');
+  solid(-82.5, 48, 15, 1.5, 3.6);
   const heartShape = new THREE.Shape();
   heartShape.moveTo(0, 0);
   heartShape.bezierCurveTo(-0.4, 0.45, -1.2, 1, -1.2, 1.65);
@@ -333,7 +384,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     }),
     new THREE.MeshStandardMaterial({ color: '#e91834', roughness: 0.3 }),
   );
-  heart.position.set(-86.8, 0.82, 44.45);
+  heart.position.set(-86.8, 0.82, 48.45);
   heart.castShadow = true;
   scene.add(heart);
   fetch('./fonts/gentilis_bold.typeface.json')
@@ -386,7 +437,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
               }),
               new THREE.MeshStandardMaterial({ color: '#f5f4eb', roughness: 0.3 }),
             );
-            letter.position.set(x, 0.82, 44.45);
+            letter.position.set(x, 0.82, 48.45);
             letter.castShadow = true;
             scene.add(letter);
           }
@@ -396,5 +447,5 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
       text('I', -89.5);
       text('MESCE', -84.9);
     })
-    .catch(() => board('I ♥ MESCE', -82.5, 2, 44.6, 13.5, 1.8, '#262b2b'));
+    .catch(() => board('I ♥ MESCE', -82.5, 2, 48.6, 13.5, 1.8, '#262b2b'));
 }

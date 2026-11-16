@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { campusLayout } from '../public/campus-layout.js';
+import { campusLayout, studentsCorner, cornerGroundHeight } from '../public/campus-layout.js';
 import assert from 'node:assert/strict';
 import worker from '../dist/server/index.js';
 import { localEnv } from '../scripts/local-env.mjs';
@@ -720,4 +720,25 @@ test('live conversation signaling respects nearby campus people, classroom walls
   await place(a, -14, 18, 'auditorium');
   await place(b, 14, -20, 'auditorium');
   assert.equal((await signal()).r.status, 200);
+});
+
+test('tree-step seats agree with the walkable tiers and standing restores the approach position', async () => {
+  const a = (await call('/api/join', { name: 'Tree steps', room: 'corner-tiers' })).data;
+  for (const id of ['tree-0', 'tree-middle-0']) {
+    const approach = {
+      x: studentsCorner.x,
+      z: studentsCorner.z + (id === 'tree-0' ? 3.3 : 4.5),
+      yaw: 0,
+    };
+    await call('/api/state', approach, a.token);
+    const sat = await call('/api/seat', { action: 'sit', seat: id }, a.token);
+    assert.equal(sat.r.status, 200);
+    const seat = sat.data.seat;
+    assert.equal(seat.height, cornerGroundHeight(seat.x, seat.z));
+    assert.equal(seat.label, 'tree step');
+    const stood = await call('/api/seat', { action: 'stand' }, a.token);
+    assert.equal(stood.data.x, approach.x);
+    assert.equal(stood.data.z, approach.z);
+  }
+  assert.equal(cornerGroundHeight(studentsCorner.x, studentsCorner.z + 6.5), 0);
 });

@@ -1,4 +1,10 @@
-import { campusLayout, hallRows, hallColumns, campusBenchSpots } from './campus-layout.js';
+import {
+  campusLayout,
+  hallRows,
+  hallColumns,
+  campusBenchSpots,
+  studentsCorner,
+} from './campus-layout.js';
 import { academicAreas, academicSeatSpots } from './academic-data.js';
 export const campusSeats = [];
 function add(id, area, label, x, z, height, yaw = 0) {
@@ -26,25 +32,28 @@ for (const [tableX, x] of [28.5, 36.5].entries())
 for (const [i, [x, z]] of campusBenchSpots.entries())
   for (const side of [-1, 1])
     add(`bench-${i}-${side}`, 'campus', 'campus bench', x + side * 0.7, z + 0.25, 0.85);
-for (const [i, [x, z]] of [
-  [-89, 45],
-  [-88, 40],
-].entries())
+for (const [i, [x, z]] of studentsCorner.benches.entries())
   for (const side of [-1, 1])
     add(`corner-${i}-${side}`, 'campus', 'shaded bench', x + side * 0.7, z, 0.89);
-for (let i = 0; i < 6; i++) {
-  const a = (i * Math.PI) / 3;
-  add(
-    `tree-${i}`,
-    'campus',
-    'tree bench',
-    -93 + Math.sin(a) * 2.45,
-    43 + Math.cos(a) * 2.45,
-    0.95,
-    a,
-  );
+for (const [ring, count] of [
+  [2, 6],
+  [1, 12],
+]) {
+  const tier = studentsCorner.tiers[ring];
+  for (let i = 0; i < count; i++) {
+    const angle = (i * Math.PI * 2) / count;
+    add(
+      ring === 2 ? `tree-${i}` : `tree-middle-${i}`,
+      'campus',
+      'tree step',
+      studentsCorner.x + Math.sin(angle) * (tier.radius - 0.55),
+      studentsCorner.z + Math.cos(angle) * (tier.radius - 0.55),
+      tier.height,
+      angle,
+    );
+  }
 }
-for (const [i, x] of [-88, -82].entries())
+for (const [i, [x, z]] of studentsCorner.tables.entries())
   for (const side of [-1, 1])
     for (const place of [-1, 1])
       add(
@@ -52,7 +61,7 @@ for (const [i, x] of [-88, -82].entries())
         'campus',
         'snack corner bench',
         x + place * 0.65,
-        33 + side,
+        z + side,
         0.75,
         side > 0 ? Math.PI : 0,
       );

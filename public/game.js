@@ -1,8 +1,9 @@
 import * as THREE from './vendor/three.module.js';
-import { campusLayout } from './campus-layout.js';
+import { campusLayout, studentsCorner, cornerGroundHeight } from './campus-layout.js';
 import { surface, finish } from './realism.js';
 import { createSocial } from './social.js';
 import { parkVehicles } from './vehicles.js';
+import { campusSurroundings } from './campus-surroundings.js';
 import { rearCampus } from './campus-rear.js';
 import { campusDetails } from './campus-details.js';
 import { teaStall } from './tea-stall.js';
@@ -269,7 +270,7 @@ function pavilion(x, z, w, d, label) {
     }
   sign(label, x, 8.6, z, w + 5);
 }
-pavilion(-85, 33, 15, 11, 'STUDENTS’ CORNER');
+// Students’ Corner is the stepped shade tree; the snack shop is built beside it.
 // Entrance and compact bike shed just left after entering.
 box(-76, 0.1, 57, 20, 0.2, 13, colors.path);
 box(-76, 3.2, 57, 20, 0.25, 7, '#c1c6b3');
@@ -388,11 +389,11 @@ const locations = [
   {
     id: 'corner',
     name: 'Students’ Corner',
-    x: -80,
-    z: 40,
+    x: studentsCorner.x,
+    z: studentsCorner.z,
     icon: '☕',
-    text: 'A canteen, a meeting point, and a good excuse to stay a little longer. Some of the best college conversations happen between classes.',
-    extra: 'Find the I ♥ MESCE sign beside the pavilion. This one deserves a mental photograph.',
+    text: 'A large shade tree with circular stone steps. Sit with friends, share a chaya, and stay for one more conversation.',
+    extra: 'The snack shop and I ♥ MESCE sign sit beside this open gathering space.',
   },
   {
     id: 'main',
@@ -919,6 +920,20 @@ function animate(now) {
   const look = target.clone();
   look.x += welcomeOffset;
   camera.lookAt(look);
+  const nearPlane = started && !indoors() && viewMode === 2 ? 1 : 0.1;
+  if (camera.near !== nearPlane) {
+    camera.near = nearPlane;
+    camera.updateProjectionMatrix();
+  }
+  // Keep the wider road context legible in aerial view without changing walking ambience.
+  const aerialDepth =
+    started && !indoors() && viewMode === 2 ? camera.position.distanceTo(target) : 0;
+  if (scene.fog.isFogExp2) {
+    scene.fog.density = walkingFogDensity / Math.max(1, aerialDepth / 120);
+  } else {
+    scene.fog.near = Math.max(160, aerialDepth * 1.05);
+    scene.fog.far = Math.max(340, aerialDepth * 2.4);
+  }
   realism.update(time);
   details.update(time);
   tea.update(started && !indoors());
@@ -961,6 +976,7 @@ function animate(now) {
   if (frames++ % 6 === 0) mini();
 }
 const realism = finish(scene, renderer, sun, { box, cyl, ball, mat, colors });
+const walkingFogDensity = scene.fog.density || 0;
 
 // Remove floating map labels; department names are mounted on their entrances.
 for (const o of [...scene.children])
@@ -970,6 +986,7 @@ for (const o of [...scene.children])
     scene.remove(o);
   }
 const details = campusDetails({ scene, box, cyl, mat, colors });
+campusSurroundings({ scene, box, mat, colors });
 raiseForecourt();
 function raiseForecourt() {
   for (const o of [...scene.children]) {
@@ -1079,6 +1096,8 @@ function activeScene() {
         : scene;
 }
 function campusFloor(x, z) {
+  const cornerHeight = cornerGroundHeight(x, z);
+  if (cornerHeight) return cornerHeight;
   if (Math.hypot(x + 51, z) < 12.8 || (Math.abs(x + 51) < 3 && z < -12 && z > -20)) return 1.18;
   if (Math.abs(x + 51) < 3.5 && z >= 12.8 && z <= 15.5)
     return Math.max(0, 1.18 - Math.floor((z - 12.8) / 0.7) * 0.3);
@@ -1207,8 +1226,11 @@ if (
       },
       resetCamera: (name) => {
         yaw = ['Facilities overview', 'IEDC rear path'].includes(name) ? Math.PI : 0;
-        viewMode = name === 'Facilities overview' ? 2 : 0;
-        zoom = name === 'Facilities overview' ? 23 : 18;
+        viewMode = ['Facilities overview', 'Roads overview'].includes(name) ? 2 : 0;
+        zoom = name === 'Roads overview' ? 65 : name === 'Facilities overview' ? 23 : 18;
+        if (name === 'Roads overview') yaw = 0.7;
+        cameraTilt = 0;
+        $('cameraBtn').textContent = viewMode === 2 ? '◉ Aerial' : '◉ Follow';
         target.copy(player.position);
       },
     }),

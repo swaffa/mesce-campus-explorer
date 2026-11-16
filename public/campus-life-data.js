@@ -15,10 +15,10 @@ export const shops = [
   },
   {
     id: 'corner',
-    name: 'Students’ Corner',
+    name: 'Students’ Corner Snack Shop',
     keeper: 'Chettan',
     x: -85,
-    z: 34,
+    z: 32,
     description: 'A little shop, a shady tree, and all the usual favourites.',
     items: [
       { id: 'icecream', name: 'Ice cream', price: 6, icon: '🍦', kind: 'icecream' },

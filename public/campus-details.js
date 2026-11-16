@@ -3,9 +3,7 @@ export function campusDetails({ scene, box, cyl, mat, colors }) {
   // The entrance, divided approach, fountain and Main Block share the same axis.
   const gateX = -51;
   // A small local pocket road runs outside the front boundary.
-  box(0, -0.68, 77, 220, 1.6, 7, '#a5997d');
-  box(0, 0.16, 77, 220, 0.12, 4.8, colors.road);
-  for (const z of [74.5, 79.5]) box(0, 0.24, z, 220, 0.2, 0.22, '#bcb6a5');
+  // The narrow gate road continues through the map-informed surroundings network.
   box(gateX, 0.17, 70.5, 16, 0.16, 9, colors.road);
   box(0, -0.6, 84, 230, 1.4, 7, '#c6b78e');
   for (const x of [gateX - 11, gateX + 11]) {
