@@ -1,4 +1,4 @@
-import { campusLayout } from './campus-layout.js';
+import { campusLayout, rearPaths } from './campus-layout.js';
 import { renderKeralaAmbience } from './audio-synthesis.js';
 import { readAudioPreferences } from './audio-preferences.js';
 export function createAmbience({
@@ -332,7 +332,15 @@ export function createAmbience({
                 campusLayout.parking.width / 2 &&
                 Math.abs(player.position.z - campusLayout.parking.z) <
                   campusLayout.parking.depth / 2)),
-          grass = !inside && !road && player.position.z < 30;
+          grass =
+            !inside &&
+            !road &&
+            player.position.z < 30 &&
+            !rearPaths.some(
+              (p) =>
+                Math.abs(player.position.x - p.x) < p.width / 2 &&
+                Math.abs(player.position.z - p.z) < p.depth / 2,
+            );
         transient(
           quiet ? 0.018 : grass ? 0.023 : 0.038,
           inside ? 450 : road ? 850 : 1800,

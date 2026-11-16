@@ -3,6 +3,7 @@ import { campusLayout } from './campus-layout.js';
 import { surface, finish } from './realism.js';
 import { createSocial } from './social.js';
 import { parkVehicles } from './vehicles.js';
+import { rearCampus } from './campus-rear.js';
 import { campusDetails } from './campus-details.js';
 import { teaStall } from './tea-stall.js';
 import { createRiding } from './riding.js';
@@ -404,6 +405,25 @@ const locations = [
       'Look up: the main block is modeled around the distinctive white dome and red-and-white façade in your references.',
   },
   {
+    id: 'nss',
+    name: 'NSS Corner',
+    x: campusLayout.nss.x,
+    z: campusLayout.nss.z,
+    icon: '🌿',
+    text: 'A shaded gathering corner along the left side of the Main Block.',
+    extra: 'Take a seat with friends. Continue around the wing to find the rear IEDC canopy.',
+  },
+  {
+    id: 'iedc',
+    name: 'IEDC',
+    x: campusLayout.iedc.x,
+    z: campusLayout.iedc.z,
+    icon: '💡',
+    text: 'The innovation and entrepreneurship corner at the rear of the Main Block.',
+    extra:
+      'This recreation includes the exterior entrance and canopy. The interior is not modeled yet.',
+  },
+  {
     id: 'lawn',
     name: 'The lawn',
     x: -9,
@@ -411,7 +431,7 @@ const locations = [
     icon: '🌿',
     text: 'A small patch of green between busy blocks. Slow down for a moment. Classes can wait in this little version of campus.',
     extra:
-      'Across the road: the parking area and the meals canteen. The masjid is nearer the entrance.',
+      'Across the road, the junction leads toward the canteen, library and auditorium. The masjid is nearer the entrance.',
   },
   {
     id: 'cse',
@@ -969,6 +989,7 @@ function raiseForecourt() {
   box(-51, 0.52, -16.5, 5, 1.04, 9, '#a69c83');
 }
 departmentDetails({ scene, box, cyl, ball, mat, colors, tree });
+rearCampus({ scene, box, cyl, ball, mat, colors, tree, solid });
 const tea = teaStall({ scene, player, box, cyl, roof, solid, toast });
 const social = createSocial({
   scene,
@@ -1185,7 +1206,7 @@ if (
         return true;
       },
       resetCamera: (name) => {
-        yaw = name === 'Facilities overview' ? Math.PI : 0;
+        yaw = ['Facilities overview', 'IEDC rear path'].includes(name) ? Math.PI : 0;
         viewMode = name === 'Facilities overview' ? 2 : 0;
         zoom = name === 'Facilities overview' ? 23 : 18;
         target.copy(player.position);

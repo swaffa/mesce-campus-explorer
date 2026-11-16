@@ -1,4 +1,4 @@
-import { campusLayout, hallRows, hallColumns } from './campus-layout.js';
+import { campusLayout, hallRows, hallColumns, campusBenchSpots } from './campus-layout.js';
 import { academicAreas, academicSeatSpots } from './academic-data.js';
 export const campusSeats = [];
 function add(id, area, label, x, z, height, yaw = 0) {
@@ -23,14 +23,7 @@ for (const [tableX, x] of [28.5, 36.5].entries())
           0.675,
           side > 0 ? Math.PI : 0,
         );
-for (const [i, [x, z]] of [
-  [-11, -13],
-  [2, -13],
-  [-75, 39],
-  [25, 37],
-  [44, 35],
-  [-58, 13],
-].entries())
+for (const [i, [x, z]] of campusBenchSpots.entries())
   for (const side of [-1, 1])
     add(`bench-${i}-${side}`, 'campus', 'campus bench', x + side * 0.7, z + 0.25, 0.85);
 for (const [i, [x, z]] of [

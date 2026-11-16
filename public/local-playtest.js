@@ -15,6 +15,9 @@ export function localPlaytest({
   panel.innerHTML = '<summary>Local playtest checkpoints</summary>';
   const points = [
     ['Enter Main Block', -51, -15],
+    ['NSS Corner', campusLayout.nss.x, campusLayout.nss.z],
+    ['IEDC rear path', campusLayout.iedc.x, campusLayout.iedc.z],
+    ['River and bridge view', -69, -64],
     ['Enter CSE Block', 12, -14],
     ['Enter EEE Block', 40, -14],
     ['Enter Mechanical Block', 68, -14],

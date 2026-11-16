@@ -1,3 +1,4 @@
+import { campusBenchSpots } from './campus-layout.js';
 import * as THREE from './vendor/three.module.js';
 
 // Procedural, locally generated surfaces: no external texture downloads.
@@ -300,14 +301,7 @@ export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
   for (const x of [12, 40, 68])
     for (let i = 0; i < 4; i++) box(x, 0.15 + i * 0.18, -16.6 - i * 0.5, 4.5, 0.28, 0.7, '#c4bba8');
   // Benches with separate timber slats and metal legs.
-  for (const [x, z] of [
-    [-11, -13],
-    [2, -13],
-    [-75, 39],
-    [25, 37],
-    [44, 35],
-    [-58, 13],
-  ]) {
+  for (const [x, z] of campusBenchSpots) {
     for (let i = 0; i < 4; i++) box(x, 0.8, z + i * 0.17, 2.8, 0.1, 0.13, '#78523b');
     for (let i = 0; i < 3; i++) box(x, 1.15 + i * 0.17, z - 0.12, 2.8, 0.11, 0.1, '#8d6042');
     for (const a of [-1, 1]) box(x + a, 0.4, z + 0.2, 0.12, 0.8, 0.8, '#384a43');
