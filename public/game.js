@@ -274,14 +274,16 @@ box(-76, 0.1, 57, 20, 0.2, 13, colors.path);
 box(-76, 3.2, 57, 20, 0.25, 7, '#c1c6b3');
 for (const x of [-85, -67]) for (const z of [54, 60]) box(x, 1.6, z, 0.15, 3.2, 0.15, '#5f7562');
 const parkedVehicles = parkVehicles(scene);
-// Facilities sit across the road, opposite the lawn.
-box(-3, 0.15, 24, 32, 0.2, 21, colors.road);
-for (let x = -17; x < 12; x += 3.5) {
-  for (const z of [17, 29]) {
-    box(x, 0.28, z, 0.1, 0.02, 5.5, '#e5e2ce');
-  }
+// Empty parking and a separate pedestrian forecourt lead toward the raised hall.
+const parking = campusLayout.parking,
+  forecourt = campusLayout.forecourt;
+box(parking.x, 0.15, parking.z, parking.width, 0.2, parking.depth, colors.road);
+for (let x = parking.x - parking.width / 2 + 2; x < parking.x + parking.width / 2 - 1; x += 3.5) {
+  for (const z of [parking.z - 5.5, parking.z + 5.5]) box(x, 0.28, z, 0.08, 0.02, 5, '#cecbb6');
 }
-box(-3, 0.3, 23, 31, 0.02, 0.12, '#dad9c1');
+box(forecourt.x, 0.13, forecourt.z, forecourt.width, 0.26, forecourt.depth, colors.path);
+// The drive joins the cross-campus road without crossing the hall's stairs.
+box(parking.x - 17, 0.13, 18, 4, 0.2, 28, colors.path);
 moveFacility(campusLayout.canteen, () => pavilion(33, 26, 18, 12, 'CANTEEN'));
 // Restrained landscaping with deterministic variation.
 let seed = 42;
@@ -321,8 +323,8 @@ for (const [x, z] of [
   [-74, 47],
   [-33, 12],
   [-27, 37],
-  [25, 39],
-  [44, 39],
+  [-12, 37],
+  [54, 35],
   [53, 15],
   [61, 13],
   [88, 12],
@@ -1174,6 +1176,7 @@ if (
         performance: cozy.performance(),
       }),
       inAcademic: () => academic.active(),
+      inAuditorium: () => auditorium.active(),
       beforeMove: async () => {
         if (seating.active() && !(await seating.stand())) return false;
         if (academic.active() && !(await academic.exit())) return false;

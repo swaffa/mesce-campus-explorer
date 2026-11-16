@@ -6,6 +6,7 @@ export function localPlaytest({
   resetCamera,
   beforeMove = async () => true,
   inAcademic = () => false,
+  inAuditorium = () => false,
   previewTouch = () => {},
   diagnostics = () => ({}),
 }) {
@@ -19,7 +20,7 @@ export function localPlaytest({
     ['Enter Mechanical Block', 68, -14],
     ['Entrance guard', -56.3, 58],
     ['Main block guard', -55, -7],
-    ['Parking guard', 17, 20],
+    ['Parking guard', campusLayout.parking.x + 20, 20],
     ['Campus dogs', -73, 50],
     ['Fountain steps', -51, 15.4],
     ['Students’ Corner', -81, 38],
@@ -28,8 +29,10 @@ export function localPlaytest({
     ['Library door', campusLayout.library.doorX, campusLayout.library.doorZ],
     ['Auditorium steps', campusLayout.auditorium.dx, 30.6 + campusLayout.auditorium.dz],
     ['Canteen', campusLayout.canteen.x, campusLayout.canteen.z + 7],
-    ['Facilities overview', 50, 35],
+    ['Facilities overview', 24, 30],
     ['CSE garden', 12, -10],
+    ['Inside hall: Centre aisle', 0, 2],
+    ['Inside hall: Stage steps', 0, -12],
   ];
   const academicPoints = [
     ['Inside block: Corridor', 0, 0],
@@ -63,6 +66,11 @@ export function localPlaytest({
     if (name.startsWith('Inside block:')) {
       if (!inAcademic()) {
         toast('Enter an academic block first.');
+        return;
+      }
+    } else if (name.startsWith('Inside hall:')) {
+      if (!inAuditorium()) {
+        toast('Enter the auditorium first.');
         return;
       }
     } else if (!(await beforeMove())) return;

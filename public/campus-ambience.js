@@ -325,7 +325,13 @@ export function createAmbience({
       if (stepDistance > stride) {
         stepDistance %= stride;
         const road =
-            !inside && (Math.abs(player.position.z) < 4 || Math.abs(player.position.x + 51) < 7),
+            !inside &&
+            (Math.abs(player.position.z) < 4 ||
+              Math.abs(player.position.x + 51) < 7 ||
+              (Math.abs(player.position.x - campusLayout.parking.x) <
+                campusLayout.parking.width / 2 &&
+                Math.abs(player.position.z - campusLayout.parking.z) <
+                  campusLayout.parking.depth / 2)),
           grass = !inside && !road && player.position.z < 30;
         transient(
           quiet ? 0.018 : grass ? 0.023 : 0.038,

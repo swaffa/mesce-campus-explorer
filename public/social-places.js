@@ -176,7 +176,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     parent.add(pane);
     return pane;
   }
-  // Auditorium and its attached library occupy the open rear-right campus area.
+  // Auditorium veranda looks across the forecourt toward the main block.
   moveFacility(campusLayout.auditorium, () => {
     box(0, 1.05, 48, 30, 2.1, 19, '#9d998a');
     box(0, 5.8, 48, 29, 7.4, 18, colors.cream);
@@ -223,6 +223,25 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
         0.62,
         i < 4 ? '#77776a' : '#ba9473',
       );
+    // Low stone edging and small pots seen along the veranda, leaving the stair centre clear.
+    for (const x of [-11.5, 11.5]) {
+      box(x, 0.55, 33, 3.1, 1.1, 5.8, '#77776a');
+      box(x, 1.14, 33, 3.25, 0.12, 6, '#a5a18c');
+    }
+    for (const x of [-12.2, -9.8, 9.8, 12.2]) {
+      cyl(x, 2.52, 36.5, 0.42, 0.7, '#996c4e');
+      for (let i = 0; i < 4; i++) {
+        const a = i * 2.4;
+        const leaf = ball(
+          x + Math.cos(a) * 0.27,
+          3.02 + (i % 2) * 0.15,
+          36.5 + Math.sin(a) * 0.27,
+          0.42,
+          '#5c784a',
+        );
+        leaf.scale.y = 0.55;
+      }
+    }
     // Side landings preserve the raised access routes.
     box(12, 1.05, 37.5, 5, 2.1, 4, '#b6ab96');
     for (let i = 0; i < 7; i++)
@@ -263,15 +282,16 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     box(24, 0.12, 42.7, 6, 0.24, 3, '#b7ad95');
     for (const z of [48, 53, 58, 63]) arch(33.12, 3.4, z, 2.8, 3.7, Math.PI / 2);
   });
-  // Clear approaches from parking to the new stair, library and canteen entrances.
-  box(23, 0.13, 37, 27, 0.26, 4, colors.path);
-  box(34, 0.13, 39, 5, 0.26, 5, colors.path);
-  box(58, 0.13, 38.5, 48, 0.26, 3, colors.path);
-  box(82, 0.13, 45, 4, 0.26, 13, colors.path);
-  box(57, 0.13, 42, 8, 0.26, 7, colors.path);
-  box(55, 0.13, 45.3, 6, 0.26, 4, colors.path);
-  box(16.5, 0.13, 62.7, 3, 0.26, 11, colors.path);
-  box(6.5, 0.13, 64, 20, 0.26, 2.8, colors.path);
+  // Connected routes follow the facilities' shared positions, including the descent to prayer space.
+  const hall = campusLayout.auditorium,
+    library = campusLayout.library,
+    canteen = campusLayout.canteen;
+  box(hall.x, 0.13, hall.doorZ - 7, 5, 0.26, 5, colors.path);
+  box((hall.x + canteen.x) / 2, 0.13, 36.5, canteen.x - hall.x, 0.26, 3, colors.path);
+  box(canteen.x, 0.13, 43, 4, 0.26, 13, colors.path);
+  box(library.doorX, 0.13, library.doorZ - 2, 7, 0.26, 4, colors.path);
+  box(hall.x - 17.5, 0.13, 59, 3, 0.26, 11, colors.path);
+  box(-3.4, 0.13, 64, 3, 0.26, 4, colors.path);
   // The women's hall sits behind the auditorium; its entrance turns clockwise to face east.
   const women = new THREE.Group();
   women.position.set(-11, 0, 64);

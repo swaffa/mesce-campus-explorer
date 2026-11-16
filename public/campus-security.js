@@ -1,3 +1,4 @@
+import { campusLayout } from './campus-layout.js';
 import { campusCharacter } from './campus-characters.js';
 
 // Short, deterministic patrols stay clear of doorways, the divider and dining seats.
@@ -34,10 +35,10 @@ const posts = [
     id: 'parking',
     phase: 33,
     points: [
-      [14, 14],
-      [14, 30],
-      [17, 30],
-      [17, 14],
+      [campusLayout.parking.x + 18, 14],
+      [campusLayout.parking.x + 18, 28],
+      [campusLayout.parking.x + 20, 28],
+      [campusLayout.parking.x + 20, 14],
     ],
     lines: [
       'Please keep the paths clear for everyone.',

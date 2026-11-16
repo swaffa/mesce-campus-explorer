@@ -1,4 +1,4 @@
-import { campusLayout } from './campus-layout.js';
+import { campusLayout, hallRows, hallColumns } from './campus-layout.js';
 import { academicAreas, academicSeatSpots } from './academic-data.js';
 export const campusSeats = [];
 function add(id, area, label, x, z, height, yaw = 0) {
@@ -7,8 +7,8 @@ function add(id, area, label, x, z, height, yaw = 0) {
 for (const area of academicAreas)
   for (const s of academicSeatSpots)
     add(area + '-' + s.id, area, s.label, s.x, s.z, s.height, s.yaw);
-for (const [row, z] of [-8.5, -5, -1.5, 2, 5.5, 9].entries())
-  for (const [column, x] of [-12, -9, -6, 6, 9, 12].entries())
+for (const [row, z] of hallRows.entries())
+  for (const [column, x] of hallColumns.entries())
     add(`hall-${row}-${column}`, 'auditorium', 'auditorium chair', x, z, 0.775, Math.PI);
 for (const [tableX, x] of [28.5, 36.5].entries())
   for (const [tableZ, z] of [26, 30].entries())
