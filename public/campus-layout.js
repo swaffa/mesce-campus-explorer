@@ -33,6 +33,28 @@ export const rearPaths = [
   { x: -94, z: -33, width: 7, depth: 13 },
 ];
 
+// A shaded connection between Main and CS, an academic-side promenade and
+// a pedestrian spine from the CS approach to the parking/auditorium forecourt.
+// Satellite-referenced relationships, compressed to the existing playable scale.
+export const campusWalkways = [
+  { x: -33, z: -13, width: 36, depth: 2.6 },
+  { x: -17, z: -20, width: 2.6, depth: 16 },
+  { x: -8.5, z: -27, width: 21, depth: 2.6 },
+  { x: -0.5, z: -16.2, width: 2.6, depth: 24.2 },
+  { x: 38, z: -5.4, width: 94, depth: 2.6 },
+  { x: 12, z: 19, width: 3, depth: 30 },
+  { x: 30, z: 33, width: 46, depth: 3 },
+  { x: 38, z: 37.1, width: 3, depth: 9 },
+  { x: 56, z: 44, width: 3, depth: 24 },
+  { x: 62, z: 55, width: 15, depth: 3 },
+];
+
+export function isCampusWalkway(x, z) {
+  return [...rearPaths, ...campusWalkways].some(
+    (p) => Math.abs(x - p.x) <= p.width / 2 && Math.abs(z - p.z) <= p.depth / 2,
+  );
+}
+
 export const studentsCorner = {
   x: -87,
   z: 39,

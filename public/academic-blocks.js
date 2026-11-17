@@ -2,10 +2,18 @@ import {
   academicBlocks,
   academicFloors,
   academicZone,
-  academicStairHeight,
+  academicFloorHeight,
 } from './academic-data.js';
 import { buildAcademicFloor } from './academic-world.js';
-export function createAcademicBlocks({ player, social, toast, busyActivity, beforeExit, sound }) {
+export function createAcademicBlocks({
+  player,
+  social,
+  toast,
+  busyActivity,
+  beforeExit,
+  sound,
+  reducedMotion = () => false,
+}) {
   let current = null,
     floor = 0,
     near = null,
@@ -169,7 +177,7 @@ export function createAcademicBlocks({ player, social, toast, busyActivity, befo
       if (peer.area === area()) {
         peer.model.visible = true;
         if (!peer.activity?.startsWith('seat-'))
-          peer.model.position.y = academicStairHeight(peer.model.position.x, peer.model.position.z);
+          peer.model.position.y = academicFloorHeight(peer.model.position.x, peer.model.position.z);
         r.scene.add(peer.model);
       }
     const zone = academicZone(area(), player.position.x, player.position.z).split(':')[1];
@@ -231,6 +239,10 @@ export function createAcademicBlocks({ player, social, toast, busyActivity, befo
       panel.position.x += (desired - panel.position.x) * Math.min(1, dt * 6);
     }
     r.staff.userData.arms[1].rotation.x = -0.2 + Math.sin(time * 0.8) * 0.035;
+    if (!reducedMotion())
+      r.fans.forEach((fan, i) => {
+        fan.rotation.y += dt * (1.1 + i * 0.17);
+      });
   }
   function blocked(x, z) {
     if (!current) return false;
@@ -243,6 +255,6 @@ export function createAcademicBlocks({ player, social, toast, busyActivity, befo
     blocked,
     update,
     exit,
-    height: academicStairHeight,
+    height: academicFloorHeight,
   };
 }

@@ -1,4 +1,9 @@
-import { campusLayout, rearPaths, studentsCorner, cornerGroundHeight } from './campus-layout.js';
+import {
+  campusLayout,
+  isCampusWalkway,
+  studentsCorner,
+  cornerGroundHeight,
+} from './campus-layout.js';
 import { renderKeralaAmbience } from './audio-synthesis.js';
 import { readAudioPreferences } from './audio-preferences.js';
 export function createAmbience({
@@ -338,11 +343,7 @@ export function createAmbience({
             !road &&
             !cornerGroundHeight(player.position.x, player.position.z) &&
             player.position.z < 30 &&
-            !rearPaths.some(
-              (p) =>
-                Math.abs(player.position.x - p.x) < p.width / 2 &&
-                Math.abs(player.position.z - p.z) < p.depth / 2,
-            );
+            !isCampusWalkway(player.position.x, player.position.z);
         transient(
           quiet ? 0.018 : grass ? 0.023 : 0.038,
           inside ? 450 : road ? 850 : 1800,

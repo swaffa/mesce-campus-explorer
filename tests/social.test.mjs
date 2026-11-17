@@ -692,6 +692,31 @@ test('all academic blocks and lift floors preserve distinct presence and exclusi
   await call('/api/seat', { action: 'stand' }, a.token);
   await call('/api/seat', { action: 'stand' }, b.token);
 });
+test('friends share separate places on a classroom bench and standing returns to the approach', async () => {
+  const visitors = [];
+  for (let place = 0; place < 3; place++) {
+    const visitor = (
+      await call('/api/join', { name: 'Bench friend ' + place, room: 'class-bench' })
+    ).data;
+    visitors.push(visitor);
+    const x = [-24.5, -25.8, -23.2][place];
+    await call('/api/state', { x, z: -10, yaw: Math.PI, area: 'block-cse-0' }, visitor.token);
+    const seat = 'block-cse-0-class-0-0' + (place ? '-' + place : '');
+    const sat = await call('/api/seat', { action: 'sit', seat }, visitor.token);
+    assert.equal(sat.r.status, 200);
+    assert.equal(sat.data.seat.x, x);
+    assert.equal(sat.data.seat.z, -11.25);
+    assert.equal(sat.data.seat.height, 0.8);
+    assert.equal(sat.data.seat.label, 'classroom bench');
+  }
+  for (const [place, visitor] of visitors.entries()) {
+    const stood = await call('/api/seat', { action: 'stand' }, visitor.token);
+    assert.equal(stood.r.status, 200);
+    assert.equal(stood.data.x, [-24.5, -25.8, -23.2][place]);
+    assert.equal(stood.data.z, -10);
+  }
+});
+
 test('live conversation signaling respects nearby campus people, classroom walls and full auditorium', async () => {
   const a = (await call('/api/join', { name: 'Speaker A', room: 'acoustic' })).data,
     b = (await call('/api/join', { name: 'Speaker B', room: 'acoustic' })).data;

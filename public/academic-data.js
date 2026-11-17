@@ -9,12 +9,27 @@ export const academicFloors = ['Ground floor', 'First floor', 'Second floor'];
 export const academicAreas = academicBlocks.flatMap((b) =>
   academicFloors.map((_, f) => 'block-' + b.id + '-' + f),
 );
+// The Maps classroom panorama guides the furniture, not the unsurveyed floor plan.
+// Keep the original central seat positions/IDs while sharing each long timber bench.
+export const classroomDesks = [-24.5, -18].flatMap((x, column) =>
+  [-12.5, -8.5].map((z, row) => ({ x, z, column, row, width: 4.6, depth: 1.65 })),
+);
+export const classroomPlatform = {
+  x: -21,
+  z: -18.05,
+  width: 13.5,
+  depth: 3.2,
+  height: 0.32,
+  stepZ: -16.15,
+  stepDepth: 0.6,
+  stepHeight: 0.16,
+};
 export const academicSeatSpots = [
-  ...[-24.5, -18].flatMap((x, c) =>
-    [-12.5, -8.5].map((z, r) => ({
-      id: 'class-' + c + '-' + r,
-      label: 'classroom chair',
-      x,
+  ...classroomDesks.flatMap(({ x, z, column, row }) =>
+    [0, -1.3, 1.3].map((offset, place) => ({
+      id: 'class-' + column + '-' + row + (place ? '-' + place : ''),
+      label: 'classroom bench',
+      x: x + offset,
       z: z + 1.25,
       height: 0.8,
       yaw: Math.PI,
@@ -72,4 +87,13 @@ export function academicZone(area, x, z) {
 export function academicStairHeight(x, z) {
   if (Math.abs(x + 6.5) > 2.4 || z < 7.7 || z > 16.2) return 0;
   return z >= 14.3 ? 2.31 : Math.min(2.31, Math.max(0, Math.ceil((z - 7.7) / 0.6) * 0.21));
+}
+
+export function academicFloorHeight(x, z) {
+  const p = classroomPlatform;
+  if (Math.abs(x - p.x) <= p.width / 2) {
+    if (Math.abs(z - p.z) <= p.depth / 2) return p.height;
+    if (Math.abs(z - p.stepZ) <= p.stepDepth / 2) return p.stepHeight;
+  }
+  return academicStairHeight(x, z);
 }

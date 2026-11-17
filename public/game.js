@@ -1,5 +1,10 @@
 import * as THREE from './vendor/three.module.js';
-import { campusLayout, studentsCorner, cornerGroundHeight } from './campus-layout.js';
+import {
+  campusLayout,
+  campusWalkways,
+  studentsCorner,
+  cornerGroundHeight,
+} from './campus-layout.js';
 import { surface, finish } from './realism.js';
 import { createSocial } from './social.js';
 import { parkVehicles } from './vehicles.js';
@@ -28,7 +33,7 @@ import { cozyWorld } from './cozy-world.js';
 import { departmentDetails } from './department-details.js';
 import { createTouchControls } from './touch-controls.js';
 import { pinchZoom, jumpDuration, jumpHeight } from './input-math.js';
-import { academicStairHeight } from './academic-data.js';
+import { academicFloorHeight } from './academic-data.js';
 import { naturalWorld } from './natural-world.js';
 const $ = (id) => document.getElementById(id),
   canvas = $('world');
@@ -221,11 +226,21 @@ box(-51, 3.5, -14, 4.5, 0.35, 13, colors.cream);
 for (const z of [-19, -13, -8])
   for (const x of [-52.8, -49.2]) box(x, 1.7, z, 0.24, 3.3, 0.25, colors.cream);
 // Smaller lawn between the main and computer science blocks.
-box(-9, 0.17, -28, 10, 0.2, 26, '#cbbd90');
-box(-9, 0.29, -28, 8.8, 0.12, 24.8, '#9eaf6a');
+box(-9, 0.1, -28, 10, 0.2, 26, '#cbbd90');
+box(-9, 0.18, -28, 8.8, 0.12, 24.8, '#9eaf6a');
 sign('THE LAWN', -6, 2, -28, 10);
-building(12, -28, 20, 18, 14, 'CSE · ADS · CYBER');
-building(40, -28, 20, 18, 14, 'EEE · ECE');
+// Open central courts are visible in the CS and electrical-block satellite roofs.
+// Retain the front façades and entry positions used by the playable interiors.
+for (const [x, name] of [
+  [12, 'CSE · ADS · CYBER'],
+  [40, 'EEE · ECE'],
+]) {
+  building(x, -22, 20, 6, 14, name);
+  building(x, -34, 20, 6, 14);
+  building(x - 7, -28, 6, 6, 14);
+  building(x + 7, -28, 6, 6, 14);
+  box(x, 0.08, -28, 8, 0.12, 6, colors.path);
+}
 building(68, -28, 20, 18, 14, 'MECHANICAL');
 for (const x of [12, 40, 68]) {
   box(x, 0.15, -11, 4, 0.15, 15, colors.path);
@@ -286,6 +301,10 @@ for (let x = parking.x - parking.width / 2 + 2; x < parking.x + parking.width / 
 box(forecourt.x, 0.13, forecourt.z, forecourt.width, 0.26, forecourt.depth, colors.path);
 // The drive joins the cross-campus road without crossing the hall's stairs.
 box(parking.x - 17, 0.13, 18, 4, 0.2, 28, colors.path);
+for (const path of campusWalkways)
+  box(path.x, 0.2, path.z, path.width, 0.16, path.depth, colors.path);
+// Mark one crossing on the same axis as the CS approach and forecourt path.
+for (let z = -3; z <= 3; z += 1) box(12, 0.25, z, 3, 0.025, 0.45, '#ded9c3');
 moveFacility(campusLayout.canteen, () => pavilion(33, 26, 18, 12, 'CANTEEN'));
 // Restrained landscaping with deterministic variation.
 let seed = 42;
@@ -1032,7 +1051,7 @@ const social = createSocial({
     space === 'campus'
       ? campusFloor(x, z)
       : space.startsWith('block-')
-        ? academicStairHeight(x, z)
+        ? academicFloorHeight(x, z)
         : 0,
   onVehicleState: (players, id) => riding.reconcile(players, id),
   onSwingState: (players, id) => swings.reconcile(players, id),
@@ -1082,6 +1101,7 @@ const academic = createAcademicBlocks({
     interiors.active(),
   beforeExit: () => (seating.active() ? seating.stand() : true),
   sound: (kind) => ambience.effect?.(kind),
+  reducedMotion: () => cozy.reducedMotion(),
 });
 function indoors() {
   return auditorium.active() || interiors.active() || academic.active();

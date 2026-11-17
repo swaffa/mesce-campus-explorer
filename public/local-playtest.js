@@ -37,12 +37,16 @@ export function localPlaytest({
     ['Canteen', campusLayout.canteen.x, campusLayout.canteen.z + 7],
     ['Facilities overview', 24, 30],
     ['CSE garden', 12, -10],
+    ['Main–CS shaded path', -9, -27],
+    ['CS to forecourt crossing', 12, 6],
     ['Inside hall: Centre aisle', 0, 2],
     ['Inside hall: Stage steps', 0, -12],
   ];
   const academicPoints = [
     ['Inside block: Corridor', 0, 0],
     ['Inside block: Classroom chair', -18, -10.5],
+    ['Inside block: Classroom aisle', -21.2, -6],
+    ['Inside block: Teaching platform', -21, -17],
     ['Inside block: Lab', -10.5, -10],
     ['Inside block: Seminar hall', 7, -7],
     ['Inside block: Staffroom', 24, -14],

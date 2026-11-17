@@ -1,5 +1,10 @@
 import * as THREE from './vendor/three.module.js';
-import { academicFloors, academicSeatSpots } from './academic-data.js';
+import {
+  academicFloors,
+  academicSeatSpots,
+  classroomDesks,
+  classroomPlatform,
+} from './academic-data.js';
 import { campusCharacter } from './campus-characters.js';
 const boxes = new THREE.BoxGeometry(1, 1, 1),
   materials = new Map();
@@ -10,7 +15,8 @@ function mat(color) {
 }
 export function buildAcademicFloor(block, floor) {
   const scene = new THREE.Scene(),
-    obstacles = [];
+    obstacles = [],
+    fans = [];
   scene.background = new THREE.Color('#d4d4bd');
   scene.userData.cameraBounds = { x: 28.5, z: 18.5, y: 5.5 };
   scene.add(new THREE.HemisphereLight('#fff2da', '#7a806d', 2.2));
@@ -64,11 +70,12 @@ export function buildAcademicFloor(block, floor) {
     box(cx, 3.8, z, width, 0.4, 0.28, '#b49c7b');
     for (const s of [-1, 1]) box(cx + (s * width) / 2, 1.85, z, 0.15, 3.7, 0.32, '#957d5f');
   }
-  function desk(x, z, w = 4, d = 1.65) {
-    box(x, 1.1, z, w, 0.16, d, '#b3966b');
+  function desk(x, z, w = 4, d = 1.65, base = 0) {
+    box(x, base + 1.1, z, w, 0.16, d, '#987552');
+    box(x, base + 0.82, z, w - 0.18, 0.12, d - 0.18, '#74563e');
     for (const dx of [-w / 2 + 0.3, w / 2 - 0.3])
       for (const dz of [-d / 2 + 0.2, d / 2 - 0.2])
-        box(x + dx, 0.53, z + dz, 0.12, 1.06, 0.12, '#61746a');
+        box(x + dx, base + 0.53, z + dz, 0.12, 1.06, 0.12, '#414740');
     solid(x, z, w, d);
   }
   box(0, -0.16, 0, 58, 0.32, 40, '#b3ad97');
@@ -78,6 +85,19 @@ export function buildAcademicFloor(block, floor) {
     for (let z = -18; z < 20; z += 2.8) {
       box(x, 0.04, z, 2.77, 0.015, 2.77, z > -3.5 && z < 3.5 ? '#c3c3af' : '#c6bca5');
     }
+  // The reference classroom has an oxide floor and a low teaching dais.
+  box(-21, 0.065, -12, 13.5, 0.035, 15.5, '#a46e56');
+  const dais = classroomPlatform;
+  box(dais.x, dais.height / 2, dais.z, dais.width, dais.height, dais.depth, '#995e48');
+  box(
+    dais.x,
+    dais.stepHeight / 2,
+    dais.stepZ,
+    dais.width,
+    dais.stepHeight,
+    dais.stepDepth,
+    '#ae7b5d',
+  );
   wall(-29, 0, 0.25, 40);
   wall(29, 0, 0.25, 40);
   wall(0, -20, 58, 0.25);
@@ -91,7 +111,7 @@ export function buildAcademicFloor(block, floor) {
   ]) {
     doorway(x, -4, 3.4, 14);
     sign(label, x, 3.45, -3.78, 11);
-    sign(label, x, 3.35, -19.8, 11);
+    if (label !== 'CLASSROOM') sign(label, x, 3.35, -19.8, 11);
   }
   // A clear entrance spine, common room, lift lobby and two separate washrooms.
   wall(-3, 12, 0.25, 16);
@@ -145,7 +165,7 @@ export function buildAcademicFloor(block, floor) {
     5.8,
     Math.PI,
   );
-  for (const x of [-24, -17, -10, -3, 4, 11, 18, 25]) {
+  for (const x of [-10, -3, 4, 11, 18, 25]) {
     box(x, 2.5, -19.8, 4.2, 2.1, 0.06, '#93b2aa');
     box(x, 2.5, -19.7, 0.08, 2.2, 0.08, '#f0e8d5');
     box(x, 1.4, -19.65, 4.5, 0.15, 0.5, '#b8aa8d');
@@ -162,16 +182,66 @@ export function buildAcademicFloor(block, floor) {
     1.1,
   );
   sign('EXIT TO CAMPUS', 0, 3.2, 19.75, 4.5, Math.PI, '#36594c', '#fff3d9');
-  // Blackboard, lecture desk, exercise books and rows of student desks.
-  box(-21, 2.65, -18.9, 10, 2.3, 0.15, '#36584a');
-  sign('Welcome, MESCE.', -21, 2.8, -18.78, 8, 0, '#36584a', '#e9e4cb', 0.8);
-  desk(-21, -16.6, 4.5);
-  for (const x of [-24.5, -18])
-    for (const z of [-12.5, -8.5]) {
-      desk(x, z);
-      box(x - 0.65, 1.22, z, 1, 0.06, 0.7, '#eee4ce');
-      box(x + 0.6, 1.21, z, 0.7, 0.08, 0.9, '#8b9b7b');
+  // Tall side windows, lower wall band and high-level brick ventilation.
+  box(-27.84, 0.65, -12, 0.08, 1.3, 15.5, '#c1bfb0');
+  box(-21, 0.65, -19.82, 13.5, 1.3, 0.08, '#c1bfb0');
+  for (const z of [-16, -11.5, -7]) {
+    box(-27.74, 2.5, z, 0.1, 2.25, 3.7, '#92a99f');
+    for (const dz of [-1.85, -0.62, 0.62, 1.85])
+      box(-27.64, 2.5, z + dz, 0.16, 2.4, 0.075, '#49564e');
+    for (const y of [1.35, 2.1, 2.9, 3.65]) box(-27.64, y, z, 0.16, 0.075, 3.85, '#49564e');
+    box(-27.6, 1.27, z, 0.45, 0.12, 3.95, '#c4bcaa');
+    box(-27.7, 4.05, z, 0.15, 0.55, 3.9, '#a0644f');
+    for (let dz = -1.6; dz <= 1.6; dz += 0.4)
+      box(-27.59, 4.05, z + dz, 0.08, 0.28, 0.16, '#5a5343');
+  }
+  box(-21, 2.75, -19.6, 10.4, 2.55, 0.2, '#76583e');
+  box(-21, 2.75, -19.46, 10, 2.25, 0.1, '#34483c');
+  box(-21, 1.6, -19.23, 10.4, 0.1, 0.35, '#76583e');
+  sign('Learn · question · share', -21, 2.8, -19.39, 8, 0, '#34483c', '#e9e4cb', 0.7);
+  desk(-24.2, -18.1, 3.6, 1.5, dais.height);
+  // A small steel lectern leaves the centre/right of the platform walkable.
+  box(-17.2, 0.95, -18.1, 0.1, 1.25, 0.1, '#596158');
+  box(-17.2, 0.38, -18.1, 0.9, 0.12, 0.7, '#596158');
+  const lectern = box(-17.2, 1.6, -18.1, 1.15, 0.12, 0.75, '#7a735e');
+  lectern.rotation.x = 0.18;
+  solid(-17.2, -18.1, 1.15, 0.75);
+  for (const { x, z, width, depth } of classroomDesks) {
+    desk(x, z, width, depth);
+    // One shared bench per desk: the seat data uses the same centres.
+    box(x, 0.7, z + 1.25, width, 0.2, 0.75, '#987552');
+    for (const dx of [-width / 2 + 0.35, width / 2 - 0.35]) {
+      box(x + dx, 0.34, z + 1.25, 0.14, 0.68, 0.65, '#414740');
+      box(x + dx, 0.54, z + 0.4, 0.12, 0.12, 1.8, '#414740');
     }
+    box(x - 0.65, 1.22, z, 1, 0.06, 0.7, '#eee4ce');
+    box(x + 0.6, 1.21, z, 0.7, 0.08, 0.9, '#8b9b7b');
+  }
+  // Open cutaway ceiling: beams and independently turning three-blade fans.
+  for (const z of [-14, -6]) box(-21, 4.65, z, 13.6, 0.32, 0.42, '#e1dbc7');
+  for (const [i, z] of [-13.5, -7.5].entries()) {
+    const fan = new THREE.Group();
+    fan.position.set(-21, 4.05, z);
+    fan.rotation.y = i * 1.4;
+    box(0, 0.25, 0, 0.1, 0.5, 0.1, '#66513d', fan);
+    box(0, 0, 0, 0.48, 0.18, 0.48, '#66513d', fan);
+    for (let blade = 0; blade < 3; blade++) {
+      const angle = (blade * Math.PI * 2) / 3;
+      const mesh = box(
+        Math.sin(angle) * 0.9,
+        0,
+        Math.cos(angle) * 0.9,
+        0.28,
+        0.045,
+        1.5,
+        '#826248',
+        fan,
+      );
+      mesh.rotation.y = angle;
+    }
+    scene.add(fan);
+    fans.push(fan);
+  }
   // Distinct original lab props: computers, circuit benches or a mechanical lathe.
   for (const x of [-10.5, -3.5])
     for (const z of [-12, -7.5]) {
@@ -240,6 +310,7 @@ export function buildAcademicFloor(block, floor) {
   staff.rotation.y = 0.3;
   scene.add(staff);
   for (const spot of academicSeatSpots) {
+    if (spot.id.startsWith('class-')) continue;
     const c = spot.label.includes('lab')
       ? '#779286'
       : spot.label.includes('seminar')
@@ -316,5 +387,5 @@ export function buildAcademicFloor(block, floor) {
       batch.computeBoundingSphere();
       scene.add(batch);
     }
-  return { scene, obstacles, stream, staff, lift: [left, right] };
+  return { scene, obstacles, stream, staff, fans, lift: [left, right] };
 }
