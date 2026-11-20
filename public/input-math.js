@@ -46,3 +46,8 @@ export function jumpHeight(age) {
   const progress = age / jumpDuration;
   return 1.35 * 4 * progress * (1 - progress);
 }
+// Outdoor views span hundreds of metres. A 10cm near plane wastes depth
+// precision and makes thin road/paving layers shimmer; interiors keep close detail.
+export function cameraNearPlane(started, inside, aerial) {
+  return inside ? 0.1 : !started || aerial ? 1 : 0.5;
+}

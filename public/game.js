@@ -32,7 +32,7 @@ import { createProximity } from './proximity.js';
 import { cozyWorld } from './cozy-world.js';
 import { departmentDetails } from './department-details.js';
 import { createTouchControls } from './touch-controls.js';
-import { pinchZoom, jumpDuration, jumpHeight } from './input-math.js';
+import { pinchZoom, jumpDuration, jumpHeight, cameraNearPlane } from './input-math.js';
 import { academicFloorHeight } from './academic-data.js';
 import { naturalWorld } from './natural-world.js';
 const $ = (id) => document.getElementById(id),
@@ -157,10 +157,44 @@ function sign(text, x, y, z, size = 9, bg = '#f5ecd8', fg = '#254b3c') {
 box(0, -1.3, 0, 203, 2.5, 150, '#b3ba86');
 box(0, -0.03, 0, 200, 0.12, 147, colors.grass);
 // Paths and the two primary campus roads.
-box(0, 0.04, 0, 194, 0.15, 10, colors.path);
-box(0, 0.13, 0, 194, 0.12, 7.3, colors.road);
-box(-51, 0.07, 36, 16, 0.2, 73, colors.path);
-box(-51, 0.2, 36, 14, 0.12, 73, colors.road);
+const academicRoad = campusLayout.academicRoad,
+  approachDrive = campusLayout.approachDrive;
+box(
+  academicRoad.x,
+  0.04,
+  academicRoad.z,
+  academicRoad.width,
+  0.15,
+  academicRoad.shoulderDepth,
+  colors.path,
+);
+box(
+  academicRoad.x,
+  0.13,
+  academicRoad.z,
+  academicRoad.width,
+  0.12,
+  academicRoad.depth,
+  colors.road,
+);
+box(
+  approachDrive.x,
+  0.07,
+  approachDrive.z,
+  approachDrive.shoulderWidth,
+  0.2,
+  approachDrive.depth,
+  colors.path,
+);
+box(
+  approachDrive.x,
+  0.2,
+  approachDrive.z,
+  approachDrive.width,
+  0.12,
+  approachDrive.depth,
+  colors.road,
+);
 cyl(-51, 0.21, 0, 12.8, 0.16, colors.road);
 box(-51, 0.3, 0, 3.7, 0.1, 24, colors.path);
 for (let x = -95; x < 97; x += 7) box(x, 0.22, 0, 3, 0.035, 0.15, '#dfdfc2');
@@ -939,7 +973,7 @@ function animate(now) {
   const look = target.clone();
   look.x += welcomeOffset;
   camera.lookAt(look);
-  const nearPlane = started && !indoors() && viewMode === 2 ? 1 : 0.1;
+  const nearPlane = cameraNearPlane(started, indoors(), viewMode === 2);
   if (camera.near !== nearPlane) {
     camera.near = nearPlane;
     camera.updateProjectionMatrix();

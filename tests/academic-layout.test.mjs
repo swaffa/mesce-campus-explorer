@@ -55,6 +55,18 @@ test('classroom geometry leaves a connected aisle to all shared benches and the 
   assert.equal(classroomDesks.length, 4);
   assert.equal(room.fans.length, 2);
   room.scene.updateMatrixWorld(true);
+  const wallRay = new THREE.Raycaster(
+    new THREE.Vector3(0, 0.16, 12.3),
+    new THREE.Vector3(-1, 0, 0),
+  );
+  const wallHits = wallRay.intersectObjects(room.scene.children, true);
+  const skirting = wallHits.find((hit) => hit.object.material.color?.getHexString() === 'aaa490');
+  const wall = wallHits.find((hit) => hit.object.material.color?.getHexString() === 'e4decb');
+  assert(skirting && wall);
+  assert(
+    wall.distance - skirting.distance > 0.029,
+    'skirting stands clear of the wall instead of fighting for the same pixels',
+  );
   for (const [z, height] of [
     [-17, classroomPlatform.height],
     [classroomPlatform.stepZ, 0.16],

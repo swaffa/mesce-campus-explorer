@@ -4,7 +4,8 @@ export function campusDetails({ scene, box, cyl, mat, colors }) {
   const gateX = -51;
   // A small local pocket road runs outside the front boundary.
   // The narrow gate road continues through the map-informed surroundings network.
-  box(gateX, 0.17, 70.5, 16, 0.16, 9, colors.road);
+  // The continuous approach drive already reaches the pocket road. A second
+  // almost-coplanar asphalt slab here caused flicker beneath the gate.
   box(0, -0.6, 84, 230, 1.4, 7, '#c6b78e');
   for (const x of [gateX - 11, gateX + 11]) {
     box(x, 3.7, 65, 3.2, 7.4, 2.5, colors.cream);

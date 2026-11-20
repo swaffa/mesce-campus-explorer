@@ -16,6 +16,7 @@ export function localPlaytest({
   const points = [
     ['Enter Main Block', -51, -15],
     ['NSS Corner', campusLayout.nss.x, campusLayout.nss.z],
+    ['NSS road junction', -89, 3],
     ['IEDC rear path', campusLayout.iedc.x, campusLayout.iedc.z],
     ['River and bridge view', -69, -64],
     ['Enter CSE Block', 12, -14],

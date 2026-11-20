@@ -1,6 +1,8 @@
 // Exterior offsets shared by scene geometry, doorways and server-validated interactions.
 // Compact, playable interpretation of the supplied campus photographs and video.
 export const campusLayout = {
+  academicRoad: { x: 0, z: 0, width: 194, depth: 7.3, shoulderDepth: 10 },
+  approachDrive: { x: -51, z: 38.25, width: 14, depth: 77.5, shoulderWidth: 16 },
   canteen: { dx: 35, dz: 21, x: 68, z: 47 },
   auditorium: { dx: 14, dz: 7, x: 14, z: 55, doorX: 14, doorZ: 44 },
   library: { dx: 14, dz: -1, x: 38, z: 55, doorX: 38, doorZ: 41.2 },
@@ -27,7 +29,9 @@ export const campusBenchSpots = [
 ];
 
 export const rearPaths = [
-  { x: -89, z: -20, width: 3, depth: 45 },
+  // Stop at the north pavement. Extending to z=2.5 put this path exactly
+  // coplanar with the asphalt and produced stripes while the camera moved.
+  { x: -89, z: -23.5, width: 3, depth: 38 },
   { x: -89, z: -44, width: 3, depth: 12 },
   { x: -77, z: -49, width: 27, depth: 3 },
   { x: -94, z: -33, width: 7, depth: 13 },

@@ -37,7 +37,9 @@ export function buildAcademicFloor(block, floor) {
   }
   function wall(x, z, w, d) {
     box(x, 2, z, w, 4, d, '#e4decb');
-    box(x, 0.16, z, w, 0.32, d + 0.06, '#aaa490');
+    // Stand clear of both wall orientations; coplanar side faces flickered
+    // into jagged strips when walking down the entrance corridor.
+    box(x, 0.16, z, w + 0.06, 0.32, d + 0.06, '#aaa490');
     solid(x, z, w, d);
   }
   function sign(text, x, y, z, w = 9, angle = 0, color = '#e9dfc8', ink = '#284d43', h = 0.75) {
