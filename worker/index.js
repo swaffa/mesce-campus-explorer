@@ -345,7 +345,13 @@ export default {
         });
       }
       if (u.pathname === '/api/leave' && req.method === 'POST') {
-        await env.DB.prepare('DELETE FROM campus_players WHERE id = ?').bind(p.id).run();
+        await env.DB.batch([
+          env.DB.prepare('DELETE FROM campus_rtc_signals WHERE sender = ? OR receiver = ?').bind(
+            p.id,
+            p.id,
+          ),
+          env.DB.prepare('DELETE FROM campus_players WHERE id = ?').bind(p.id),
+        ]);
         return json({ ok: true });
       }
       return json({ error: 'Not found' }, 404);

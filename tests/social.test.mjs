@@ -250,10 +250,13 @@ test('live-voice signals reach only their recipient in the same room and area', 
     403,
   );
 });
-test('voice configuration issues temporary relay credentials without microphone access', async () => {
+test('an unconfigured relay is reported honestly, with direct STUN connections still available', async () => {
   const p = (await call('/api/join', { name: 'Connection test', room: 'rtc-config' })).data;
   const r = (await call('/api/rtc/config', undefined, p.token, { method: 'GET' })).data;
-  assert(r.iceServers.some((s) => String(s.urls).includes('turn:')));
+  assert.equal(r.relayConfigured, false);
+  assert.equal(r.setupRequired, true);
+  assert.equal(r.relay, 'none');
+  assert(r.iceServers.every((s) => s.urls.every((url) => url.startsWith('stun:'))));
   assert(!JSON.stringify(r).includes('openrelayprojectsecret'));
 });
 test('anyone can host their own event, while the queue and ownership remain enforced', async () => {
@@ -597,6 +600,39 @@ test('dedicated relay configuration is validated, and service secrets stay serve
     delete env.CLOUDFLARE_TURN_KEY_ID;
     delete env.CLOUDFLARE_TURN_API_TOKEN;
   }
+});
+
+test('voice inboxes discard old sessions and stop delivering signals after a space change', async () => {
+  const a = (await call('/api/join', { name: 'Rejoining caller', room: 'voice-lifecycle' })).data;
+  const b = (await call('/api/join', { name: 'Listener', room: 'voice-lifecycle' })).data;
+  for (const p of [a, b]) await call('/api/rtc/enable', { enabled: 1, mode: 'room' }, p.token);
+  const send = () =>
+    call(
+      '/api/rtc/signal',
+      { to: b.id, payload: { type: 'offer', call: 'old', sdp: 'v=0' } },
+      a.token,
+    );
+  const read = () => call('/api/rtc/signals?since=0', undefined, b.token, { method: 'GET' });
+  assert.equal((await send()).r.status, 200);
+  assert.equal((await read()).data.signals.length, 1);
+  await call('/api/rtc/enable', { enabled: 0 }, b.token);
+  await call('/api/rtc/enable', { enabled: 1, mode: 'room' }, b.token);
+  assert.equal((await read()).data.signals.length, 0);
+  await send();
+  await call('/api/state', { ...position, area: 'auditorium' }, a.token);
+  const moved = (await read()).data;
+  assert.equal(moved.signals.length, 0);
+  assert(moved.cursor > 0);
+  // A filtered signal cannot be fetched later by returning to the old space with this cursor.
+  assert.equal(
+    (await call('/api/rtc/signals?since=' + moved.cursor, undefined, b.token, { method: 'GET' }))
+      .data.signals.length,
+    0,
+  );
+  await call('/api/state', { ...position, area: 'campus' }, a.token);
+  await send();
+  await call('/api/leave', {}, a.token);
+  assert.equal((await read()).data.signals.length, 0);
 });
 
 test('canteen actions follow the relocated building rather than its former footprint', async () => {

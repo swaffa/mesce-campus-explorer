@@ -2,6 +2,7 @@ import { canHearVoice } from './voice-space.js';
 import { academicZone } from './academic-data.js';
 import { createVoicePeer } from './voice-peer.js';
 import { checkVoiceTransport } from './voice-check.js';
+import { createVoiceInbox } from './voice-inbox.js';
 export function createLiveVoice({ social, toast }) {
   const $ = (id) => document.getElementById(id),
     connections = new Map(),
@@ -11,6 +12,8 @@ export function createLiveVoice({ social, toast }) {
     stream = null,
     config = null,
     configAt = 0,
+    configRequest = null,
+    epoch = 0,
     cursor = 0,
     polling = false,
     pollTimer = null,
@@ -45,12 +48,39 @@ export function createLiveVoice({ social, toast }) {
   };
   $('closeVoice').onclick = () => (panel.hidden = true);
   async function ice(force = false) {
-    if (force || !config || Date.now() - configAt > 1500000) {
-      config = await social.request('/api/rtc/config', undefined, { method: 'GET' });
-      configAt = Date.now();
-    }
-    return config;
+    const refresh = Math.min(
+      config?.refreshAfter || configAt + 1500000,
+      (config?.expiresAt || Infinity) - 60000,
+    );
+    if (!force && config && Date.now() < refresh && configAt) return config;
+    if (!configRequest)
+      configRequest = (async () => {
+        const next = await social.request('/api/rtc/config', undefined, { method: 'GET' });
+        for (const entry of connections.values()) entry.link.setIceServers(next.iceServers);
+        config = next;
+        configAt = Date.now();
+        return next;
+      })().finally(() => {
+        configRequest = null;
+      });
+    return configRequest;
   }
+  const inbox = createVoiceInbox({
+    ready(id, payload) {
+      if (!enabled) return 'drop';
+      if (payload.type === 'hangup') return true;
+      if (payload.type === 'offer' && id.localeCompare(social.sessionId()) > 0) return 'drop';
+      if (!eligible(peerData(id))) return false;
+      if (payload.type === 'offer') return true;
+      return connections.get(id)?.link.call === payload.call;
+    },
+    receive,
+    onError(id) {
+      retryAt.set(id, Date.now() + 6000);
+      close(id);
+      lastError = 'Call setup was interrupted. Retrying…';
+    },
+  });
   function peerData(id) {
     return world.find((p) => p.id === id);
   }
@@ -112,11 +142,8 @@ export function createLiveVoice({ social, toast }) {
               : 'waiting for friends');
     $('voiceHelp').textContent = enabled
       ? lastError ||
-        (!connected && !waiting
-          ? 'Invite a friend to this room and ask them to join voice.'
-          : config?.relay === 'shared'
-            ? 'A shared relay is being used. Some Wi-Fi/mobile networks still need a dedicated relay.'
-            : '')
+        (config?.setupRequired ? config.message : '') ||
+        (!connected && !waiting ? 'Invite a friend to this room and ask them to join voice.' : '')
       : '';
     button.textContent = enabled ? '☎ In call' : '☎ Voice call';
     button.classList.toggle('is-live', !!enabled);
@@ -149,7 +176,14 @@ export function createLiveVoice({ social, toast }) {
     audio.autoplay = true;
     audio.playsInline = true;
     document.body.append(audio);
-    const entry = { audio, locallyMuted: false, createdAt: Date.now(), link: null };
+    const entry = {
+      audio,
+      locallyMuted: false,
+      createdAt: Date.now(),
+      disconnectedAt: 0,
+      link: null,
+    };
+    audio.volume = 0;
     entry.link = createVoicePeer({
       iceServers: config.iceServers,
       stream,
@@ -161,8 +195,13 @@ export function createLiveVoice({ social, toast }) {
         audio.play().catch(() => ($('enablePlayback').hidden = false));
       },
       onState: (state) => {
+        if (connections.get(id) !== entry) return;
+        if (state === 'disconnected') entry.disconnectedAt ||= Date.now();
+        else entry.disconnectedAt = 0;
         if (state === 'failed') {
-          lastError = 'A call could not connect. Check the relay connection below.';
+          lastError = config?.setupRequired
+            ? config.message
+            : 'A call could not connect. Check the relay connection below.';
           retryAt.set(id, Date.now() + 12000);
           close(id);
           configAt = 0;
@@ -170,6 +209,7 @@ export function createLiveVoice({ social, toast }) {
         redraw();
       },
       onError: () => {
+        if (connections.get(id) !== entry) return;
         lastError = 'Connection interrupted. Retrying…';
       },
     });
@@ -177,13 +217,13 @@ export function createLiveVoice({ social, toast }) {
     return entry;
   }
   async function offer(p) {
-    if (connections.has(p.id) || Date.now() < (retryAt.get(p.id) || 0)) return;
+    if (!eligible(p) || connections.has(p.id) || Date.now() < (retryAt.get(p.id) || 0)) return;
     const entry = connection(p.id);
     try {
       await entry.link.offer();
     } catch {
       retryAt.set(p.id, Date.now() + 8000);
-      close(p.id);
+      if (connections.get(p.id) === entry) close(p.id);
     }
     redraw();
   }
@@ -196,7 +236,7 @@ export function createLiveVoice({ social, toast }) {
     let entry = connections.get(id);
     if (payload.type === 'offer') {
       if (id.localeCompare(social.sessionId()) > 0) return;
-      entry = connection(id, payload.call);
+      if (entry?.link.call !== payload.call) entry = connection(id, payload.call);
     }
     if (!entry || entry.link.call !== payload.call) return;
     await entry.link.receive(payload);
@@ -204,21 +244,23 @@ export function createLiveVoice({ social, toast }) {
   async function poll() {
     if (!enabled || polling) return;
     polling = true;
+    const current = epoch;
     try {
+      await ice();
       const r = await social.request('/api/rtc/signals?since=' + cursor, undefined, {
         method: 'GET',
       });
+      if (!enabled || current !== epoch) return;
       for (const s of r.signals) {
         cursor = Math.max(cursor, s.id);
         try {
-          await receive(s.sender, JSON.parse(s.payload));
-        } catch {
-          retryAt.set(s.sender, Date.now() + 6000);
-          close(s.sender);
-        }
+          inbox.push(s.sender, JSON.parse(s.payload));
+        } catch {}
       }
-    } catch {
-      lastError = 'Voice reconnecting…';
+      cursor = Math.max(cursor, r.cursor || 0);
+      await inbox.flush();
+    } catch (error) {
+      if (enabled && current === epoch) lastError = error.message || 'Voice reconnecting…';
     } finally {
       polling = false;
       redraw();
@@ -246,6 +288,11 @@ export function createLiveVoice({ social, toast }) {
   async function leave(announce = true) {
     clearInterval(pollTimer);
     pollTimer = null;
+    epoch++;
+    inbox.clear();
+    retryAt.clear();
+    cursor = 0;
+    $('enablePlayback').hidden = true;
     for (const id of [...connections.keys()]) close(id, true);
     enabled = 0;
     stream?.getTracks().forEach((t) => {
@@ -271,6 +318,7 @@ export function createLiveVoice({ social, toast }) {
         throw new Error('Open the campus in Safari, Chrome or Firefox for voice calls.');
       if (enabled) await leave(false);
       mode = $('voiceScope').value;
+      await ice(true);
       if (withMic) {
         if (!navigator.mediaDevices?.getUserMedia)
           throw new Error(
@@ -285,7 +333,6 @@ export function createLiveVoice({ social, toast }) {
         for (const track of stream.getAudioTracks()) track.onended = () => leave(false);
         startMeter();
       }
-      await ice();
       const choice = withMic ? 1 : 2;
       await social.request('/api/rtc/enable', { enabled: choice, mode });
       enabled = choice;
@@ -301,13 +348,7 @@ export function createLiveVoice({ social, toast }) {
           : 'Listening only. Your microphone stays off.',
       );
     } catch (e) {
-      stream?.getTracks().forEach((t) => {
-        t.onended = null;
-        t.stop();
-      });
-      stream = null;
-      stopMeter();
-      enabled = 0;
+      await leave(false);
       lastError =
         e.name === 'NotAllowedError'
           ? 'Microphone blocked. Allow it in browser site settings, then try again.'
@@ -366,6 +407,7 @@ export function createLiveVoice({ social, toast }) {
       context = new AC();
       await context.resume();
       const c = await ice(true);
+      if (c.setupRequired) throw new Error(c.message);
       const result = await checkVoiceTransport(c.iceServers, { relay: true, context });
       $('voiceDiagnostic').textContent =
         'Relay audio confirmed: ' +
@@ -382,16 +424,25 @@ export function createLiveVoice({ social, toast }) {
     world = r.players;
     if (!enabled) return;
     for (const [id, entry] of [...connections]) {
+      const state = entry.link.pc.connectionState;
       if (!eligible(peerData(id))) close(id, true);
       else if (
-        entry.link.pc.connectionState !== 'connected' &&
-        Date.now() - entry.createdAt > 20000
+        (state !== 'connected' &&
+          state !== 'disconnected' &&
+          Date.now() - entry.createdAt > 20000) ||
+        (state === 'disconnected' &&
+          entry.disconnectedAt &&
+          Date.now() - entry.disconnectedAt > 8000)
       ) {
         retryAt.set(id, Date.now() + 8000);
         close(id, true);
         configAt = 0;
+        lastError = config?.setupRequired
+          ? config.message
+          : 'The call timed out. Retrying the connection…';
       }
     }
+    inbox.flush().catch(() => {});
     for (const p of world)
       if (eligible(p) && social.sessionId().localeCompare(p.id) < 0)
         ice()
@@ -422,6 +473,9 @@ export function createLiveVoice({ social, toast }) {
   }
   addEventListener('pagehide', () => {
     clearInterval(pollTimer);
+    inbox.clear();
+    epoch++;
+    enabled = 0;
     stream?.getTracks().forEach((t) => {
       t.onended = null;
       t.stop();

@@ -65,6 +65,7 @@
           }),
           config = await response.json();
         if (!response.ok) throw new Error(config.error);
+        if (relay && config.setupRequired) throw new Error(config.message);
         const result = await checkVoiceTransport(relay ? config.iceServers : [], {
           relay,
           context,

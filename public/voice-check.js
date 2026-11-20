@@ -18,6 +18,15 @@ export async function checkVoiceTransport(
     poll,
     receivedBytes = 0;
   try {
+    if (
+      relay &&
+      !iceServers?.some((s) =>
+        (Array.isArray(s.urls) ? s.urls : [s.urls]).some((url) => /^turns?:/.test(url)),
+      )
+    )
+      throw new Error(
+        'The campus voice relay is not configured. Ask the campus owner to finish TURN setup before testing.',
+      );
     await ctx.resume();
     const destination = ctx.createMediaStreamDestination(),
       level = ctx.createGain();
@@ -60,33 +69,28 @@ export async function checkVoiceTransport(
         source.connect(analyser).connect(silent).connect(ctx.destination);
       },
     });
-    await a.offer();
     return await new Promise((resolve, reject) => {
       timer = setTimeout(
         () =>
           reject(
             new Error(
               (relay
-                ? 'No working audio relay route was found. A dedicated TURN relay is still needed.'
+                ? !/ typ relay(?: |\r?\n|$)/.test(a.pc.localDescription?.sdp || '')
+                  ? 'No relay candidate was obtained. Check the TURN credentials, provider allowance and network access.'
+                  : 'A relay candidate was obtained, but audio could not pass. Try another network and check provider status.'
                 : 'The browser could not establish a direct audio connection.') +
-                ' Details: sender ' +
+                ' Connection: ' +
                 a.pc.connectionState +
                 '/' +
                 a.pc.iceConnectionState +
-                ', receiver ' +
-                b.pc.connectionState +
-                '/' +
-                b.pc.iceConnectionState +
-                ', context ' +
-                ctx.state +
-                ', received ' +
+                '. Audio received: ' +
                 receivedBytes +
-                ' bytes, track ' +
-                !!analyser,
+                ' bytes.',
             ),
           ),
         timeoutMs,
       );
+      a.offer().catch(reject);
       let checking = false;
       poll = setInterval(async () => {
         if (checking) return;

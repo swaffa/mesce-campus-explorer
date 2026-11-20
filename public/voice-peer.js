@@ -71,6 +71,9 @@ export function createVoicePeer({
     await pc.setLocalDescription(await pc.createOffer());
     await announce('offer');
   }
+  function setIceServers(servers) {
+    if (!closed) pc.setConfiguration({ ...pc.getConfiguration(), iceServers: servers });
+  }
   function close() {
     closed = true;
     pc.ontrack = null;
@@ -81,5 +84,5 @@ export function createVoicePeer({
     pendingLocal.length = 0;
     pendingRemote.length = 0;
   }
-  return { pc, call, offer, receive, close };
+  return { pc, call, offer, receive, close, setIceServers };
 }

@@ -13,6 +13,12 @@ class FakePeer {
   addTrack(track) {
     this.tracks.push(track);
   }
+  getConfiguration() {
+    return this.config;
+  }
+  setConfiguration(config) {
+    this.config = config;
+  }
   addTransceiver(kind, options) {
     this.transceivers.push({ kind, ...options });
   }
@@ -88,4 +94,27 @@ test('remote candidates wait for their matching SDP and stale calls are ignored'
   assert.equal(sent[1].type, 'ice');
   assert.deepEqual(link.pc.transceivers, [{ kind: 'audio', direction: 'recvonly' }]);
   link.close();
+});
+
+test('temporary ICE credentials can refresh without losing the current call or relay policy', async () => {
+  const link = createVoicePeer({
+    iceServers: [],
+    stream: null,
+    iceTransportPolicy: 'relay',
+    PeerConnection: FakePeer,
+    call: 'long-call',
+    send: async () => {},
+  });
+  await link.offer();
+  const servers = [
+    { urls: 'turns:relay.example:443', username: 'renewed', credential: 'temporary' },
+  ];
+  link.setIceServers(servers);
+  assert.deepEqual(link.pc.config.iceServers, servers);
+  assert.equal(link.pc.config.iceTransportPolicy, 'relay');
+  assert.equal(link.pc.signalingState, 'have-local-offer');
+  assert.equal(link.call, 'long-call');
+  link.close();
+  link.setIceServers([]);
+  assert.deepEqual(link.pc.config.iceServers, servers);
 });

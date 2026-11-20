@@ -1,4 +1,5 @@
 import { canHearVoice } from '../public/voice-space.js';
+import { voiceRelayConfig } from './voice-relay.js';
 const cj = (body, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 const cf = (message, status = 400) => {
@@ -27,111 +28,12 @@ async function keyMatches(a, b) {
   for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
   return diff === 0;
 }
-const iceCache = new Map();
-function validIce(list) {
-  return (
-    Array.isArray(list) &&
-    list.length > 0 &&
-    list.length <= 20 &&
-    list.every((server) => {
-      const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-      return (
-        urls.length > 0 &&
-        urls.length <= 12 &&
-        urls.every(
-          (url) =>
-            typeof url === 'string' && /^(stun|stuns|turn|turns):/.test(url) && url.length < 500,
-        )
-      );
-    })
-  );
-}
-async function iceServers(env, p) {
-  if (env.VOICE_ICE_SERVERS) {
-    let data;
-    try {
-      data = JSON.parse(env.VOICE_ICE_SERVERS);
-    } catch {}
-    if (!validIce(data)) cf('Voice relay configuration needs valid ICE servers.', 503);
-    return { iceServers: data, relay: 'dedicated' };
-  }
-  const cached = iceCache.get(p.id);
-  if (cached && cached.expires > Date.now()) return cached.config;
-  if (
-    (env.CLOUDFLARE_TURN_KEY_ID && env.CLOUDFLARE_TURN_API_TOKEN) ||
-    (env.METERED_TURN_HOST && env.METERED_TURN_API_KEY)
-  ) {
-    let data;
-    try {
-      let response;
-      if (env.CLOUDFLARE_TURN_KEY_ID && env.CLOUDFLARE_TURN_API_TOKEN) {
-        if (!/^[a-zA-Z0-9_-]{10,100}$/.test(env.CLOUDFLARE_TURN_KEY_ID)) throw new Error();
-        response = await fetch(
-          'https://rtc.live.cloudflare.com/v1/turn/keys/' +
-            env.CLOUDFLARE_TURN_KEY_ID +
-            '/credentials/generate-ice-servers',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: 'Bearer ' + env.CLOUDFLARE_TURN_API_TOKEN,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ ttl: 3600 }),
-            signal: AbortSignal.timeout(8000),
-          },
-        );
-      } else {
-        if (!/^[a-z0-9-]+\.metered\.live$/.test(env.METERED_TURN_HOST)) throw new Error();
-        const url = new URL('https://' + env.METERED_TURN_HOST + '/api/v1/turn/credentials');
-        url.searchParams.set('apiKey', env.METERED_TURN_API_KEY);
-        response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      }
-      if (!response.ok) throw new Error();
-      const raw = await response.json();
-      data = Array.isArray(raw) ? raw : raw.iceServers;
-      if (!validIce(data)) throw new Error();
-    } catch {
-      cf('The configured voice relay could not be reached. Try again shortly.', 503);
-    }
-    const config = { iceServers: data, relay: 'dedicated', expiresAt: Date.now() + 3600000 };
-    if (iceCache.size >= 1000) iceCache.clear();
-    iceCache.set(p.id, { config, expires: Date.now() + 1500000 });
-    return config;
-  }
-  // Documented public fallback; not a substitute for a verified dedicated relay.
-  const username = Math.floor(Date.now() / 1000 + 3600) + ':mesce:' + p.id,
-    key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode('openrelayprojectsecret'),
-      { name: 'HMAC', hash: 'SHA-1' },
-      false,
-      ['sign'],
-    );
-  const bytes = new Uint8Array(
-      await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(username)),
-    ),
-    credential = btoa(String.fromCharCode(...bytes));
-  return {
-    relay: 'shared',
-    iceServers: [
-      { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-      {
-        urls: [
-          'turn:staticauth.openrelay.metered.ca:80?transport=udp',
-          'turn:staticauth.openrelay.metered.ca:443?transport=tcp',
-          'turns:staticauth.openrelay.metered.ca:443?transport=tcp',
-        ],
-        username,
-        credential,
-      },
-    ],
-  };
-}
 export async function communityRoute(req, env, p, u, ctx) {
   const now = Date.now(),
     db = env.DB,
     live = now - 45000;
-  if (u.pathname === '/api/rtc/config' && req.method === 'GET') return cj(await iceServers(env, p));
+  if (u.pathname === '/api/rtc/config' && req.method === 'GET')
+    return cj(await voiceRelayConfig(env, p));
   if (u.pathname === '/api/rtc/enable' && req.method === 'POST') {
     const b = await cb(req);
     const mode = b.mode === 'room' ? 'room' : 'nearby',
@@ -146,19 +48,26 @@ export async function communityRoute(req, env, p, u, ctx) {
       if (count.n >= 8)
         cf('Eight microphones are already on. You can still join in listen-only mode.', 409);
     }
-    await db
+    const update = db
       .prepare(
         'UPDATE campus_players SET voice_on = ?, voice_mode = ?, updated_at = ? WHERE id = ?',
       )
-      .bind(enabled, mode, now, p.id)
-      .run();
+      .bind(enabled, mode, now, p.id);
+    if (enabled !== p.voice_on || mode !== p.voice_mode) {
+      await db.batch([
+        db
+          .prepare('DELETE FROM campus_rtc_signals WHERE sender = ? OR receiver = ?')
+          .bind(p.id, p.id),
+        update,
+      ]);
+    } else await update.run();
     return cj({ enabled, mode });
   }
   if (u.pathname === '/api/rtc/signals' && req.method === 'GET') {
     const cursor = Math.max(0, Number(u.searchParams.get('since')) || 0);
     const signals = await db
       .prepare(
-        'SELECT id, sender, payload FROM campus_rtc_signals WHERE receiver = ? AND room = ? AND id > ? AND created_at > ? ORDER BY id LIMIT 100',
+        'SELECT s.id, s.sender, s.payload, p.room, p.area, p.x, p.z, p.voice_on, p.voice_mode, p.updated_at FROM campus_rtc_signals s LEFT JOIN campus_players p ON p.id = s.sender WHERE s.receiver = ? AND s.room = ? AND s.id > ? AND s.created_at > ? ORDER BY s.id LIMIT 100',
       )
       .bind(p.id, p.room, cursor, now - 90000)
       .all();
@@ -168,7 +77,13 @@ export async function communityRoute(req, env, p, u, ctx) {
         .bind(now - 120000)
         .run(),
     );
-    return cj({ signals: signals.results });
+    return cj({
+      // Advance past discarded messages too, without disclosing their sender or payload.
+      cursor: signals.results.at(-1)?.id || cursor,
+      signals: signals.results
+        .filter((s) => p.voice_on && s.voice_on && s.updated_at > live && canHearVoice(p, s))
+        .map(({ id, sender, payload }) => ({ id, sender, payload })),
+    });
   }
   if (u.pathname === '/api/rtc/signal' && req.method === 'POST') {
     if (!p.voice_on) cf('Join live voice first.', 403);
