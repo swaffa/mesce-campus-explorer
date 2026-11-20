@@ -162,6 +162,7 @@ export function naturalWorld({ scene, renderer, sun, player, camera }) {
       );
     }
   leaves.count = index;
+  leaves.userData.seasonalFoliage = true;
   leaves.receiveShadow = true;
   leaves.computeBoundingSphere();
   scene.add(leaves);

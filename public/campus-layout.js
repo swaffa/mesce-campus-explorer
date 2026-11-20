@@ -4,8 +4,8 @@ export const campusLayout = {
   academicRoad: { x: 0, z: 0, width: 194, depth: 7.3, shoulderDepth: 10 },
   approachDrive: { x: -51, z: 38.25, width: 14, depth: 77.5, shoulderWidth: 16 },
   canteen: { dx: 35, dz: 21, x: 68, z: 47 },
-  auditorium: { dx: 14, dz: 7, x: 14, z: 55, doorX: 14, doorZ: 44 },
-  library: { dx: 14, dz: -1, x: 38, z: 55, doorX: 38, doorZ: 41.2 },
+  auditorium: { dx: 14, dz: 1, x: 14, z: 49, doorX: 14, doorZ: 38 },
+  library: { dx: 14, dz: -7, x: 38, z: 49, doorX: 38, doorZ: 35.2 },
   nss: { x: -92, z: -31 },
   iedc: { x: -65, z: -49 },
   parking: { x: -8, z: 22, width: 32, depth: 18 },
@@ -21,7 +21,7 @@ export const campusBenchSpots = [
   [-11, -13],
   [2, -13],
   [-75, 39],
-  [25, 37],
+  [25, 28],
   [44, 35],
   [-58, 13],
   [-95, -31],
@@ -48,8 +48,8 @@ export const campusWalkways = [
   { x: 38, z: -5.4, width: 94, depth: 2.6 },
   { x: 12, z: 19, width: 3, depth: 30 },
   { x: 30, z: 33, width: 46, depth: 3 },
-  { x: 38, z: 37.1, width: 3, depth: 9 },
-  { x: 56, z: 44, width: 3, depth: 24 },
+  { x: 38, z: 34.1, width: 3, depth: 3.2 },
+  { x: 56, z: 42.25, width: 3, depth: 25.5 },
   { x: 62, z: 55, width: 15, depth: 3 },
 ];
 
@@ -57,6 +57,20 @@ export function isCampusWalkway(x, z) {
   return [...rearPaths, ...campusWalkways].some(
     (p) => Math.abs(x - p.x) <= p.width / 2 && Math.abs(z - p.z) <= p.depth / 2,
   );
+}
+
+// Stairs and landings use the same offset as the moved venue geometry.
+export function auditoriumGroundHeight(worldX, worldZ) {
+  const x = worldX - campusLayout.auditorium.dx,
+    z = worldZ - campusLayout.auditorium.dz;
+  if (Math.abs(x) < 9 && z >= 30.5 && z < 36.5)
+    return Math.min(2.1, Math.ceil((z - 30.5) / 0.6) * 0.21);
+  if (x >= -19 && x <= 14.5 && z >= 35.5 && z < 39) return 2.1;
+  if (x > 14.5 && x < 19.6 && z > 35.5 && z < 39.5)
+    return Math.max(0, 2.1 - Math.floor((x - 14.5) / 0.65) * 0.3);
+  if (x > -19.6 && x < -15.3 && z >= 39 && z < 48.8)
+    return z < 42 ? 2.1 : Math.max(0, 2.1 - Math.floor((z - 42) / 0.65) * 0.21);
+  return null;
 }
 
 export const studentsCorner = {

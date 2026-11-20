@@ -306,9 +306,8 @@ export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
     for (let i = 0; i < 3; i++) box(x, 1.15 + i * 0.17, z - 0.12, 2.8, 0.11, 0.1, '#8d6042');
     for (const a of [-1, 1]) box(x + a, 0.4, z + 0.2, 0.12, 0.8, 0.8, '#384a43');
   }
-  // Narrow kerbs, tactile paving and crossing stripes make distances readable.
+  // Keep the narrow kerbs; the owner requested no zebra-crossing stripes.
   for (const z of [-4.2, 4.2]) box(10, 0.28, z, 169, 0.3, 0.23, '#b9b4a4');
-  for (let i = 0; i < 7; i++) box(-8 + i * 0.65, 0.24, 0, 0.34, 0.03, 6.8, '#dedbcd');
   // Roof tiles use an actual repeating terracotta surface.
   scene.traverse((o) => {
     if (o.isMesh && o.geometry?.type === 'ConeGeometry') {

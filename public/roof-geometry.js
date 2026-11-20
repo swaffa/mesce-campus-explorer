@@ -36,3 +36,13 @@ export function rectangularHipRoof(width, depth, rise, ridgeLength) {
   geometry.computeBoundingBox();
   return geometry;
 }
+
+export function pavilionRoof(width, depth, material) {
+  const mesh = new THREE.Mesh(rectangularHipRoof(width, depth, 2.5, depth * 0.45), material);
+  // Geometry is already rectangular in world axes; rotating/scaling a cone
+  // made the long canteen roof overshoot its columns and lean sideways.
+  mesh.position.y = 4.84;
+  mesh.castShadow = mesh.receiveShadow = true;
+  mesh.userData.canopy = { w: width, d: depth };
+  return mesh;
+}

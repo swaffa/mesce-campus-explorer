@@ -483,13 +483,46 @@ summary {
 }
 #weatherPreset {
   width: 100%;
-  font: 12px sans-serif;
+  font: inherit;
+  font-size: 1rem;
   padding: 10px;
   background: #fffaf0;
   color: #264737;
   border: 1px solid #acbba2;
   border-radius: 5px;
   margin: 12px 0;
+}
+.weather-settings {
+  border: 1px solid #aeb99e66;
+  border-radius: 9px;
+  margin: 20px 0;
+  padding: 16px;
+  text-align: left;
+}
+.weather-settings legend,
+.weather-settings label {
+  font-size: 0.95rem;
+  color: #294d42;
+}
+.weather-settings label {
+  display: block;
+}
+.weather-settings p {
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+#weatherPreset {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #294d42 50%),
+    linear-gradient(135deg, #294d42 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) 50%,
+    calc(100% - 14px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
 }
 @media (max-width: 700px) {
   #pointPocket {

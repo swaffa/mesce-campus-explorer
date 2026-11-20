@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {
   campusLayout,
   campusWalkways,
+  auditoriumGroundHeight,
   studentsCorner,
   cornerGroundHeight,
 } from './campus-layout.js';
@@ -35,6 +36,7 @@ import { createTouchControls } from './touch-controls.js';
 import { pinchZoom, jumpDuration, jumpHeight, cameraNearPlane } from './input-math.js';
 import { academicFloorHeight } from './academic-data.js';
 import { naturalWorld } from './natural-world.js';
+import { pavilionRoof } from './roof-geometry.js';
 const $ = (id) => document.getElementById(id),
   canvas = $('world');
 const renderer = new THREE.WebGLRenderer({
@@ -307,9 +309,21 @@ function roof(x, y, z, w, d) {
 }
 function pavilion(x, z, w, d, label) {
   box(x, 0.3, z, w + 1, 0.6, d + 1, colors.path);
-  roof(x, 5.9, z, w + 2, d + 2);
+  const canopy = pavilionRoof(
+    w + 2,
+    d + 2,
+    surface(colors.roof, w + 2, 1, d + 2, mat(colors.roof))[2],
+  );
+  canopy.position.x = x;
+  canopy.position.z = z;
+  scene.add(canopy);
+  // Edge fascia leaves the dining area visible when its roof fades overhead.
+  for (const side of [-1, 1]) {
+    box(x, 4.78, z + side * (d / 2 + 1), w + 2, 0.16, 0.16, colors.cream);
+    box(x + side * (w / 2 + 1), 4.78, z, 0.16, 0.16, d + 2, colors.cream);
+  }
   for (const a of [-w / 2 + 0.5, w / 2 - 0.5])
-    for (const b of [-d / 2 + 0.5, d / 2 - 0.5]) cyl(x + a, 2.5, z + b, 0.25, 4.5, colors.cream);
+    for (const b of [-d / 2 + 0.5, d / 2 - 0.5]) cyl(x + a, 2.775, z + b, 0.25, 4.95, colors.cream);
   box(x, 1.8, z - d / 2 + 0.5, w - 1, 3.2, 1, colors.cream);
   solid(x, z - d / 2 + 0.5, w, 1.5, 4.1);
   if (label !== 'CANTEEN')
@@ -337,8 +351,6 @@ box(forecourt.x, 0.13, forecourt.z, forecourt.width, 0.26, forecourt.depth, colo
 box(parking.x - 17, 0.13, 18, 4, 0.2, 28, colors.path);
 for (const path of campusWalkways)
   box(path.x, 0.2, path.z, path.width, 0.16, path.depth, colors.path);
-// Mark one crossing on the same axis as the CS approach and forecourt path.
-for (let z = -3; z <= 3; z += 1) box(12, 0.25, z, 3, 0.025, 0.45, '#ded9c3');
 moveFacility(campusLayout.canteen, () => pavilion(33, 26, 18, 12, 'CANTEEN'));
 // Restrained landscaping with deterministic variation.
 let seed = 42;
@@ -982,7 +994,7 @@ function animate(now) {
   const aerialDepth =
     started && !indoors() && viewMode === 2 ? camera.position.distanceTo(target) : 0;
   if (scene.fog.isFogExp2) {
-    scene.fog.density = walkingFogDensity / Math.max(1, aerialDepth / 120);
+    scene.fog.density = visuals.fogDensity() / Math.max(1, aerialDepth / 120);
   } else {
     scene.fog.near = Math.max(160, aerialDepth * 1.05);
     scene.fog.far = Math.max(340, aerialDepth * 2.4);
@@ -1029,7 +1041,6 @@ function animate(now) {
   if (frames++ % 6 === 0) mini();
 }
 const realism = finish(scene, renderer, sun, { box, cyl, ball, mat, colors });
-const walkingFogDensity = scene.fog.density || 0;
 
 // Remove floating map labels; department names are mounted on their entrances.
 for (const o of [...scene.children])
@@ -1155,16 +1166,7 @@ function campusFloor(x, z) {
   if (Math.hypot(x + 51, z) < 12.8 || (Math.abs(x + 51) < 3 && z < -12 && z > -20)) return 1.18;
   if (Math.abs(x + 51) < 3.5 && z >= 12.8 && z <= 15.5)
     return Math.max(0, 1.18 - Math.floor((z - 12.8) / 0.7) * 0.3);
-  x -= campusLayout.auditorium.dx;
-  z -= campusLayout.auditorium.dz;
-  if (Math.abs(x) < 9 && z >= 30.5 && z < 36.5)
-    return Math.min(2.1, Math.ceil((z - 30.5) / 0.6) * 0.21);
-  if (x >= -19 && x <= 14.5 && z >= 35.5 && z < 39) return 2.1;
-  if (x > 14.5 && x < 19.6 && z > 35.5 && z < 39.5)
-    return Math.max(0, 2.1 - Math.floor((x - 14.5) / 0.65) * 0.3);
-  if (x > -19.6 && x < -15.3 && z >= 39 && z < 48.8)
-    return z < 42 ? 2.1 : Math.max(0, 2.1 - Math.floor((z - 42) / 0.65) * 0.21);
-  return 0;
+  return auditoriumGroundHeight(x, z) ?? 0;
 }
 const liveVoice = createLiveVoice({ social, toast });
 const events = createEvents({

@@ -8,7 +8,7 @@ import {
   classroomDesks,
   classroomPlatform,
 } from '../public/academic-data.js';
-import { isCampusWalkway } from '../public/campus-layout.js';
+import { isCampusWalkway, campusLayout } from '../public/campus-layout.js';
 import { buildAcademicFloor } from '../public/academic-world.js';
 
 test('classroom geometry leaves a connected aisle to all shared benches and the teaching platform', () => {
@@ -121,7 +121,7 @@ test('the new campus walks connect the academic approaches, crossing and facilit
     ],
     [
       [38, 33],
-      [38, 41.2],
+      [38, campusLayout.library.doorZ],
     ],
     [
       [56, 33],

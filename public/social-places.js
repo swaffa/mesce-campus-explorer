@@ -337,11 +337,16 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   const hall = campusLayout.auditorium,
     library = campusLayout.library,
     canteen = campusLayout.canteen;
+  // Close the narrow seam between the two attached building wings.
+  const joinX = (hall.x + 14.5 + library.x - 9) / 2;
+  box(joinX, 3.5, hall.z, 0.8, 7, 7, colors.cream);
+  box(joinX, 7.1, hall.z, 1, 0.2, 7.4, colors.cream);
+  solid(joinX, hall.z, 0.8, 7, 7.5);
   box(hall.x, 0.13, hall.doorZ - 7, 5, 0.26, 5, colors.path);
-  box((hall.x + canteen.x) / 2, 0.13, 36.5, canteen.x - hall.x, 0.26, 3, colors.path);
-  box(canteen.x, 0.13, 43, 4, 0.26, 13, colors.path);
+  box((hall.x + canteen.x) / 2, 0.13, 29.5, canteen.x - hall.x, 0.26, 3, colors.path);
   box(library.doorX, 0.13, library.doorZ - 2, 7, 0.26, 4, colors.path);
-  box(hall.x - 17.5, 0.13, 59, 3, 0.26, 11, colors.path);
+  const prayerPathStart = hall.dz + 48.8;
+  box(hall.x - 17.5, 0.13, (prayerPathStart + 64) / 2, 3, 0.26, 64 - prayerPathStart, colors.path);
   box(-3.4, 0.13, 64, 3, 0.26, 4, colors.path);
   // The women's hall sits behind the auditorium; its entrance turns clockwise to face east.
   const women = new THREE.Group();
