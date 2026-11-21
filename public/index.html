@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="social.css" />
     <link rel="stylesheet" href="community.css" />
     <link rel="stylesheet" href="tablet.css" />
+    <link rel="stylesheet" href="avatar-picker.css" />
   </head>
   <body>
     <canvas id="world" aria-label="Interactive 3D MES college campus"></canvas>
@@ -29,11 +30,8 @@
     </header>
     <section id="welcome" class="welcome">
       <div class="eyebrow">YOUR PEOPLE. YOUR CAMPUS.</div>
-      <h1>Welcome to<br /><em>MESCE.</em></h1>
-      <p>
-        Past the fountain. Around the lawn. Back to your favourite corner.<br />Students and alumni.
-        Old friends and new memories.
-      </p>
+      <h1>Welcome to <em>MESCE.</em></h1>
+      <p>Students and alumni. Old friends and new memories.</p>
       <div class="join-fields">
         <label
           >Your name<input
@@ -54,26 +52,23 @@
             id="batchYear"
             maxlength="4"
             inputmode="numeric"
-            placeholder="e.g. 2018" /></label
-        ><label for="prayerSpace"
-          >Prayer space<select id="prayerSpace">
-            <option value="men">Men’s prayer space</option>
-            <option value="women">Women’s prayer space</option>
-          </select></label
-        >
-        <div class="attire-field">
-          <label for="characterStyle"
-            >Your attire<select id="characterStyle">
-              <option value="trousers">Shirt &amp; trousers</option>
-              <option value="braids">Braids &amp; skirt</option>
-              <option value="hijab">Hijab &amp; uniform</option>
-            </select></label
-          ><canvas id="attirePreview" role="img" aria-label="Attire preview"></canvas>
-        </div>
+            placeholder="e.g. 2018"
+        /></label>
+        <fieldset class="avatar-picker">
+          <legend>Choose your avatar</legend>
+          <input type="hidden" id="characterStyle" value="boy-01-sidepart" />
+          <div class="avatar-stage">
+            <canvas id="attirePreview" role="img" aria-label="Selected avatar preview"></canvas>
+            <strong id="avatarName">Side part</strong>
+            <button type="button" id="avatarTurn">Turn around</button>
+          </div>
+          <div id="avatarChoices" class="avatar-choices" aria-label="Student avatars"></div>
+          <small id="avatarLoadStatus" role="status">Getting your avatars ready…</small>
+        </fieldset>
         <small>Meet students and alumni on campus. Share the campus link with friends.</small>
       </div>
       <p id="joinError" role="alert"></p>
-      <button class="primary" id="start">Join the campus <span>↗</span></button>
+      <button class="primary" id="start">Join the campus</button>
       <div class="welcome-foot" id="welcomeControls">
         WASD / arrow keys to move <b>·</b> live conversations · club events · group photos
       </div>

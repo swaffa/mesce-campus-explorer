@@ -51,3 +51,7 @@ Audio is not saved to chat or R2 by the live-call path. The older voice-note end
 ## Verification limits for this revision
 
 Node tests cover the real call controller with simulated browser peers, delayed presence, early ICE, leave/rejoin cleanup, backend authorization and inbox cursors, provider failures, credential refresh, cache separation and secret filtering. These checks do not prove an audible call or TURN allocation. Browser control is unavailable in this workspace for this revision; the owner must finish a provider account and run `/voice-test.html` in Relay mode, then check a two-person call across Wi-Fi/mobile networks. The diagnostic requires received RTP bytes and decoded audio to report success. It now times out negotiation too and identifies missing configuration before attempting a relay-only connection.
+
+### Subsequent browser check
+
+Browser control became available during the avatar update. The actual `/voice-test.html` Direct test passed with 650 received and decoded audio bytes using a silent generated tone and no microphone. Relay mode immediately displayed the missing-configuration message. This confirms browser transport and the diagnostic UI, not an audible two-person call across networks. Cloudflare/Metered account setup is still outstanding.

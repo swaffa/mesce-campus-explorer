@@ -2,7 +2,7 @@
 
 ## Three.js r170
 
-`public/vendor/three.module.js` is vendored from [Three.js](https://github.com/mrdoob/three.js/tree/r170), copyright 2010–2024 Three.js authors, under the MIT license. The source header is retained and the full [MIT license](docs/licenses/threejs-MIT.txt) is included.
+`public/vendor/three.module.js`, `GLTFLoader.js`, `SkeletonUtils.js` and `BufferGeometryUtils.js` are vendored from [Three.js](https://github.com/mrdoob/three.js/tree/r170), copyright 2010–2024 Three.js authors, under the MIT license. Loader/utility imports are adapted to local paths. The source header is retained and the full [MIT license](docs/licenses/threejs-MIT.txt) is included.
 
 ## Gentilis Bold
 

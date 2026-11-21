@@ -1,5 +1,6 @@
 import { campusLayout } from './campus-layout.js';
 import * as THREE from './vendor/three.module.js';
+import { cloneStudentRig } from './student-avatars.js';
 export function cozyWorld({
   scene,
   renderer,
@@ -261,11 +262,12 @@ export function cozyWorld({
   function makeCue() {
     cue?.traverse((o) => {
       if (o.isMesh) o.material.dispose();
+      if (o.isSkinnedMesh) o.skeleton.dispose();
     });
     cue?.removeFromParent();
     cueLeg = player.userData.legs[0];
     pairs = [];
-    cue = player.clone(true);
+    cue = cloneStudentRig(player);
     cueStyle = player.userData.style;
     const source = [],
       copies = [];

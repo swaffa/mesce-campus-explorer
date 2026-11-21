@@ -25,6 +25,7 @@ import { createAmbience } from './campus-ambience.js';
 import { communityVisuals } from './community-visuals.js';
 import { campusCharacter, restyleCharacter } from './campus-characters.js';
 import { createAttirePreview } from './attire-preview.js';
+import { updateStudentAvatar } from './student-avatars.js';
 import { campusLife } from './campus-life.js';
 import { createSeating } from './seating.js';
 import { createCampusInteriors } from './campus-interiors.js';
@@ -1013,6 +1014,8 @@ function animate(now) {
   events.update();
   liveVoice.update(dt);
   ambience.update(started, time, dt);
+  updateStudentAvatar(player, dt);
+  for (const peer of social.getPeers().values()) updateStudentAvatar(peer.model, dt);
   visuals.update(time, dt, player, indoors(), cozy.reducedMotion());
   cozy.update(time, dt, indoors(), paused, renderDelta);
   natural.update(time, dt, {

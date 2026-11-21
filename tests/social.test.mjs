@@ -3,6 +3,7 @@ import { campusLayout, studentsCorner, cornerGroundHeight } from '../public/camp
 import assert from 'node:assert/strict';
 import worker from '../dist/server/index.js';
 import { localEnv } from '../scripts/local-env.mjs';
+import { avatarChoices } from '../public/avatar-catalog.js';
 const env = localEnv();
 const pending = [];
 const ctx = {
@@ -32,6 +33,34 @@ async function call(path, body, token, options = {}) {
   return { r, data };
 }
 const position = { x: -67, z: 59, yaw: 0, since: 0 };
+test('new avatar choices are shared and need no separate prayer-space field', async () => {
+  const joined = [];
+  for (const choice of avatarChoices) {
+    const { r, data } = await call('/api/join', {
+      name: choice.label,
+      room: 'avatar-picker',
+      avatar_style: choice.id,
+    });
+    assert.equal(r.status, 200);
+    assert.equal(data.avatar_style, choice.id);
+    assert.equal(data.prayer_space, choice.prayerSpace);
+    joined.push(data);
+  }
+  const state = (await call('/api/state', position, joined[0].token)).data;
+  for (const person of joined)
+    assert.equal(state.players.find((p) => p.id === person.id).avatar_style, person.avatar_style);
+  assert(!JSON.stringify(state).includes('prayer_space'));
+  const woman = joined.find((p) => p.avatar_style === 'girl-02-bob');
+  const man = joined.find((p) => p.avatar_style === 'boy-02-glasses');
+  assert.equal(
+    (await call('/api/state', { ...position, area: 'masjid' }, woman.token)).r.status,
+    403,
+  );
+  assert.equal(
+    (await call('/api/state', { ...position, area: 'women-masjid' }, man.token)).r.status,
+    403,
+  );
+});
 test('outdoor jumps are shared, rate limited, and suppressed inside academic blocks', async () => {
   const jumper = (await call('/api/join', { name: 'Jumping student', room: 'jump-sync' })).data;
   const friend = (await call('/api/join', { name: 'Classmate', room: 'jump-sync' })).data;

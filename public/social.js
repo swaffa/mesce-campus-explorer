@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import { requestCampus } from './api-client.js';
 import { jumpDuration, jumpHeight } from './input-math.js';
+import { disposeStudentAvatar } from './student-avatars.js';
 const $ = (id) => document.getElementById(id);
 export function createSocial({
   scene,
@@ -163,6 +164,7 @@ export function createSocial({
       }
       for (const [id, p] of peers)
         if (!ids.has(id)) {
+          disposeStudentAvatar(p.model);
           p.model.removeFromParent();
           p.model.traverse((o) => {
             if (o.isSprite) {
@@ -216,7 +218,6 @@ export function createSocial({
         name,
         room,
         wallet_token: walletToken,
-        prayer_space: $('prayerSpace').value,
         avatar_style: $('characterStyle').value,
         member_type: $('memberType').value,
         batch: $('batchYear').value.trim(),

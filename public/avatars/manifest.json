@@ -1,0 +1,62 @@
+[
+  {
+    "id": "boy-01-sidepart",
+    "label": "Boy 01 Sidepart",
+    "file": "boy-01-sidepart.glb",
+    "triangles": 3567,
+    "bones": 20,
+    "animations": ["Idle", "Walk"],
+    "heightMeters": 1.825,
+    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+  },
+  {
+    "id": "boy-02-glasses",
+    "label": "Boy 02 Glasses",
+    "file": "boy-02-glasses.glb",
+    "triangles": 4287,
+    "bones": 20,
+    "animations": ["Idle", "Walk"],
+    "heightMeters": 1.932,
+    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+  },
+  {
+    "id": "boy-03-tousled",
+    "label": "Boy 03 Tousled",
+    "file": "boy-03-tousled.glb",
+    "triangles": 3899,
+    "bones": 20,
+    "animations": ["Idle", "Walk"],
+    "heightMeters": 1.945,
+    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+  },
+  {
+    "id": "girl-01-braids",
+    "label": "Girl 01 Braids",
+    "file": "girl-01-braids.glb",
+    "triangles": 3983,
+    "bones": 20,
+    "animations": ["Idle", "Walk"],
+    "heightMeters": 1.825,
+    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+  },
+  {
+    "id": "girl-02-bob",
+    "label": "Girl 02 Bob",
+    "file": "girl-02-bob.glb",
+    "triangles": 3687,
+    "bones": 20,
+    "animations": ["Idle", "Walk"],
+    "heightMeters": 1.825,
+    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+  },
+  {
+    "id": "girl-03-ponytail",
+    "label": "Girl 03 Ponytail",
+    "file": "girl-03-ponytail.glb",
+    "triangles": 3907,
+    "bones": 20,
+    "animations": ["Idle", "Walk"],
+    "heightMeters": 1.91,
+    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+  }
+]

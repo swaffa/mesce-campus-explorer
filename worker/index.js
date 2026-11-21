@@ -4,6 +4,18 @@ import { academicAreas } from '../public/academic-data.js';
 import { communityRoute } from './community-api.js';
 import { economyRoute } from './economy-api.js';
 import { seatingRoute, campusSeats } from './seating-api.js';
+import { validAvatarStyle, prayerSpaceForAvatar } from '../public/avatar-catalog.js';
+const binaryAssets = new Map();
+function assetContent(path, asset) {
+  if (asset.encoding !== 'base64') return asset.body;
+  if (!binaryAssets.has(path)) {
+    const raw = atob(asset.body),
+      bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    binaryAssets.set(path, bytes);
+  }
+  return binaryAssets.get(path);
+}
 const DAY = 86400000,
   LIVE = 45000,
   MAX = 40;
@@ -70,7 +82,8 @@ export default {
       if (!u.pathname.startsWith('/api/')) {
         const a = assets[u.pathname === '/' ? '/index.html' : u.pathname];
         if (!a) return new Response('Not found', { status: 404 });
-        return new Response(a.body, {
+        const content = assetContent(u.pathname, a);
+        return new Response(content, {
           headers: {
             'Content-Type': a.type,
             'Cache-Control': 'no-cache',
@@ -99,10 +112,8 @@ export default {
           .bind(room, now - LIVE)
           .first();
         if (count.n >= MAX) fail('This room is full. Choose another room.', 409);
-        const prayerSpace = ['men', 'women'].includes(b.prayer_space) ? b.prayer_space : 'unset';
-        const avatar = ['trousers', 'braids', 'hijab'].includes(b.avatar_style)
-          ? b.avatar_style
-          : 'trousers';
+        const avatar = validAvatarStyle(b.avatar_style) ? b.avatar_style : 'trousers';
+        const prayerSpace = prayerSpaceForAvatar(b.avatar_style, b.prayer_space);
         const member = b.member_type === 'alumni' ? 'alumni' : 'student',
           batch = clean(b.batch, 4);
         if (batch && !/^\d{4}$/.test(batch)) fail('Batch/year must be four digits.');

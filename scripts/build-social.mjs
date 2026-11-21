@@ -11,6 +11,7 @@ const contentTypes = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.glb': 'model/gltf-binary',
 };
 const assets = {};
 
@@ -22,8 +23,10 @@ function collectAssets(directory) {
       continue;
     }
     const url = '/' + path.relative(publicDirectory, filename).split(path.sep).join('/');
+    const binary = path.extname(filename) === '.glb';
     assets[url] = {
-      body: fs.readFileSync(filename, 'utf8'),
+      body: fs.readFileSync(filename, binary ? 'base64' : 'utf8'),
+      ...(binary ? { encoding: 'base64' } : {}),
       type: contentTypes[path.extname(filename)] || 'text/plain; charset=utf-8',
     };
   }

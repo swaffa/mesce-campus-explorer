@@ -1,4 +1,6 @@
 import * as THREE from './vendor/three.module.js';
+import { avatarChoice } from './avatar-catalog.js';
+import { attachStudentAvatar, disposeStudentAvatar } from './student-avatars.js';
 const materials = new Map(),
   headGeometry = new THREE.IcosahedronGeometry(1, 1),
   softGeometry = new THREE.IcosahedronGeometry(1, 0),
@@ -41,6 +43,14 @@ function material(color, smooth = false) {
   return materials.get(key);
 }
 export function campusCharacter({ style = 'trousers', shopkeeper = false, security = false } = {}) {
+  const requestedStyle = style;
+  if (!shopkeeper && !security)
+    style =
+      avatarChoice(style).prayerSpace === 'women'
+        ? style === 'hijab'
+          ? 'hijab'
+          : 'braids'
+        : 'trousers';
   const hijab = style === 'hijab' && !shopkeeper && !security;
   const g = new THREE.Group(),
     skin = material(hijab ? '#c99f7e' : '#bc8d59', hijab),
@@ -237,11 +247,26 @@ export function campusCharacter({ style = 'trousers', shopkeeper = false, securi
     puppet: true,
     style,
   };
+  if (!shopkeeper && !security) {
+    g.userData.style = requestedStyle;
+    if (typeof window !== 'undefined' && avatarChoice(requestedStyle).file)
+      attachStudentAvatar(g, requestedStyle).catch(() => {
+        g.userData.avatarLoadFailed = true;
+      });
+  }
   return g;
 }
 export function restyleCharacter(model, style) {
+  disposeStudentAvatar(model);
   const replacement = campusCharacter({ style });
+  disposeStudentAvatar(replacement);
   for (const child of [...model.children]) if (child.userData.characterPart) model.remove(child);
   for (const child of [...replacement.children]) model.add(child);
   Object.assign(model.userData, replacement.userData);
+  model.userData.avatarLoaded = null;
+  model.userData.avatarLoadFailed = false;
+  if (typeof window !== 'undefined' && avatarChoice(style).file)
+    return attachStudentAvatar(model, style).catch(() => {
+      model.userData.avatarLoadFailed = true;
+    });
 }
