@@ -14,6 +14,6 @@ esbuild and Prettier are pinned development dependencies. Their packages retain 
 
 ## Project assets
 
-Campus meshes, characters, procedural textures, synthesized sound design, and short library texts are original project assets. Reference images guide the stylized campus interpretation. No After School assets, recordings, or source code are included. See the [asset manifest](docs/ASSET-MANIFEST.md) for sound provenance and remaining production asset needs.
+The playable campus combines project-built geometry and sound with supplied student rigs and licensed vehicle and tree models. The [in-game model credits](public/credits.html) and [model inventory](public/models/manifest.json) identify each external model’s source, author, license and delivery changes. Reference images guide the stylized campus interpretation. No After School assets, recordings, or source code are included. See the [asset manifest](docs/ASSET-MANIFEST.md) for sound provenance and remaining production asset needs.
 
 These notices describe third-party components and do not assign a new license to the original project source.

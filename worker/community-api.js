@@ -32,6 +32,95 @@ export async function communityRoute(req, env, p, u, ctx) {
   const now = Date.now(),
     db = env.DB,
     live = now - 45000;
+  if (u.pathname === '/api/rtc/invitations' && req.method === 'GET') {
+    const rows = await db
+      .prepare(
+        'SELECT i.id, i.sender, i.expires_at, s.name, s.room, s.area, s.x, s.z, s.updated_at FROM campus_talk_invites i JOIN campus_players s ON s.id = i.sender WHERE i.receiver = ? AND i.room = ? AND i.status = ? AND i.expires_at > ? ORDER BY i.created_at DESC LIMIT 8',
+      )
+      .bind(p.id, p.room, 'pending', now)
+      .all();
+    ctx.waitUntil(
+      db
+        .prepare('DELETE FROM campus_talk_invites WHERE expires_at < ?')
+        .bind(now - 60000)
+        .run(),
+    );
+    return cj({
+      invitations: rows.results
+        .filter(
+          (s) =>
+            s.updated_at > live &&
+            canHearVoice({ ...p, voice_mode: 'nearby' }, { ...s, voice_mode: 'nearby' }),
+        )
+        .map((s) => ({ id: s.id, from: s.sender, name: s.name, expiresAt: s.expires_at })),
+    });
+  }
+  if (u.pathname === '/api/rtc/invite' && req.method === 'POST') {
+    const b = await cb(req),
+      to = ct(b.to, 50);
+    const peer = await db
+      .prepare(
+        'SELECT id,room,area,x,z FROM campus_players WHERE id = ? AND room = ? AND updated_at > ?',
+      )
+      .bind(to, p.room, live)
+      .first();
+    if (
+      !peer ||
+      peer.id === p.id ||
+      !canHearVoice({ ...p, voice_mode: 'nearby' }, { ...peer, voice_mode: 'nearby' })
+    )
+      cf('Walk closer to that student to ask them to talk.', 409);
+    const count = await db
+      .prepare('SELECT COUNT(*) AS n FROM campus_talk_invites WHERE sender = ? AND created_at > ?')
+      .bind(p.id, now - 30000)
+      .first();
+    if (count.n >= 4) cf('Give your friends a moment to answer.', 429);
+    await db.prepare('DELETE FROM campus_talk_invites WHERE expires_at < ?').bind(now).run();
+    const existing = await db
+      .prepare(
+        'SELECT id FROM campus_talk_invites WHERE sender = ? AND receiver = ? AND status = ?',
+      )
+      .bind(p.id, to, 'pending')
+      .first();
+    if (existing) return cj({ id: existing.id });
+    const id = crypto.randomUUID();
+    await db
+      .prepare(
+        'INSERT OR IGNORE INTO campus_talk_invites (id,room,sender,receiver,created_at,expires_at) VALUES (?,?,?,?,?,?)',
+      )
+      .bind(id, p.room, p.id, to, now, now + 30000)
+      .run();
+    const saved = await db
+      .prepare(
+        'SELECT id FROM campus_talk_invites WHERE sender = ? AND receiver = ? AND status = ?',
+      )
+      .bind(p.id, to, 'pending')
+      .first();
+    return cj({ id: saved.id });
+  }
+  if (u.pathname === '/api/rtc/respond' && req.method === 'POST') {
+    const b = await cb(req),
+      id = ct(b.id, 50),
+      action = b.accept ? 'accepted' : 'declined';
+    if (typeof b.accept !== 'boolean') cf('Choose whether to join or dismiss the invitation.');
+    const invite = await db
+      .prepare(
+        'SELECT i.id,s.room,s.area,s.x,s.z,s.updated_at FROM campus_talk_invites i JOIN campus_players s ON s.id = i.sender WHERE i.id = ? AND i.receiver = ? AND i.room = ? AND i.status = ? AND i.expires_at > ?',
+      )
+      .bind(id, p.id, p.room, 'pending', now)
+      .first();
+    if (
+      !invite ||
+      invite.updated_at < live ||
+      !canHearVoice({ ...p, voice_mode: 'nearby' }, { ...invite, voice_mode: 'nearby' })
+    )
+      cf('That invitation has ended. Ask your friend again.', 409);
+    await db
+      .prepare('UPDATE campus_talk_invites SET status = ? WHERE id = ?')
+      .bind(action, id)
+      .run();
+    return cj({ ok: true });
+  }
   if (u.pathname === '/api/rtc/config' && req.method === 'GET')
     return cj(await voiceRelayConfig(env, p));
   if (u.pathname === '/api/rtc/enable' && req.method === 'POST') {
@@ -61,6 +150,11 @@ export async function communityRoute(req, env, p, u, ctx) {
         update,
       ]);
     } else await update.run();
+    if (!enabled)
+      await db
+        .prepare('DELETE FROM campus_talk_invites WHERE sender = ? AND status = ?')
+        .bind(p.id, 'pending')
+        .run();
     return cj({ enabled, mode });
   }
   if (u.pathname === '/api/rtc/signals' && req.method === 'GET') {

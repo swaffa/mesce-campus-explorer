@@ -1,5 +1,19 @@
 import * as THREE from './vendor/three.module.js';
-export function createSwings({ scene, player, social, box, cyl, ball, solid, mat, toast, riding }) {
+import { campusTreeDetails } from './campus-trees.js';
+export function createSwings({
+  scene,
+  player,
+  social,
+  box,
+  cyl,
+  ball,
+  solid,
+  mat,
+  toast,
+  riding,
+  reducedMotion,
+  lowQuality,
+}) {
   function trunkBranch(a, b, r) {
     const delta = b.clone().sub(a);
     const m = new THREE.Mesh(
@@ -33,25 +47,33 @@ export function createSwings({ scene, player, social, box, cyl, ball, solid, mat
             7.1 + (i % 3) * 1.2,
             z + Math.sin(a) * (r + 1.6),
             0.28,
-            ['#d24b35', '#bd3e32', '#e36b40'][j],
+            ['#dc9cb6', '#c58b9b', '#e9bfd3'][j],
             scene,
             0.6,
           );
       }
     }
   }
-  for (const [x, z] of [
-    [22, -43],
-    [37, -12],
-    [49, -44],
-    [78, -43],
-  ])
-    bigTree(x, z);
-  bigTree(3, -13);
-  bigTree(61, -13, true);
+  const detailedTrees = [];
+  for (const [x, z, model, height, flowers] of [
+    [22, -43, 'coconut', 11],
+    [37, -12, 'mango', 10],
+    [49, -44, 'tropical-palm', 12],
+    [78, -43, 'coconut', 11],
+    [3, -13, 'leafy', 11],
+    [61, -13, 'magnolia', 12, true],
+  ]) {
+    const before = new Set(scene.children);
+    bigTree(x, z, flowers);
+    const low = new THREE.Group();
+    for (const child of [...scene.children]) if (!before.has(child)) low.add(child);
+    scene.add(low);
+    detailedTrees.push({ x, z, model, height, flowers, low });
+  }
+  const treeDetails = campusTreeDetails(scene, detailedTrees, { reducedMotion, lowQuality });
   const stations = [
     { id: 'cs', name: 'CSE tree', x: 8, z: -9 },
-    { id: 'mech', name: 'red-flowering Mechanical tree', x: 66, z: -9 },
+    { id: 'mech', name: 'pink-flowering Mechanical tree', x: 66, z: -9 },
   ];
   for (const s of stations) {
     trunkBranch(new THREE.Vector3(s.x - 5, 5.3, -13), new THREE.Vector3(s.x, 5.1, s.z), 0.27);
@@ -125,6 +147,7 @@ export function createSwings({ scene, player, social, box, cyl, ball, solid, mat
   }
   let display = '';
   function update(started, dt) {
+    treeDetails.update(player, started, dt, social.getArea() !== 'campus');
     const now = Date.now();
     for (const s of stations) {
       const sitter = players.find((p) => p.activity === 'swing-' + s.id);

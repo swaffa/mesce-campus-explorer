@@ -16,6 +16,7 @@ const contentTypes = {
 const assets = {};
 
 function collectAssets(directory) {
+  if (path.relative(publicDirectory, directory) === 'models') return;
   for (const name of fs.readdirSync(directory).sort()) {
     const filename = path.join(directory, name);
     if (fs.statSync(filename).isDirectory()) {

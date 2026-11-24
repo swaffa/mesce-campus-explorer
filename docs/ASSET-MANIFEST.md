@@ -1,6 +1,6 @@
 # MESCE original assets and audio replacement manifest
 
-All new scene geometry, procedural textures, characters, shader motion and short library texts are original project assets. No After School assets, source code or sound recordings are used. The existing Gentilis font asset retains its bundled license.
+Campus architecture, procedural textures, shader motion and short library texts were created for the game. The student rigs and nine imported vehicle and tree models are listed below. No After School assets, source code or sound recordings are used. The existing Gentilis font asset retains its bundled license.
 
 ## Integrated sound design
 
@@ -36,8 +36,14 @@ The current visual pass uses original canvas-generated wood grain, bark, plaster
 
 ## Supplied student avatar pack (21 November)
 
-`public/avatars/` contains the six GLB files supplied by the owner in the student-avatars folder: `boy-01-sidepart`, `boy-02-glasses`, `boy-03-tousled`, `girl-01-braids`, `girl-02-bob` and `girl-03-ponytail`. The accompanying `manifest.json` retains the source metadata. These are the supplied meshes, materials, skeletons and Idle/Walk clips, integrated into the existing Three.js r170 runtime. They are not downloaded After School assets. The existing procedural hijab avatar is retained as a seventh choice. No reference photographs, source Blender workspace or local source paths are included in the deployment.
+`public/avatars/` contains the six GLB files supplied by the owner in the student-avatars folder: `boy-01-sidepart`, `boy-02-glasses`, `boy-03-tousled`, `girl-01-braids`, `girl-04-hijabi` and `girl-03-ponytail`. The accompanying `manifest.json` retains the source metadata. These are the supplied meshes, materials, skeletons and Idle/Walk clips, integrated into the existing Three.js r170 runtime. They are not downloaded After School assets. Saved Bob and legacy hijab selections now load the supplied ivory hijabi. No reference photographs, source Blender workspace or local source paths are included in the deployment.
 
-The models have no facial blend shapes, finger articulation, cloth simulation or separate run animation. Running uses a faster Walk clip. Existing seat, prayer, ride and wave controls apply compatible bone rotations; the skirts remain rigid. Menu images are rendered locally from the same original models using one WebGL renderer. Per-player skeletons and animation mixers are independent; model geometry and materials are cached and shared. GLBs are approximately 422–508 KB each.
+The models have no facial blend shapes, finger articulation, cloth simulation or separate run animation. Running uses a faster Walk clip. The seat, prayer and ride controls apply compatible bone rotations; the skirts remain rigid. Menu images are rendered locally from the same original models using one WebGL renderer. Per-player skeletons and animation mixers are independent; model geometry and materials are cached and shared. GLBs are approximately 422–667 KB each.
 
 The added `GLTFLoader.js`, `SkeletonUtils.js` and `BufferGeometryUtils.js` come from the official Three.js r170 distribution, with only local import paths adapted. They use Three.js's MIT license, retained under `docs/licenses/threejs-MIT.txt`. The engine version and controls are unchanged.
+
+## Vehicles and trees
+
+The nine supplied models are catalogued in [the model inventory](../public/models/manifest.json) with source filenames, licenses, authors, byte sizes and preparation notes. The game loads these GLBs on approach and shares geometry across copies. Distant silhouettes keep the parking area visible while assets load. See [model credits](../public/credits.html).
+
+The Lexus and Honda use separate front and rear registrations. The Harley and Vespa share ten parking places with individual Kerala plates. The Mechanical swing uses the supplied saucer magnolia. Falling petals and leaves are generated separately and respect reduced motion.

@@ -100,6 +100,8 @@ function rotateInModelSpace(bone, model, x, z = 0) {
 export function updateStudentAvatar(model, dt) {
   const s = instances.get(model);
   if (!s) return;
+  s.root.position.x = model.userData.ridingOffset?.x || 0;
+  s.root.position.z = model.userData.ridingOffset?.z || 0;
   const speed = Math.min(
     12,
     Math.hypot(model.position.x - s.last.x, model.position.z - s.last.z) / Math.max(dt, 0.001),

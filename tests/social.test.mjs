@@ -50,7 +50,7 @@ test('new avatar choices are shared and need no separate prayer-space field', as
   for (const person of joined)
     assert.equal(state.players.find((p) => p.id === person.id).avatar_style, person.avatar_style);
   assert(!JSON.stringify(state).includes('prayer_space'));
-  const woman = joined.find((p) => p.avatar_style === 'girl-02-bob');
+  const woman = joined.find((p) => p.avatar_style === 'girl-04-hijabi');
   const man = joined.find((p) => p.avatar_style === 'boy-02-glasses');
   assert.equal(
     (await call('/api/state', { ...position, area: 'masjid' }, woman.token)).r.status,
@@ -831,4 +831,51 @@ test('tree-step seats agree with the walkable tiers and standing restores the ap
     assert.equal(stood.data.z, approach.z);
   }
   assert.equal(cornerGroundHeight(studentsCorner.x, studentsCorner.z + 6.5), 0);
+});
+
+test('a driven car stays in its shared position and another nearby student can use it', async () => {
+  const a = (await call('/api/join', { name: 'Car driver', room: 'shared-cars' })).data,
+    b = (await call('/api/join', { name: 'Next driver', room: 'shared-cars' })).data;
+  assert.equal((await call('/api/ride', { vehicle: 'car-0' }, a.token)).r.status, 400);
+  await call('/api/state', { x: -16.75, z: 20, yaw: 0 }, a.token);
+  await call('/api/state', { x: -16.75, z: 20, yaw: 0 }, b.token);
+  assert.equal((await call('/api/ride', { vehicle: 'car-0' }, a.token)).r.status, 200);
+  assert.equal((await call('/api/ride', { vehicle: 'car-0' }, b.token)).r.status, 409);
+  await call('/api/state', { x: -30, z: 10, yaw: 1.2 }, a.token);
+  const state = (await call('/api/state', position, b.token)).data;
+  assert.equal(state.vehicles.find((v) => v.vehicle === 'car-0').x, -30);
+  await call('/api/ride', { vehicle: null }, a.token);
+  assert.equal((await call('/api/ride', { vehicle: 'car-0' }, b.token)).r.status, 400);
+  await call('/api/state', { x: -28, z: 10, yaw: 0 }, b.token);
+  assert.equal((await call('/api/ride', { vehicle: 'car-0' }, b.token)).r.status, 200);
+  const outside = (await call('/api/join', { name: 'Other campus', room: 'other-cars' })).data;
+  assert.equal((await call('/api/state', position, outside.token)).data.vehicles.length, 0);
+});
+test('nearby Talk invitations reach the selected person without activating their microphone', async () => {
+  const a = (await call('/api/join', { name: 'Talk host', room: 'talk-invites' })).data,
+    b = (await call('/api/join', { name: 'Classmate', room: 'talk-invites' })).data,
+    c = (await call('/api/join', { name: 'Third student', room: 'talk-invites' })).data;
+  const send = (to) => call('/api/rtc/invite', { to }, a.token),
+    read = (p) => call('/api/rtc/invitations', undefined, p.token, { method: 'GET' });
+  await call('/api/rtc/enable', { enabled: 1, mode: 'nearby' }, a.token);
+  const invite = (await send(b.id)).data.id;
+  assert.equal((await read(b)).data.invitations[0].name, 'Talk host');
+  assert.equal((await read(c)).data.invitations.length, 0);
+  assert.equal(
+    (await call('/api/rtc/respond', { id: invite, accept: true }, c.token)).r.status,
+    409,
+  );
+  assert.equal(
+    (await call('/api/rtc/respond', { id: invite, accept: true }, b.token)).r.status,
+    200,
+  );
+  const state = (await call('/api/state', position, b.token)).data;
+  assert.equal(state.players.find((p) => p.id === b.id).voice_on, 0);
+  await send(c.id);
+  await call('/api/state', { x: 80, z: -50, yaw: 0 }, c.token);
+  assert.equal((await read(c)).data.invitations.length, 0);
+  assert.equal((await send(c.id)).r.status, 409);
+  await send(b.id);
+  await call('/api/rtc/enable', { enabled: 0 }, a.token);
+  assert.equal((await read(b)).data.invitations.length, 0);
 });

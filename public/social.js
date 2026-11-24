@@ -8,15 +8,11 @@ export function createSocial({
   player,
   person,
   camera,
-  renderer,
-  getView,
   setDestination,
   toast,
-  captureFrame,
   onVehicleState,
   onSwingState,
   onCommunityState,
-  getActiveScene,
   setStyle,
   getFloor = () => 0,
 }) {
@@ -24,8 +20,8 @@ export function createSocial({
     online = false,
     since = 0,
     timer = null,
-    busy = false,
-    wave = false,
+    stateRequest = null,
+    changingVehicle = false,
     jumpPending = false,
     failures = 0,
     recording = null,
@@ -112,9 +108,15 @@ export function createSocial({
       $('roster').append(el);
     }
   }
-  async function sync() {
-    if (!session || busy || document.hidden) return;
-    busy = true;
+  function sync() {
+    if (!session || changingVehicle || document.hidden) return;
+    if (!stateRequest)
+      stateRequest = sendState().finally(() => {
+        stateRequest = null;
+      });
+    return stateRequest;
+  }
+  async function sendState() {
     try {
       const jump = jumpPending;
       jumpPending = false;
@@ -123,17 +125,15 @@ export function createSocial({
         z: player.position.z,
         yaw: player.rotation.y,
         since,
-        wave,
         jump,
         area,
       });
-      wave = false;
       failures = 0;
       online = true;
       status('Live · ' + session.room, true);
       lastPlayers = r.players;
       updateRoster(r.players);
-      onVehicleState?.(r.players, session.id);
+      onVehicleState?.(r.players, session.id, r.vehicles || []);
       onSwingState?.(r.players, session.id);
       onCommunityState?.(r);
       const ids = new Set();
@@ -185,8 +185,6 @@ export function createSocial({
       failures++;
       online = false;
       status(failures > 2 ? 'Connection lost · retrying…' : 'Reconnecting…', false);
-    } finally {
-      busy = false;
     }
   }
   async function join() {
@@ -288,8 +286,8 @@ export function createSocial({
         const b = document.createElement('button');
         b.textContent = '⌖ Mark gathering point';
         b.onclick = () => {
-          setDestination({ x: m.x, z: m.z, name: m.name + '’s photo spot' });
-          toast('Photo spot marked on your minimap. Walk over to join.');
+          setDestination({ x: m.x, z: m.z, name: m.name + '’s meeting point' });
+          toast('Meeting point marked on your minimap.');
         };
         row.append(b);
       }
@@ -331,108 +329,6 @@ export function createSocial({
       toast('Copy the link from your browser to invite friends.');
     }
   };
-  $('waveBtn').onclick = () => {
-    wave = true;
-    localWave = Date.now();
-    sync();
-  };
-  let localWave = 0;
-  $('gatherBtn').onclick = () => send('gather', 'Group photo here! Walk over and join me.');
-  $('photoBtn').onclick = async () => {
-    if (!session) return;
-    const c = document.createElement('canvas');
-    c.width = 1600;
-    c.height = 1000;
-    const g = c.getContext('2d');
-    const view = getView();
-    const old = camera.position.clone(),
-      quat = camera.quaternion.clone(),
-      aspect = camera.aspect;
-    const point = player.position.clone();
-    const nearby = [...peers.values()]
-      .filter((p) => p.model.visible && p.model.position.distanceTo(point) < 22)
-      .map((p) => p.model);
-    const group = [player, ...nearby];
-    const box = new THREE.Box3();
-    group.forEach((p) => box.expandByPoint(p.position));
-    const center = box.getCenter(new THREE.Vector3());
-    let radius = Math.max(6, box.getSize(new THREE.Vector3()).length() * 0.75);
-    camera.aspect = 1.6;
-    camera.updateProjectionMatrix();
-    const photoScene = getActiveScene();
-    const blockers = photoScene.children.filter((o) => o.isMesh);
-    let best = null,
-      bestHits = Infinity;
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI) / 4;
-      const candidate = new THREE.Vector3(
-        center.x + Math.sin(a) * (radius * 1.3 + 9),
-        center.y + radius * 0.9 + 12,
-        center.z + Math.cos(a) * (radius * 1.3 + 9),
-      );
-      if (photoScene !== scene) {
-        const bounds = photoScene.userData.cameraBounds || { x: 15.5, z: 22, y: 8 };
-        candidate.x = THREE.MathUtils.clamp(candidate.x, -bounds.x, bounds.x);
-        candidate.z = THREE.MathUtils.clamp(candidate.z, -bounds.z, bounds.z);
-        candidate.y = Math.min(bounds.y, radius * 0.4 + 3);
-      }
-      let hits = 0;
-      for (const subject of group) {
-        const aim = subject.position.clone().add(new THREE.Vector3(0, 1.2, 0));
-        const delta = aim.clone().sub(candidate);
-        const ray = new THREE.Raycaster(
-          candidate,
-          delta.clone().normalize(),
-          0.1,
-          delta.length() - 0.5,
-        );
-        if (ray.intersectObjects(blockers, false).length) hits++;
-      }
-      if (hits < bestHits) {
-        bestHits = hits;
-        best = candidate;
-      }
-      if (hits === 0) break;
-    }
-    camera.position.copy(best);
-    camera.lookAt(center.x, 1.4, center.z);
-    renderer.render(photoScene, camera);
-    g.drawImage(renderer.domElement, 0, 0, c.width, c.height);
-    camera.position.copy(old);
-    camera.quaternion.copy(quat);
-    camera.aspect = aspect;
-    camera.updateProjectionMatrix();
-    captureFrame();
-    g.fillStyle = '#173d37';
-    g.fillRect(0, 920, 1600, 80);
-    g.fillStyle = '#fff6e5';
-    g.font = 'bold 25px sans-serif';
-    g.fillText('MESCE', 35, 955);
-    g.font = '17px sans-serif';
-    g.fillText(
-      session.room +
-        ' · ' +
-        new Date().toLocaleDateString() +
-        ' · ' +
-        group.length +
-        ' person' +
-        (group.length === 1 ? '' : 's'),
-      35,
-      983,
-    );
-    g.textAlign = 'right';
-    g.fillText('A little campus memory.', 1565, 968);
-    const url = c.toDataURL('image/png');
-    $('groupPhoto').src = url;
-    $('downloadPhoto').href = url;
-    $('photoCount').textContent =
-      group.length +
-      ' person' +
-      (group.length === 1 ? '' : 's') +
-      ' in this frame. Gather within 22 steps to join the photo.';
-    $('photoDialog').showModal();
-  };
-  $('closePhoto').onclick = () => $('photoDialog').close();
   function update(dt, time) {
     for (const model of [player, ...[...peers.values()].map((p) => p.model)])
       for (const tag of model.children)
@@ -467,10 +363,6 @@ export function createSocial({
       p.model.userData.arms[1].rotation.z = waving ? -2.3 : 0;
       p.model.userData.arms[1].rotation.x = waving ? Math.sin(time * 9) * 0.4 : 0;
     }
-    if (Date.now() - localWave < 3500) {
-      player.userData.arms[1].rotation.z = -2.3;
-      player.userData.arms[1].rotation.x = Math.sin(time * 9) * 0.4;
-    } else player.userData.arms[1].rotation.z = 0;
   }
   addEventListener(
     'keydown',
@@ -516,8 +408,15 @@ export function createSocial({
       return r;
     },
     requestRide: async (vehicle) => {
-      await api('/api/ride', { vehicle });
-      await sync();
+      changingVehicle = true;
+      try {
+        // Drain any older presence write before reporting the exact entry/exit pose.
+        await stateRequest;
+        await sendState();
+        await api('/api/ride', { vehicle });
+      } finally {
+        changingVehicle = false;
+      }
     },
     isJoined: () => !!session,
     getPeers: () => peers,

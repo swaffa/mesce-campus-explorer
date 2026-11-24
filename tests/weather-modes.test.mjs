@@ -88,7 +88,7 @@ test('season switches restore materials, activate rain/leaves, and hide outdoor 
       select = panel.children.find((element) => element.id === 'weatherPreset');
     assert.deepEqual(
       select.children.map((option) => option.value),
-      ['clear', 'rain', 'autumn', 'winter'],
+      ['clear', 'rain', 'winter'],
     );
     assert.equal(
       tree.material.onBeforeCompile,
@@ -107,16 +107,9 @@ test('season switches restore materials, activate rain/leaves, and hide outdoor 
     select.value = 'autumn';
     select.onchange();
     visual.update(3, 0.016, player, false);
-    assert.equal(visual.mode(), 'autumn');
-    assert(!visual.isRaining());
-    assert(!tree.material.color.equals(originalColor));
-    assert(prop.material.color.equals(originalColor), 'shared non-foliage props keep their colour');
-    const fallingLeaves = scene.children.find(
-      (object) => object.isInstancedMesh && object.geometry.type === 'ShapeGeometry',
-    );
-    assert(fallingLeaves.visible);
-    visual.update(4, 0.016, player, false, true);
-    assert(!fallingLeaves.visible, 'reduced motion suppresses falling leaves');
+    assert.equal(visual.mode(), 'clear');
+    assert(tree.material.color.equals(originalColor));
+    assert(prop.material.color.equals(originalColor));
     visual.setMode('winter');
     assert.equal(visual.fogDensity(), weatherModes.winter.density);
     visual.setMode('clear');

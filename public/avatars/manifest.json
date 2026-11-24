@@ -40,14 +40,12 @@
     "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
   },
   {
-    "id": "girl-02-bob",
-    "label": "Girl 02 Bob",
-    "file": "girl-02-bob.glb",
-    "triangles": 3687,
+    "id": "girl-04-hijabi",
+    "label": "Hijabi",
+    "file": "girl-04-hijabi.glb",
+    "triangles": 5687,
     "bones": 20,
-    "animations": ["Idle", "Walk"],
-    "heightMeters": 1.825,
-    "reconstruction": "Modeled from a single front-view reference; side and back details inferred."
+    "animations": ["Idle", "Walk"]
   },
   {
     "id": "girl-03-ponytail",

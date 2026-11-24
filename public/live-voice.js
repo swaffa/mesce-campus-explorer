@@ -22,19 +22,23 @@ export function createLiveVoice({ social, toast }) {
     deaf = false,
     starting = false,
     lastError = '',
+    invitations = [],
+    invitationAt = 0,
+    invitationBusy = false,
+    seenInvitations = new Set(),
     meterContext = null,
     meterSource = null,
     meter = null,
     meterValues = null;
   const button = document.createElement('button');
   button.id = 'liveVoiceBtn';
-  button.textContent = '☎ Voice call';
+  button.textContent = 'Talk';
   $('chatBtn').before(button);
   const panel = document.createElement('section');
   panel.id = 'voicePanel';
   panel.hidden = true;
   panel.innerHTML =
-    '<div class="panel-head"><strong>A call with your campus friends.</strong><button id="closeVoice" aria-label="Close live voice panel">×</button></div><p>Talk live while exploring, or speak to the whole auditorium during an event. Microphones start only when you choose them. Classrooms and floors have separate conversations.</p><label>Talk to<select id="voiceScope"><option value="nearby">Nearby people</option><option value="room">Same room</option></select></label><strong id="voiceSpaceLabel"></strong><div class="voice-actions"><button id="joinMic">Turn on microphone</button><button id="joinListen">Listen only</button><button id="muteMic" hidden>Mute mic</button><button id="deafen" hidden>Mute incoming audio</button><button id="leaveVoice" hidden>Leave call</button></div><label id="micMeterLabel" hidden>Microphone level<meter id="micMeter" min="0" max="1" value="0" aria-label="Microphone level"></meter></label><strong id="voiceStatus" role="status">Not in a call</strong><p id="voiceHelp" role="status"></p><div id="voicePeers"></div><button id="enablePlayback" hidden>Tap to hear your friends</button><details><summary>Connection help</summary><button id="checkVoice">Check relay connection</button><p id="voiceDiagnostic">Calls are live, never added to chat history. If microphone permission is blocked, allow it in your browser’s site settings or use Listen only.</p></details><p class="fine">Up to 8 microphones per room. The campus sound button controls the environment; call audio has its own mute controls.</p>';
+    '<div class="panel-head"><strong>A little campus conversation.</strong><button id="closeVoice" aria-label="Close live voice panel">×</button></div><p>Talk live while exploring, or speak to the whole auditorium during an event. Ask someone nearby to talk, or join friends who are already talking. Your microphone starts only when you choose. Classrooms and floors have separate conversations.</p><label>Talk to<select id="voiceScope"><option value="nearby">Nearby people</option><option value="room">Same room</option></select></label><strong id="voiceSpaceLabel"></strong><div class="voice-actions"><button id="joinMic">Start talking</button><button id="joinListen">Listen in</button><button id="muteMic" hidden>Mute mic</button><button id="deafen" hidden>Mute incoming audio</button><button id="leaveVoice" hidden>Leave talk</button></div><label id="micMeterLabel" hidden>Microphone level<meter id="micMeter" min="0" max="1" value="0" aria-label="Microphone level"></meter></label><strong id="voiceStatus" role="status">Not talking</strong><p id="voiceHelp" role="status"></p><div id="talkInvitations"></div><div id="voicePeers"></div><button id="enablePlayback" hidden>Tap to hear your friends</button><details><summary>Connection help</summary><button id="checkVoice">Check relay connection</button><p id="voiceDiagnostic">Calls are live, never added to chat history. If microphone permission is blocked, allow it in your browser’s site settings or use Listen only.</p></details><p class="fine">Up to 8 microphones per room. The campus sound button controls the environment; call audio has its own mute controls.</p>';
   $('socialHUD').append(panel);
   try {
     const saved = localStorage.getItem('mesce-voice-scope');
@@ -90,6 +94,44 @@ export function createLiveVoice({ social, toast }) {
     if (!me || p.area !== me.area || (enabled === 2 && p.voice_on === 2)) return false;
     return canHearVoice({ ...me, voice_mode: mode }, p);
   }
+  function nearby(p) {
+    if (!p || p.id === social.sessionId()) return false;
+    const me = peerData(social.sessionId());
+    return !!me && canHearVoice({ ...me, voice_mode: 'nearby' }, { ...p, voice_mode: 'nearby' });
+  }
+  async function pollInvitations() {
+    if (invitationBusy || Date.now() - invitationAt < 1400 || !social.isJoined()) return;
+    invitationBusy = true;
+    invitationAt = Date.now();
+    try {
+      const result = await social.request('/api/rtc/invitations', undefined, { method: 'GET' });
+      invitations = result.invitations || [];
+      const current = new Set(invitations.map((i) => i.id));
+      for (const id of seenInvitations) if (!current.has(id)) seenInvitations.delete(id);
+      for (const invite of invitations)
+        if (!seenInvitations.has(invite.id)) {
+          seenInvitations.add(invite.id);
+          toast(invite.name + ' asked you to talk. Tap Talk to join.');
+        }
+      redraw();
+    } catch {
+    } finally {
+      invitationBusy = false;
+    }
+  }
+  async function answerInvite(invite, accept) {
+    if (accept) {
+      await join(true);
+      if (enabled !== 1) return;
+    }
+    try {
+      await social.request('/api/rtc/respond', { id: invite.id, accept });
+      invitations = invitations.filter((i) => i.id !== invite.id);
+      redraw();
+    } catch (error) {
+      toast(error.message);
+    }
+  }
   function redraw() {
     const me = peerData(social.sessionId());
     $('voiceSpaceLabel').textContent =
@@ -105,16 +147,46 @@ export function createLiveVoice({ social, toast }) {
     list.replaceChildren();
     let connected = 0,
       waiting = 0;
-    for (const who of world.filter(eligible)) {
+    for (const who of world.filter((p) => nearby(p) || eligible(p))) {
       const entry = connections.get(who.id),
         state = entry?.link.pc.connectionState;
       const row = document.createElement('div'),
         name = document.createElement('span');
       name.textContent =
-        who.name + ' · ' + (state === 'connected' ? 'connected' : entry ? 'connecting' : 'joining');
+        who.name +
+        ' · ' +
+        (state === 'connected'
+          ? 'talking'
+          : entry
+            ? 'joining'
+            : who.voice_on
+              ? 'in a talk'
+              : 'nearby');
       row.append(name);
       if (state === 'connected') connected++;
-      else waiting++;
+      else if (who.voice_on && enabled) waiting++;
+      if (!entry) {
+        const ask = document.createElement('button');
+        ask.textContent = who.voice_on ? 'Join talk' : 'Ask to talk';
+        ask.onclick = async () => {
+          ask.disabled = true;
+          await join(true);
+          if (enabled !== 1) {
+            redraw();
+            return;
+          }
+          if (!who.voice_on) {
+            try {
+              await social.request('/api/rtc/invite', { to: who.id });
+              toast('Asked ' + who.name + ' to talk.');
+            } catch (error) {
+              toast(error.message);
+            }
+          }
+          redraw();
+        };
+        row.append(ask);
+      }
       if (entry) {
         const mute = document.createElement('button');
         mute.textContent = entry.locallyMuted ? 'Unmute' : 'Mute';
@@ -127,12 +199,27 @@ export function createLiveVoice({ social, toast }) {
       }
       list.append(row);
     }
+    const inviteList = $('talkInvitations');
+    inviteList.replaceChildren();
+    for (const invite of invitations) {
+      const row = document.createElement('div'),
+        text = document.createElement('span'),
+        accept = document.createElement('button'),
+        decline = document.createElement('button');
+      text.textContent = invite.name + ' would like to talk.';
+      accept.textContent = 'Join talk';
+      decline.textContent = 'Not now';
+      accept.onclick = () => answerInvite(invite, true);
+      decline.onclick = () => answerInvite(invite, false);
+      row.append(text, accept, decline);
+      inviteList.append(row);
+    }
     $('voiceStatus').textContent = starting
       ? starting === 'mic'
         ? 'Opening your microphone…'
         : 'Joining the call…'
       : !enabled
-        ? lastError || 'Not in a call'
+        ? lastError || 'Ask a friend nearby, or start talking.'
         : (enabled === 2 ? 'Listening' : muted ? 'Microphone muted' : 'Microphone on') +
           ' · ' +
           (connected
@@ -145,7 +232,13 @@ export function createLiveVoice({ social, toast }) {
         (config?.setupRequired ? config.message : '') ||
         (!connected && !waiting ? 'Invite a friend to this room and ask them to join voice.' : '')
       : '';
-    button.textContent = enabled ? '☎ In call' : '☎ Voice call';
+    button.textContent = enabled
+      ? enabled === 2
+        ? 'Listening'
+        : 'Talking'
+      : invitations.length
+        ? 'Talk · ' + invitations.length + ' invite'
+        : 'Talk';
     button.classList.toggle('is-live', !!enabled);
     $('joinMic').hidden = enabled === 1;
     $('joinListen').hidden = enabled === 2;
@@ -305,10 +398,10 @@ export function createLiveVoice({ social, toast }) {
     lastError = '';
     await social.request('/api/rtc/enable', { enabled: 0, mode }).catch(() => {});
     redraw();
-    if (announce) toast('You left the call. Your microphone is off.');
+    if (announce) toast('You left the talk. Your microphone is off.');
   }
   async function join(withMic) {
-    if (starting) return;
+    if (starting || enabled === (withMic ? 1 : 2)) return;
     starting = withMic ? 'mic' : 'listen';
     lastError = '';
     redraw();
@@ -422,6 +515,8 @@ export function createLiveVoice({ social, toast }) {
   };
   function onState(r) {
     world = r.players;
+    pollInvitations();
+    if (!enabled) redraw();
     if (!enabled) return;
     for (const [id, entry] of [...connections]) {
       const state = entry.link.pc.connectionState;

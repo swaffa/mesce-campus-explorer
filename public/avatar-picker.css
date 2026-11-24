@@ -211,3 +211,17 @@
     font-size: 36px;
   }
 }
+
+.avatar-card span,
+#avatarName {
+  display: none;
+}
+.avatar-card {
+  min-height: 94px;
+  user-select: none;
+}
+.avatar-card img {
+  width: 68px;
+  height: 88px;
+  pointer-events: none;
+}

@@ -153,7 +153,7 @@ export function campusCharacter({ style = 'trousers', shopkeeper = false, securi
   } else {
     if (hijab) {
       // Original clay-like scarf folds and open face, inspired by the supplied portrait.
-      const scarf = material('#a9423e', true);
+      const scarf = material('#e0d3b9', true);
       scarf.side = THREE.DoubleSide;
       mesh(hoodGeometry, scarf, 0, 2.09, -0.01, 0.45, 0.53, 0.4);
       const rim = mesh(
@@ -174,7 +174,7 @@ export function campusCharacter({ style = 'trousers', shopkeeper = false, securi
         new THREE.Vector3(0.21, 1.63, 0.32),
         new THREE.Vector3(0.35, 1.76, 0.14),
       ]);
-      mesh(new THREE.TubeGeometry(fold, 16, 0.027, 6, false), material('#bd5950', true), 0, 0, 0);
+      mesh(new THREE.TubeGeometry(fold, 16, 0.027, 6, false), material('#c8b99c', true), 0, 0, 0);
       skirtMesh = tube(0, 0.65, 0, 0.27, 0.39, 1, navy, g, 10);
     } else if (skirt) {
       ell(0, 2.34, -0.025, 0.38, 0.19, 0.33, hair, g, true);

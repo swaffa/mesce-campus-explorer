@@ -949,3 +949,21 @@ dialog {
     grid-template-columns: minmax(0, 1fr) 90px;
   }
 }
+
+#talkInvitations > div {
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 10px;
+  background: #e1e8cc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#talkInvitations > div > span {
+  flex: 1 1 180px;
+}
+#talkInvitations button,
+#voicePeers button {
+  min-height: 44px;
+}

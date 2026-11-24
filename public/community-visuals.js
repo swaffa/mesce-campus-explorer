@@ -242,28 +242,6 @@ export function communityVisuals({ scene, sun, box }) {
       '#include <begin_vertex>\n vec3 root=(instanceMatrix*vec4(0.,0.,0.,1.)).xyz; transformed.x+=pow(max(position.y+.2,0.),2.)*sin(windTime*.8+root.x*.7+root.z*.3)*.22*windStrength;',
     );
   };
-  // A small, single-draw layer of original faceted leaves for autumn.
-  const leafShape = new THREE.Shape();
-  leafShape.moveTo(0, -0.2);
-  leafShape.lineTo(-0.075, 0);
-  leafShape.lineTo(0, 0.2);
-  leafShape.lineTo(0.075, 0);
-  leafShape.closePath();
-  const driftingLeaves = new THREE.InstancedMesh(
-    new THREE.ShapeGeometry(leafShape),
-    new THREE.MeshStandardMaterial({ color: '#c58b44', roughness: 1, side: THREE.DoubleSide }),
-    64,
-  );
-  driftingLeaves.frustumCulled = false;
-  driftingLeaves.visible = false;
-  scene.add(driftingLeaves);
-  const driftOffsets = Array.from({ length: 64 }, () => ({
-    x: (rnd() - 0.5) * 28,
-    z: (rnd() - 0.5) * 28,
-    y: rnd() * 8,
-    phase: rnd() * 6,
-  }));
-  const drift = new THREE.Object3D();
   return {
     isRaining: () => weather === 'rain',
     mode: () => weather,
@@ -289,21 +267,6 @@ export function communityVisuals({ scene, sun, box }) {
           positions[at + 5] = positions[at + 2] - 0.12;
         }
         geometry.attributes.position.needsUpdate = true;
-      }
-      driftingLeaves.visible = weather === 'autumn' && !inside && !reduced;
-      if (driftingLeaves.visible) {
-        driftOffsets.forEach((o, i) => {
-          const fall = (((o.y - time * (0.25 + o.phase * 0.025)) % 8) + 8) % 8;
-          drift.position.set(
-            player.position.x + o.x + Math.sin(time * 0.3 + o.phase),
-            0.4 + fall,
-            player.position.z + o.z + Math.cos(time * 0.22 + o.phase),
-          );
-          drift.rotation.set(time * 0.4 + o.phase, o.phase, Math.sin(time * 0.5 + o.phase) * 0.5);
-          drift.updateMatrix();
-          driftingLeaves.setMatrixAt(i, drift.matrix);
-        });
-        driftingLeaves.instanceMatrix.needsUpdate = true;
       }
       for (const canopy of canopies) {
         const phase = canopy.userData.windCanopy.phase;

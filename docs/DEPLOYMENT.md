@@ -19,7 +19,7 @@ If the Worker hostname changes, update the fixed backend in `server/campus-proxy
 
 ## Sites backend
 
-`npm run build` produces `dist/server/index.js`. Preserve the existing project ID and `DB`/`BUCKET` bindings in `.openai/hosting.json`. Apply numbered migrations through the hosting workflow; `0007_shared_jumps.sql` adds transient jump timestamps without changing saved wallets or progress.
+`npm run build` produces `dist/server/index.js`. Preserve the existing project ID and `DB`/`BUCKET` bindings in `.openai/hosting.json`. Apply numbered migrations through the hosting workflow. Migration 0008 adds expiring Talk invitations and a per-room table for parked vehicle positions. Vercel serves the large files under `/models/` for both frontends. The Worker redirects those public asset requests to Vercel.
 
 Publish backend schema/API changes before publishing clients that depend on them. Keep the existing Site public unless the owner explicitly requests an audience change. Runtime TURN secrets remain on the backend, as described in [Voice setup](VOICE-SETUP.md).
 

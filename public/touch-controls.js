@@ -1,15 +1,15 @@
-import { stickVector, createCameraGesture } from './input-math.js';
+import { createCameraGesture } from './input-math.js';
 
-export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch, onJump }) {
-  const stick = document.getElementById('joystick');
-  const run = document.getElementById('runButton');
-  const jump = document.getElementById('jumpButton');
+// Direct campus interaction replaces the permanent movement pads.
+export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch, onJump, onTap }) {
   const preferenceInput = document.getElementById('touchPreference');
-  const gesture = createCameraGesture();
+  const gesture = createCameraGesture(),
+    pointers = new Map();
   const coarse = matchMedia('(any-pointer: coarse)');
-  let stickPointer = null;
-  let running = false;
-  let preference = 'auto';
+  let running = false,
+    preference = 'auto',
+    lastTap = -Infinity,
+    twoFinger = null;
   try {
     const saved = localStorage.getItem('mesce-controls');
     if (['touch', 'keyboard'].includes(saved)) preference = saved;
@@ -23,8 +23,8 @@ export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch,
     document.body.classList.toggle('touch-controls', value);
     dispatchEvent(new CustomEvent('mesce-touch-mode', { detail: value }));
     document.getElementById('welcomeControls').textContent = value
-      ? 'Left thumb to walk · drag to look · pinch to zoom · jump and run'
-      : 'WASD / arrow keys to move · Space to jump · Shift to run';
+      ? 'Tap to walk · double-tap to run · drag to look · pinch to zoom'
+      : 'WASD / arrows or click to walk · Space to jump · Shift to run';
   }
   setTouch(touch);
   coarse.addEventListener('change', () => {
@@ -38,84 +38,67 @@ export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch,
     setTouch(preferenceInput.checked);
     reset();
   });
-  const activateTouch = (event) => {
-    if (event.pointerType === 'touch' && preference === 'auto' && !touch) setTouch(true);
-  };
-  addEventListener('pointerdown', activateTouch, { passive: true });
-
-  function moveStick(event) {
-    if (event.pointerId !== stickPointer) return;
-    if (event.pointerType === 'mouse' && event.buttons === 0) {
-      stopStick(event);
-      return;
-    }
-    const rect = stick.getBoundingClientRect();
-    const point = stickVector(
-      event.clientX - rect.left - rect.width / 2,
-      event.clientY - rect.top - rect.height / 2,
-      rect.width * 0.38,
-    );
-    onMove(point);
-    stick.firstElementChild.style.transform = `translate(${point.x * rect.width * 0.27}px,${point.y * rect.height * 0.27}px)`;
-  }
-  function stopStick(event) {
-    if (event && event.pointerId !== stickPointer) return;
-    stickPointer = null;
-    onMove({ x: 0, y: 0 });
-    stick.firstElementChild.style.transform = '';
-  }
-  stick.addEventListener('pointerdown', (event) => {
-    if (!enabled() || stickPointer !== null) return;
-    event.preventDefault();
-    stickPointer = event.pointerId;
-    stick.setPointerCapture(event.pointerId);
-    moveStick(event);
-  });
-  stick.addEventListener('pointermove', moveStick);
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
-    stick.addEventListener(type, stopStick);
-
   canvas.addEventListener('pointerdown', (event) => {
     if (!enabled() || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    if (event.pointerType === 'touch' && preference === 'auto' && !touch) setTouch(true);
     event.preventDefault();
     canvas.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+      at: performance.now(),
+      moved: false,
+    });
+    if (pointers.size === 2) twoFinger = { at: performance.now(), valid: true };
+    if (pointers.size > 2 && twoFinger) twoFinger.valid = false;
     gesture.down(event.pointerId, event.clientX, event.clientY);
   });
   canvas.addEventListener('pointermove', (event) => {
-    if (event.pointerType === 'mouse' && event.buttons === 0) {
-      gesture.up(event.pointerId);
+    const start = pointers.get(event.pointerId);
+    if (!start || !enabled()) return;
+    if (event.buttons === 0) {
+      reset();
       return;
     }
-    if (!enabled()) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) {
+      start.moved = true;
+      if (twoFinger) twoFinger.valid = false;
+    }
     const next = gesture.move(event.pointerId, event.clientX, event.clientY);
     if (next?.pinch) onPinch(...next.pinch);
-    else if (next?.orbit) onOrbit(...next.orbit);
+    else if (next?.orbit && start.moved) onOrbit(...next.orbit);
   });
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-    canvas.addEventListener(type, (event) => gesture.up(event.pointerId));
-  }
-  for (const type of ['pointerup', 'pointercancel'])
-    addEventListener(
-      type,
-      (event) => {
-        stopStick(event);
-        gesture.up(event.pointerId);
-      },
-      { passive: true },
-    );
-  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
-  run.addEventListener('click', () => {
+  function up(event) {
+    const start = pointers.get(event.pointerId),
+      cancelled = event.type !== 'pointerup' || event.target !== canvas;
+    if (!start) return;
+    pointers.delete(event.pointerId);
+    gesture.up(event.pointerId);
+    if (!pointers.size) gesture.clear();
+    if (cancelled && twoFinger) twoFinger.valid = false;
     if (!enabled()) return;
-    running = !running;
-    run.setAttribute('aria-pressed', String(running));
-    run.querySelector('span').textContent = running ? 'Running' : 'Run';
-  });
-  jump.addEventListener('click', () => {
-    if (enabled()) onJump();
-  });
+    const now = performance.now();
+    if (twoFinger) {
+      if (!pointers.size) {
+        if (twoFinger.valid && !cancelled && now - twoFinger.at < 400) onJump();
+        twoFinger = null;
+      }
+    } else if (!cancelled && !start.moved && now - start.at < 600) {
+      running = now - lastTap < 300;
+      lastTap = now;
+      onTap?.(event.clientX, event.clientY);
+    }
+  }
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
+    canvas.addEventListener(type, up);
+  for (const type of ['pointerup', 'pointercancel'])
+    addEventListener(type, up, { capture: true, passive: true });
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
   function reset() {
-    stopStick();
+    pointers.clear();
     gesture.clear();
+    twoFinger = null;
+    onMove?.({ x: 0, y: 0 });
   }
   addEventListener('blur', reset);
   addEventListener('resize', reset);
@@ -127,11 +110,7 @@ export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch,
     isLooking: gesture.active,
     running: () => running,
     isTouch: () => touch,
-    update(canJump) {
-      jump.disabled = !canJump;
-      jump.title = canJump ? 'Jump' : 'Jump is available while walking outdoors';
-    },
-    // Only surfaced by the existing localhost QA panel.
+    update() {},
     previewTouch: setTouch,
   };
 }

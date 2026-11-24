@@ -8,7 +8,9 @@ import {
 } from './campus-layout.js';
 import { surface, finish } from './realism.js';
 import { createSocial } from './social.js';
-import { parkVehicles } from './vehicles.js';
+import { parkVehicles, updateVehicleDetail } from './vehicles.js';
+import { vehicleContains } from './vehicle-catalog.js';
+import { campusReflections } from './campus-models.js';
 import { campusSurroundings } from './campus-surroundings.js';
 import { rearCampus } from './campus-rear.js';
 import { campusDetails } from './campus-details.js';
@@ -34,6 +36,7 @@ import { createProximity } from './proximity.js';
 import { cozyWorld } from './cozy-world.js';
 import { departmentDetails } from './department-details.js';
 import { createTouchControls } from './touch-controls.js';
+import { findWalkPath } from './navigation.js';
 import { pinchZoom, jumpDuration, jumpHeight, cameraNearPlane } from './input-math.js';
 import { academicFloorHeight } from './academic-data.js';
 import { naturalWorld } from './natural-world.js';
@@ -340,6 +343,7 @@ box(-76, 0.1, 57, 20, 0.2, 13, colors.path);
 box(-76, 3.2, 57, 20, 0.25, 7, '#c1c6b3');
 for (const x of [-85, -67]) for (const z of [54, 60]) box(x, 1.6, z, 0.15, 3.2, 0.15, '#5f7562');
 const parkedVehicles = parkVehicles(scene);
+campusReflections(renderer, scene);
 // Empty parking and a separate pedestrian forecourt lead toward the raised hall.
 const parking = campusLayout.parking,
   forecourt = campusLayout.forecourt;
@@ -569,9 +573,8 @@ const locations = [
     x: 30 + campusLayout.canteen.dx,
     z: 35 + campusLayout.canteen.dz,
     icon: '🍵',
-    text: 'A break from the academic blocks. The canteen sits beside the empty parking area, serving biriyani and Kerala meals.',
-    extra:
-      'No parked cars here, just as requested. Stop by the serving counter or gather at the communal tables.',
+    text: 'A break from the academic blocks. The canteen sits beside the car park, serving biriyani and Kerala meals.',
+    extra: 'Stop by the serving counter or join friends at the communal tables.',
   },
 ];
 let visited = new Set();
@@ -645,6 +648,20 @@ function blocked(x, z) {
   if (riding.active() && Math.hypot(x + 51, z) < 13) return true;
   if (x < -97 || x > 97 || z < -68 || z > 80) return true;
   if (z > 70 && z < 74 && (x < -64 || x > -38)) return true;
+  if (
+    parkedVehicles.some(
+      (v) =>
+        v.id !== riding.vehicleId() &&
+        v.kind === 'car' &&
+        vehicleContains(
+          { ...v, x: v.group.position.x, z: v.group.position.z, yaw: v.group.rotation.y },
+          x,
+          z,
+          0.25,
+        ),
+    )
+  )
+    return true;
   return collisions.some((b) => Math.abs(x - b.x) < b.w && Math.abs(z - b.z) < b.d);
 }
 function resize() {
@@ -724,6 +741,10 @@ $('places').onclick = (e) => {
   destination = l;
 };
 let destination = null;
+let tapPath = [];
+const tapRay = new THREE.Raycaster(),
+  tapPlane = new THREE.Plane(),
+  tapPoint = new THREE.Vector3();
 $('cameraBtn').onclick = () => {
   viewMode = (viewMode + 1) % 3;
   $('cameraBtn').textContent = ['◉ Follow', '◉ Close', '◉ Aerial'][viewMode];
@@ -772,6 +793,25 @@ const touchControls = createTouchControls({
     zoom = pinchZoom(zoom, before, after);
   },
   onJump: tryJump,
+  onTap: (x, y) => {
+    if (seating.active() || swings.active()) return;
+    const rect = canvas.getBoundingClientRect();
+    tapRay.setFromCamera(
+      new THREE.Vector2(
+        ((x - rect.left) / rect.width) * 2 - 1,
+        1 - ((y - rect.top) / rect.height) * 2,
+      ),
+      camera,
+    );
+    tapPlane.set(new THREE.Vector3(0, 1, 0), -player.position.y);
+    if (!tapRay.ray.intersectPlane(tapPlane, tapPoint)) return;
+    const target = {
+      x: THREE.MathUtils.clamp(tapPoint.x, -97, 97),
+      z: THREE.MathUtils.clamp(tapPoint.z, -67, 79),
+    };
+    tapPath = findWalkPath(player.position, target, blocked);
+    if (!tapPath.length) toast('Tap an open path to walk there.');
+  },
 });
 canvas.addEventListener(
   'wheel',
@@ -836,6 +876,7 @@ function animate(now) {
     keys = {};
     joy = { x: 0, y: 0 };
     touchControls.reset();
+    tapPath = [];
   }
   touchControls.update(canJump());
   if (!canJump()) jumpAge = Infinity;
@@ -851,17 +892,34 @@ function animate(now) {
       velocity.set(0, 0);
     } else if (riding.active()) {
       velocity.set(0, 0);
-      riding.drive(dt, keys, joy);
+      riding.drive(dt, keys, joy, tapPath);
     } else {
       let sx = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0) + joy.x,
         sy = (keys.s || keys.arrowdown ? 1 : 0) - (keys.w || keys.arrowup ? 1 : 0) + joy.y;
       const len = Math.hypot(sx, sy),
-        speed = keys.shift || touchControls.running() ? 12 : 6.5;
+        speed = keys.shift || (tapPath.length && touchControls.running()) ? 12 : 6.5;
+      if (len > 0.05) tapPath = [];
       sx /= Math.max(1, len);
       sy /= Math.max(1, len);
-      const vx = (Math.cos(yaw) * sx + Math.sin(yaw) * sy) * speed,
+      let vx = (Math.cos(yaw) * sx + Math.sin(yaw) * sy) * speed,
         vz = (-Math.sin(yaw) * sx + Math.cos(yaw) * sy) * speed;
-      velocity.lerp(new THREE.Vector2(vx, vz), 1 - Math.exp(-dt * (len > 0.05 ? 16 : 23)));
+      if (tapPath.length) {
+        let next = tapPath[0],
+          distance = Math.hypot(next.x - player.position.x, next.z - player.position.z);
+        if (distance < 0.55) {
+          tapPath.shift();
+          next = tapPath[0];
+        }
+        if (next) {
+          distance = Math.hypot(next.x - player.position.x, next.z - player.position.z);
+          vx = ((next.x - player.position.x) / Math.max(distance, 0.01)) * speed;
+          vz = ((next.z - player.position.z) / Math.max(distance, 0.01)) * speed;
+        } else vx = vz = 0;
+      }
+      velocity.lerp(
+        new THREE.Vector2(vx, vz),
+        1 - Math.exp(-dt * (len > 0.05 || tapPath.length ? 16 : 23)),
+      );
       if (velocity.length() < 0.04) velocity.set(0, 0);
       const dx = velocity.x * dt,
         dz = velocity.y * dt;
@@ -1005,6 +1063,7 @@ function animate(now) {
   tea.update(started && !indoors());
   social.update(dt, time);
   riding.update(started && !indoors());
+  updateVehicleDetail(parkedVehicles, player, cozy.lowQuality(), started && !indoors());
   swings.update(started && !indoors(), dt);
   auditorium.update(started);
   interiors.update(started);
@@ -1080,14 +1139,10 @@ const social = createSocial({
   player,
   person,
   camera,
-  renderer,
-  getView: () => viewMode,
   setDestination: (p) => {
     destination = p;
   },
   toast,
-  captureFrame: () => renderer.render(activeScene(), camera),
-  getActiveScene: () => activeScene(),
   onCommunityState: (r) => {
     dogs.sync(r.now);
     security.sync(r.now);
@@ -1101,12 +1156,25 @@ const social = createSocial({
       : space.startsWith('block-')
         ? academicFloorHeight(x, z)
         : 0,
-  onVehicleState: (players, id) => riding.reconcile(players, id),
+  onVehicleState: (players, id, positions) => riding.reconcile(players, id, positions),
   onSwingState: (players, id) => swings.reconcile(players, id),
 });
 socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, moveFacility });
 const riding = createRiding({ vehicles: parkedVehicles, player, social, toast, blocked });
-const swings = createSwings({ scene, player, social, box, cyl, ball, solid, mat, toast, riding });
+const swings = createSwings({
+  scene,
+  player,
+  social,
+  box,
+  cyl,
+  ball,
+  solid,
+  mat,
+  toast,
+  riding,
+  reducedMotion: () => cozy.reducedMotion(),
+  lowQuality: () => cozy.lowQuality(),
+});
 const auditorium = createAuditorium({
   player,
   social,
@@ -1263,6 +1331,12 @@ if (
       toast,
       previewTouch: touchControls.previewTouch,
       diagnostics: () => ({
+        keys: Object.keys(keys)
+          .filter((key) => keys[key])
+          .join(','),
+        route: tapPath[0] || null,
+        vehicle: riding.vehicleId(),
+        looking: touchControls.isLooking(),
         x: player.position.x.toFixed(1),
         y: player.position.y.toFixed(2),
         z: player.position.z.toFixed(1),

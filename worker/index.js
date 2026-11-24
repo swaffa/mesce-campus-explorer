@@ -5,6 +5,7 @@ import { communityRoute } from './community-api.js';
 import { economyRoute } from './economy-api.js';
 import { seatingRoute, campusSeats } from './seating-api.js';
 import { validAvatarStyle, prayerSpaceForAvatar } from '../public/avatar-catalog.js';
+import { campusVehicle } from '../public/vehicle-catalog.js';
 const binaryAssets = new Map();
 function assetContent(path, asset) {
   if (asset.encoding !== 'base64') return asset.body;
@@ -79,6 +80,11 @@ export default {
   async fetch(req, env, ctx) {
     try {
       const u = new URL(req.url);
+      if (/^\/models\/[a-z-]+\.(glb|json)$/.test(u.pathname))
+        return Response.redirect(
+          'https://mesce-campus-explorer.vercel.app' + u.pathname + u.search,
+          302,
+        );
       if (!u.pathname.startsWith('/api/')) {
         const a = assets[u.pathname === '/' ? '/index.html' : u.pathname];
         if (!a) return new Response('Not found', { status: 404 });
@@ -214,16 +220,26 @@ export default {
       }
       if (u.pathname === '/api/ride' && req.method === 'POST') {
         const b = await body(req);
-        if (p.area !== 'campus') fail('Bikes are outside on campus.');
+        if (p.area !== 'campus') fail('Vehicles are outside on campus.');
         if (p.activity) fail('Stand up before taking a ride.');
-        if (b.vehicle !== null && !/^bike-[0-9]$/.test(b.vehicle))
-          fail('Choose a parked bike or scooter.');
-        if (b.vehicle !== null) {
-          const i = Number(b.vehicle.split('-')[1]);
-          const x = -84 + i * 1.85,
-            z = i % 2 ? 59 : 55;
-          if (Math.hypot(p.x - x, p.z - z) > 5) fail('Walk closer to that bike first.');
-        }
+        const selected = b.vehicle === null ? null : campusVehicle(b.vehicle);
+        if (b.vehicle !== null && !selected) fail('Choose a parked campus vehicle.');
+        const parked = selected
+          ? await env.DB.prepare(
+              'SELECT x,z,yaw FROM campus_vehicle_positions WHERE room = ? AND vehicle = ?',
+            )
+              .bind(p.room, selected.id)
+              .first()
+          : null;
+        const approach = parked || selected;
+        if (approach && Math.hypot(p.x - approach.x, p.z - approach.z) > 5)
+          fail('Walk closer to that vehicle first.');
+        if (b.vehicle === null && p.vehicle)
+          await env.DB.prepare(
+            'INSERT INTO campus_vehicle_positions (room,vehicle,x,z,yaw,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(room,vehicle) DO UPDATE SET x=excluded.x,z=excluded.z,yaw=excluded.yaw,updated_at=excluded.updated_at',
+          )
+            .bind(p.room, p.vehicle, p.x, p.z, p.yaw, now)
+            .run();
         await env.DB.prepare(
           'UPDATE campus_players SET vehicle = NULL WHERE room = ? AND updated_at < ?',
         )
@@ -278,6 +294,12 @@ export default {
         )
           .bind(b.x, b.z, b.yaw, emote, jumpAt, now, p.id)
           .run();
+        if (p.vehicle && area === 'campus')
+          await env.DB.prepare(
+            'INSERT INTO campus_vehicle_positions (room,vehicle,x,z,yaw,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(room,vehicle) DO UPDATE SET x=excluded.x,z=excluded.z,yaw=excluded.yaw,updated_at=excluded.updated_at',
+          )
+            .bind(p.room, p.vehicle, b.x, b.z, b.yaw, now)
+            .run();
         const peers = await env.DB.prepare(
           'SELECT id, name, x, z, yaw, emote_at, jump_at, vehicle, activity, push_at, member_type, batch, avatar_style, area, voice_on, voice_mode FROM campus_players WHERE room = ? AND updated_at > ? ORDER BY created_at LIMIT 40',
         )
@@ -289,7 +311,17 @@ export default {
         )
           .bind(p.room, since, now - DAY)
           .all();
-        return json({ players: peers.results, messages: messages.results.reverse(), now });
+        const vehicles = await env.DB.prepare(
+          'SELECT vehicle,x,z,yaw FROM campus_vehicle_positions WHERE room = ?',
+        )
+          .bind(p.room)
+          .all();
+        return json({
+          players: peers.results,
+          vehicles: vehicles.results,
+          messages: messages.results.reverse(),
+          now,
+        });
       }
       if (u.pathname === '/api/message' && req.method === 'POST') {
         if (now - p.last_sent < 1500) fail('Give your friends a moment between messages.', 429);
@@ -358,6 +390,10 @@ export default {
       if (u.pathname === '/api/leave' && req.method === 'POST') {
         await env.DB.batch([
           env.DB.prepare('DELETE FROM campus_rtc_signals WHERE sender = ? OR receiver = ?').bind(
+            p.id,
+            p.id,
+          ),
+          env.DB.prepare('DELETE FROM campus_talk_invites WHERE sender = ? OR receiver = ?').bind(
             p.id,
             p.id,
           ),

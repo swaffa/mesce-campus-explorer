@@ -36,3 +36,12 @@ test('shared-campus API reports missing production bindings separately from stat
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
   assert.deepEqual(await response.json(), { error: 'The shared campus is not connected yet.' });
 });
+
+test('large model requests use the public Vercel asset host and keep their version key', async () => {
+  const response = await request('/models/magnolia.glb?v=25');
+  assert.equal(response.status, 302);
+  assert.equal(
+    response.headers.get('Location'),
+    'https://mesce-campus-explorer.vercel.app/models/magnolia.glb?v=25',
+  );
+});

@@ -1,6 +1,6 @@
 # MESCE Campus Explorer
 
-A shared 3D browser game for MES College of Engineering students and alumni. Walk around campus, meet friends, ride bikes, take group photos, and host auditorium events.
+A shared 3D browser game for MES College of Engineering students and alumni. Walk around campus, meet friends, drive cars and bikes, and host auditorium events.
 
 [Play on Vercel](https://mesce-campus-explorer.vercel.app/?room=campus) · [Original host](https://mesce-campus-explorer.swaffaalhuda-mnr.chatgpt.site/?room=campus) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md)
 
@@ -23,17 +23,17 @@ This checks formatting and JavaScript syntax, rebuilds the deployment artifact, 
 
 ## In the campus
 
-- Join as a student or alumnus, choose an outfit, and meet up through text chat, gathering invitations, and live voice.
+- Join as a student or alumnus, choose from six student avatars, and use Talk to invite nearby friends or join their conversation.
 - Explore academic blocks with three floors, lifts, stairs, classrooms, labs, seminar halls, staffrooms, and drinking-water stations.
 - Sit together, read original library stories, visit the prayer halls, ride bikes, or help a friend on a tree swing.
 - Collect fruit and attend events to earn guest points, then buy food at the canteen and snack shops.
-- Organize auditorium events with an ordered queue and full-hall listening, or download a group photo locally.
+- Organize auditorium events with an ordered queue and full-hall listening, and speak to the audience from the stage.
 
 Rooms support up to 40 active participants. The campus is an original stylized interpretation of supplied references; it is not a surveyed floor plan or an official college navigation service.
 
 ## Tablet play and atmosphere
 
-Touch controls appear on touch-capable devices at any screen width. Use the left stick to move, drag the world to orbit, pinch to zoom, and tap Run or Jump. Menu → Touch controls provides a saved manual choice for hybrid devices. The social dock scrolls on smaller screens, with chat and voice placed first. Keyboard controls remain available.
+Tap open ground to walk, double-tap to run, drag to orbit, pinch to zoom, and tap briefly with two fingers to jump. In a vehicle, tap open ground to drive. Menu → Touch controls provides a saved manual choice for hybrid devices. The social dock scrolls on smaller screens, with chat and voice placed first. Keyboard controls remain available.
 
 The campus uses an elevated perspective camera, warm light, procedural weathered surfaces, instanced foliage, and independently phased wind. Device-aware detail and reduced motion keep the scene readable. Menu → Sound & ambience exposes the saved master, ambience, effects, music, and mute controls; the current atmosphere contains no music.
 
@@ -42,7 +42,7 @@ The campus uses an elevated perspective camera, warm light, procedural weathered
 | Action                  | Control                                            |
 | ----------------------- | -------------------------------------------------- |
 | Walk / run              | WASD or arrow keys / hold Shift                    |
-| Jump outside            | Space / touch Jump                                 |
+| Jump outside            | Space / two-finger tap                             |
 | Nearby interaction      | E, or the contextual touch button                  |
 | Shop / collect fruit    | F                                                  |
 | Sit / stand             | B                                                  |
@@ -50,7 +50,7 @@ The campus uses an elevated perspective camera, warm light, procedural weathered
 | Read / mount / dismount | R near the relevant object                         |
 | Ride                    | W/S throttle and brake; A/D steer                  |
 | Camera                  | Drag to rotate; scroll or +/- to zoom; view button |
-| Mobile movement         | On-screen thumbstick                               |
+| Mobile movement         | Tap ground to walk / double-tap to run             |
 
 ## Stack and deployment
 

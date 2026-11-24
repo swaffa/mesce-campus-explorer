@@ -102,7 +102,9 @@ test('loaded avatars retain compatible seat and wave controls without sharing ri
 test('saved attire migrates to the visual picker and new avatar profiles determine prayer space', () => {
   assert.equal(avatarChoice('trousers').id, 'boy-01-sidepart');
   assert.equal(avatarChoice('braids').id, 'girl-01-braids');
-  assert.equal(avatarChoice('hijab').id, 'hijab');
+  assert.equal(avatarChoice('hijab').id, 'girl-04-hijabi');
+  assert.equal(avatarChoice('girl-02-bob').id, 'girl-04-hijabi');
+  assert.equal(avatarChoices.length, 6);
   assert.equal(prayerSpaceForAvatar('girl-02-bob'), 'women');
   assert.equal(prayerSpaceForAvatar('boy-02-glasses'), 'men');
   assert.equal(prayerSpaceForAvatar('boy-02-glasses', 'women'), 'men');

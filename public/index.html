@@ -59,7 +59,7 @@
           <input type="hidden" id="characterStyle" value="boy-01-sidepart" />
           <div class="avatar-stage">
             <canvas id="attirePreview" role="img" aria-label="Selected avatar preview"></canvas>
-            <strong id="avatarName">Side part</strong>
+            <strong id="avatarName" hidden>Side part</strong>
             <button type="button" id="avatarTurn">Turn around</button>
           </div>
           <div id="avatarChoices" class="avatar-choices" aria-label="Student avatars"></div>
@@ -70,7 +70,7 @@
       <p id="joinError" role="alert"></p>
       <button class="primary" id="start">Join the campus</button>
       <div class="welcome-foot" id="welcomeControls">
-        WASD / arrow keys to move <b>·</b> live conversations · club events · group photos
+        WASD / arrow keys to move <b>·</b> nearby talks · club events
       </div>
     </section>
     <div class="scene-note" id="sceneNote">
@@ -98,27 +98,13 @@
         </div>
       </div>
       <div id="prompt" hidden><button id="interact">E · Explore this place</button></div>
-      <div id="joystick" role="group" aria-label="Movement joystick" tabindex="0">
-        <div></div>
-        <small>MOVE</small>
-      </div>
-      <div id="touchMovement" aria-label="Character actions">
-        <button id="runButton" aria-label="Toggle running" aria-pressed="false">
-          <b aria-hidden="true">⇧</b><span>Run</span>
-        </button>
-        <button id="jumpButton" aria-label="Jump">
-          <b aria-hidden="true">↑</b><span>Jump</span>
-        </button>
-      </div>
       <button id="touchAction" aria-label="Interact with nearby landmark">E</button>
     </div>
     <div id="socialHUD" hidden>
       <div class="social-bar">
         <span id="connection"><i></i><span id="connectionText">Connecting…</span></span
         ><button id="onlineCount" title="Students in this room">1 online</button
-        ><button id="shareRoom">↗ Invite friends</button><button id="waveBtn">👋 Wave</button
-        ><button id="gatherBtn">⌖ Gather here</button><button id="photoBtn">📷 Group photo</button
-        ><button id="chatBtn">☏ Chat</button>
+        ><button id="shareRoom">↗ Invite friends</button><button id="chatBtn">☏ Chat</button>
       </div>
       <section id="chatPanel" hidden aria-label="Campus room chat">
         <div class="chat-head">
@@ -141,17 +127,6 @@
         </form>
       </section>
     </div>
-    <dialog id="photoDialog">
-      <button id="closePhoto" class="close" aria-label="Close group photo">×</button
-      ><span class="eyebrow">A CAMPUS MEMORY</span>
-      <h2>Everyone, say MESCE.</h2>
-      <img id="groupPhoto" alt="Your campus group photo" />
-      <p id="photoCount"></p>
-      <a id="downloadPhoto" class="primary" download="mesce-group-photo.png">Download photo ↓</a>
-      <p class="fine">
-        Saved to your device, not uploaded. Invite friends to gather nearby, then take another.
-      </p>
-    </dialog>
     <dialog id="card">
       <button class="close" id="closeCard" aria-label="Close location">×</button
       ><span class="eyebrow" id="cardTag">A PLACE ON YOUR TRAIL</span>
@@ -170,19 +145,20 @@
         nearby action. Press F at a shop or fruit tree. Press B beside a seat to sit or stand. Press
         P on a prayer mat, or R to read in the library. Drag to orbit the camera. Scroll to zoom.
         Use the View button to switch between follow, close, and aerial cameras. On tablets and
-        phones, use the left thumbstick to walk, drag anywhere on the world to look around, pinch to
-        zoom, and tap Run or Jump. Nearby actions appear as a single touch button.
+        phones, tap an open path to walk, double-tap to run, drag to look, and pinch to zoom. A
+        quick two-finger tap jumps. Nearby actions appear as a single touch button.
       </p>
       <label class="control-preference"
         ><input id="touchPreference" type="checkbox" /> Touch controls</label
       >
+      <p><a href="/credits.html" target="_blank" rel="noopener">Model credits</a></p>
       <button id="homeBtn">↩ Back to the entrance</button
       ><button id="resetBtn">↺ Start a fresh campus trail</button>
       <p class="fine">
         An independent, stylized campus recreation based on supplied references. Explore campus, the
         auditorium, library, and prayer halls. Public campus rooms: your nickname and position are
         visible to others in the same room. Chat expires after 24 hours. Live voice is optional and
-        not recorded. Photos download locally. Not an official navigation map.
+        not recorded. Not an official navigation map.
       </p>
     </dialog>
     <div id="toast" role="status"></div>

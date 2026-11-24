@@ -1,98 +1,165 @@
 import * as THREE from './vendor/three.module.js';
-export function parkVehicles(scene) {
-  const vehicles = [];
-  const materials = {};
-  const m = (c) =>
-    materials[c] ||
-    (materials[c] = new THREE.MeshStandardMaterial({
-      color: c,
-      roughness: 0.45,
-      metalness: ['#3d4546', '#bfc6c4'].includes(c) ? 0.7 : 0.12,
-    }));
-  function part(g, geo, c, x, y, z) {
-    const a = new THREE.Mesh(geo, m(c));
-    a.position.set(x, y, z);
-    a.castShadow = true;
-    g.add(a);
-    return a;
+import { campusVehicles } from './vehicle-catalog.js';
+import { loadCampusModel, fitCampusModel } from './campus-models.js';
+
+const plateTextures = new Map();
+export function registrationPlate(text, width, height) {
+  let texture = plateTextures.get(text);
+  if (!texture) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f5f4ec';
+    g.fillRect(0, 0, 512, 128);
+    g.fillStyle = '#214e88';
+    g.fillRect(8, 8, 36, 112);
+    g.fillStyle = '#fff';
+    g.font = 'bold 15px sans-serif';
+    g.fillText('IND', 11, 104);
+    g.fillStyle = '#151a1b';
+    g.font = 'bold 49px sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(text, 277, 69, 440);
+    g.strokeStyle = '#a5a7a1';
+    g.lineWidth = 4;
+    g.strokeRect(2, 2, 508, 124);
+    texture = new THREE.CanvasTexture(c);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    plateTextures.set(text, texture);
   }
-  function block(g, c, x, y, z, w, h, d) {
-    return part(g, new THREE.BoxGeometry(w, h, d), c, x, y, z);
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(width, height),
+    new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.58,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+    }),
+  );
+}
+function lowVehicle(v) {
+  const group = new THREE.Group(),
+    rubber = new THREE.MeshStandardMaterial({ color: '#262b2a', roughness: 0.85 }),
+    paint = new THREE.MeshStandardMaterial({
+      color: v.kind === 'car' ? (v.model === 'lexus' ? '#b9c0c1' : '#c9bba0') : '#567b77',
+      roughness: 0.35,
+      metalness: 0.4,
+    });
+  const box = (w, h, d, x, y, z, m = paint) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    group.add(mesh);
+  };
+  if (v.kind === 'car') {
+    box(v.width, 0.8, v.length * 0.85, 0, 0.8, 0);
+    box(v.width * 0.84, 0.8, v.length * 0.48, 0, 1.5, -0.1);
+  } else {
+    box(0.65, 0.6, 1.2, 0, 0.9, -0.1);
+    box(0.6, 0.16, 0.9, 0, 1.2, -0.3);
+    box(0.09, 0.9, 0.09, 0, 1.1, v.length * 0.27);
+    box(0.9, 0.08, 0.08, 0, 1.55, v.length * 0.25);
   }
-  function tube(g, a, b, r, c) {
-    const d = new THREE.Vector3().subVectors(b, a),
-      o = part(g, new THREE.CylinderGeometry(r, r, d.length(), 8), c, 0, 0, 0);
-    o.position.copy(a).add(b).multiplyScalar(0.5);
-    o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
-    return o;
-  }
-  for (let i = 0; i < 10; i++) {
-    const g = new THREE.Group();
-    const scooter = i % 2 === 0;
-    const color = scooter
-      ? ['#d0d8d6', '#537578', '#c6bba3'][i % 3]
-      : ['#334647', '#4a5268', '#6a3933'][i % 3];
-    for (const z of [-0.86, 0.86]) {
-      const wheel = part(
-        g,
-        new THREE.TorusGeometry(scooter ? 0.31 : 0.36, 0.1, 8, 16),
-        '#242a28',
-        0,
-        0.44,
-        z,
+  for (const z of [-1, 1])
+    for (const x of v.kind === 'car' ? [-1, 1] : [0]) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          v.kind === 'car' ? 0.48 : 0.36,
+          v.kind === 'car' ? 0.48 : 0.36,
+          v.kind === 'car' ? 0.25 : 0.14,
+          14,
+        ),
+        rubber,
       );
-      wheel.rotation.y = Math.PI / 2;
-      const rim = part(g, new THREE.CylinderGeometry(0.24, 0.24, 0.13, 12), '#bfc6c4', 0, 0.44, z);
-      rim.rotation.z = Math.PI / 2;
-      for (const a of [0, Math.PI / 3, (Math.PI * 2) / 3]) {
-        const spoke = block(g, '#3d4546', 0, 0.44, z, 0.17, 0.5, 0.035);
-        spoke.rotation.x = a;
-      }
+      mesh.rotation.z = Math.PI / 2;
+      mesh.position.set(x * v.width * 0.44, 0.48, z * v.length * 0.31);
+      group.add(mesh);
     }
-    if (scooter) {
-      block(g, color, 0, 0.82, -0.45, 0.65, 0.65, 0.9);
-      block(g, '#292f2d', 0, 1.2, -0.4, 0.56, 0.16, 0.9);
-      block(g, color, 0, 1.12, 0.58, 0.61, 1.08, 0.32);
-      block(g, color, 0, 0.58, 0.05, 0.65, 0.16, 1.12);
-      block(g, color, 0, 1.64, 0.7, 0.7, 0.28, 0.28);
-      block(g, '#e5dfb7', 0, 1.64, 0.86, 0.31, 0.16, 0.06);
-      block(g, '#6e2823', 0, 0.9, -0.94, 0.43, 0.15, 0.05);
-    } else {
-      tube(g, new THREE.Vector3(0, 0.55, -0.8), new THREE.Vector3(0, 1.06, 0.25), 0.065, '#3d4546');
-      tube(g, new THREE.Vector3(0, 1.06, 0.25), new THREE.Vector3(0, 0.55, 0.85), 0.065, '#bfc6c4');
-      const tank = part(g, new THREE.SphereGeometry(0.37, 12, 8), color, 0, 1.2, 0.1);
-      tank.scale.set(1, 0.7, 1.4);
-      block(g, '#242a28', 0, 1.18, -0.48, 0.5, 0.14, 0.85);
-      block(g, '#3d4546', 0, 0.7, -0.03, 0.46, 0.48, 0.5);
-      tube(
-        g,
-        new THREE.Vector3(0.34, 0.47, -0.9),
-        new THREE.Vector3(0.34, 0.52, 0.1),
-        0.08,
-        '#bfc6c4',
+  return group;
+}
+function addPlates(model, v) {
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(model, true),
+    height = box.max.y - box.min.y;
+  // Cover the original registration surface; the car body and branding stay intact.
+  for (const sign of [-1, 1]) {
+    // The ES has separate trunk and grille mounts, at different heights.
+    const y =
+        v.model === 'lexus'
+          ? sign < 0
+            ? 0.98
+            : 0.56
+          : v.kind === 'car'
+            ? height * 0.3
+            : height * 0.51,
+      ray = new THREE.Raycaster(
+        new THREE.Vector3(0, y, sign * (v.length / 2 + 1)),
+        new THREE.Vector3(0, 0, -sign),
       );
-      const lamp = part(g, new THREE.CylinderGeometry(0.2, 0.2, 0.16, 12), '#eee4bf', 0, 1.4, 0.73);
-      lamp.rotation.x = Math.PI / 2;
-      block(g, '#7c2821', 0, 1.08, -0.95, 0.26, 0.12, 0.05);
-    }
-    tube(g, new THREE.Vector3(0, 0.48, 0.86), new THREE.Vector3(0, 1.65, 0.64), 0.045, '#bfc6c4');
-    tube(
-      g,
-      new THREE.Vector3(-0.48, 1.63, 0.65),
-      new THREE.Vector3(0.48, 1.63, 0.65),
-      0.045,
-      '#3d4546',
+    const hit = ray.intersectObject(model, true).find((h) => h.object.isMesh);
+    const z = hit ? hit.point.z : sign * v.length * 0.45;
+    const plate = registrationPlate(
+      v.plate,
+      v.kind === 'car' ? 0.92 : 0.42,
+      v.kind === 'car' ? 0.23 : 0.15,
     );
-    for (const x of [-0.47, 0.47]) {
-      tube(g, new THREE.Vector3(x, 1.63, 0.65), new THREE.Vector3(x, 1.97, 0.6), 0.02, '#3d4546');
-      const mirror = part(g, new THREE.SphereGeometry(0.12, 10, 6), '#bfc6c4', x, 1.97, 0.6);
-      mirror.scale.set(1.5, 0.7, 0.3);
-    }
-    block(g, '#e0ddd1', 0, 0.73, -1.02, 0.3, 0.17, 0.035);
-    g.position.set(-84 + i * 1.85, 0, i % 2 ? 59 : 55);
-    g.rotation.y = 0.16;
-    scene.add(g);
-    vehicles.push({ id: 'bike-' + i, group: g, parked: g.position.clone(), scooter });
+    plate.position.set(0, y, z + sign * 0.025);
+    if (sign < 0) plate.rotation.y = Math.PI;
+    model.add(plate);
   }
-  return vehicles;
+}
+export function parkVehicles(scene) {
+  return campusVehicles.map((v) => {
+    const group = new THREE.Group(),
+      low = lowVehicle(v);
+    group.add(low);
+    group.position.set(v.x, 0, v.z);
+    group.rotation.y = v.yaw;
+    scene.add(group);
+    const entry = {
+      ...v,
+      group,
+      parked: group.position.clone(),
+      scooter: v.kind === 'scooter',
+      low,
+      high: null,
+      loaded: false,
+    };
+    entry.load = () => {
+      if (entry.requested) return;
+      entry.error = false;
+      entry.requested = true;
+      loadCampusModel(v.model)
+        .then((gltf) => {
+          const high = fitCampusModel(gltf, { length: v.length });
+          addPlates(high, v);
+          group.add(high);
+          entry.high = high;
+          entry.loaded = true;
+          low.visible = false;
+        })
+        .catch(() => {
+          entry.error = true;
+          entry.requested = false;
+        });
+    };
+    return entry;
+  });
+}
+export function updateVehicleDetail(vehicles, player, lowQuality, started) {
+  for (const v of vehicles) {
+    const distance = Math.hypot(
+      player.position.x - v.group.position.x,
+      player.position.z - v.group.position.z,
+    );
+    if (started && distance < (v.kind === 'car' ? 42 : 32) && !v.requested && !v.error) v.load();
+    if (!v.high) continue;
+    const near =
+      Math.hypot(player.position.x - v.group.position.x, player.position.z - v.group.position.z) <
+      (lowQuality ? 30 : 60);
+    v.high.visible = near;
+    v.low.visible = !near;
+  }
 }
