@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-export function departmentDetails({ scene, box, cyl, ball, mat, colors, tree }) {
+export function departmentDetails({ scene, box, floorBox = box, cyl, ball, mat, colors, tree }) {
   function plaque(lines, x, y, z, w, h) {
     const c = document.createElement('canvas');
     c.width = 1536;
@@ -40,7 +40,7 @@ export function departmentDetails({ scene, box, cyl, ball, mat, colors, tree }) 
     for (const dx of [-5, 5]) box(x + dx, 1.9, -15.2, 0.4, 3.8, 0.4, '#e5e2d3');
     box(x, 1.5, -18.72, 4, 3, 0.12, '#253b35');
     for (let i = 0; i < 3; i++)
-      box(x, (i + 1) * 0.1, -14.4 - i * 0.55, 6, (i + 1) * 0.2, 0.6, '#aea58f');
+      floorBox(x, (i + 1) * 0.1, -14.4 - i * 0.55, 6, (i + 1) * 0.2, 0.6, '#aea58f');
   }
   plaque(
     ['COMPUTER SCIENCE · BCA', 'AI & DATA SCIENCE · CYBER SECURITY'],
@@ -65,7 +65,7 @@ export function departmentDetails({ scene, box, cyl, ball, mat, colors, tree }) 
   // Leafy borders frame each approach without obstructing its central walkway.
   for (const x of [12, 40, 68]) {
     for (const side of [-1, 1]) {
-      box(x + side * 6.9, 0.18, -10.1, 4, 0.3, 8, '#a2a975');
+      floorBox(x + side * 6.9, 0.18, -10.1, 4, 0.3, 8, '#a2a975');
       for (let i = 0; i < 7; i++) {
         const z = -13.6 + i * 1.05;
         ball(x + side * 5.4, 0.8, z, 0.73, ['#4f6938', '#668341', '#78904b'][i % 3], scene, 0.85);

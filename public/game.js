@@ -8,6 +8,7 @@ import {
 } from './campus-layout.js';
 import { surface, finish } from './realism.js';
 import { createSocial } from './social.js';
+import { vehicleGround } from './vehicle-ground.js';
 import { parkVehicles, updateVehicleDetail } from './vehicles.js';
 import { vehicleContains } from './vehicle-catalog.js';
 import { campusReflections } from './campus-models.js';
@@ -100,6 +101,11 @@ function box(x, y, z, w, h, d, c, parent = scene) {
   parent.add(m);
   return m;
 }
+function floorBox(...args) {
+  const mesh = box(...args);
+  mesh.userData.vehicleSurface = true;
+  return mesh;
+}
 function cyl(x, y, z, r, h, c, parent = scene, r2 = r, n = 12) {
   const bark = c === '#77634c' || c === '#87715a';
   const m = new THREE.Mesh(
@@ -160,12 +166,12 @@ function sign(text, x, y, z, size = 9, bg = '#f5ecd8', fg = '#254b3c') {
   scene.add(sp);
   return sp;
 }
-box(0, -1.3, 0, 203, 2.5, 150, '#b3ba86');
-box(0, -0.03, 0, 200, 0.12, 147, colors.grass);
+floorBox(0, -1.3, 0, 203, 2.5, 150, '#b3ba86');
+floorBox(0, -0.03, 0, 200, 0.12, 147, colors.grass);
 // Paths and the two primary campus roads.
 const academicRoad = campusLayout.academicRoad,
   approachDrive = campusLayout.approachDrive;
-box(
+floorBox(
   academicRoad.x,
   0.04,
   academicRoad.z,
@@ -174,7 +180,7 @@ box(
   academicRoad.shoulderDepth,
   colors.path,
 );
-box(
+floorBox(
   academicRoad.x,
   0.13,
   academicRoad.z,
@@ -183,7 +189,7 @@ box(
   academicRoad.depth,
   colors.road,
 );
-box(
+floorBox(
   approachDrive.x,
   0.07,
   approachDrive.z,
@@ -192,7 +198,7 @@ box(
   approachDrive.depth,
   colors.path,
 );
-box(
+floorBox(
   approachDrive.x,
   0.2,
   approachDrive.z,
@@ -201,8 +207,8 @@ box(
   approachDrive.depth,
   colors.road,
 );
-cyl(-51, 0.21, 0, 12.8, 0.16, colors.road);
-box(-51, 0.3, 0, 3.7, 0.1, 24, colors.path);
+cyl(-51, 0.21, 0, 12.8, 0.16, colors.road).userData.vehicleSurface = true;
+floorBox(-51, 0.3, 0, 3.7, 0.1, 24, colors.path);
 for (let x = -95; x < 97; x += 7) box(x, 0.22, 0, 3, 0.035, 0.15, '#dfdfc2');
 // Campus boundary walls, separated at the entrance.
 for (const [x, z, w, d] of [
@@ -261,13 +267,13 @@ building(-24, -32, 10, 16, 9);
 dome(-51, 20.8, -30, 4.8);
 dome(-60, 13.8, -31, 1.6);
 dome(-42, 13.8, -31, 1.6);
-box(-51, 0.22, -13, 4, 0.15, 14, colors.path);
+floorBox(-51, 0.22, -13, 4, 0.15, 14, colors.path);
 box(-51, 3.5, -14, 4.5, 0.35, 13, colors.cream);
 for (const z of [-19, -13, -8])
   for (const x of [-52.8, -49.2]) box(x, 1.7, z, 0.24, 3.3, 0.25, colors.cream);
 // Smaller lawn between the main and computer science blocks.
-box(-9, 0.1, -28, 10, 0.2, 26, '#cbbd90');
-box(-9, 0.18, -28, 8.8, 0.12, 24.8, '#9eaf6a');
+floorBox(-9, 0.1, -28, 10, 0.2, 26, '#cbbd90');
+floorBox(-9, 0.18, -28, 8.8, 0.12, 24.8, '#9eaf6a');
 sign('THE LAWN', -6, 2, -28, 10);
 // Open central courts are visible in the CS and electrical-block satellite roofs.
 // Retain the front façades and entry positions used by the playable interiors.
@@ -279,11 +285,11 @@ for (const [x, name] of [
   building(x, -34, 20, 6, 14);
   building(x - 7, -28, 6, 6, 14);
   building(x + 7, -28, 6, 6, 14);
-  box(x, 0.08, -28, 8, 0.12, 6, colors.path);
+  floorBox(x, 0.08, -28, 8, 0.12, 6, colors.path);
 }
 building(68, -28, 20, 18, 14, 'MECHANICAL');
 for (const x of [12, 40, 68]) {
-  box(x, 0.15, -11, 4, 0.15, 15, colors.path);
+  floorBox(x, 0.15, -11, 4, 0.15, 15, colors.path);
   box(x, 1, -18, 5, 2, 1.5, colors.cream);
 }
 // Fountain: moving water streams and a circular forecourt.
@@ -312,7 +318,7 @@ function roof(x, y, z, w, d) {
   return m;
 }
 function pavilion(x, z, w, d, label) {
-  box(x, 0.3, z, w + 1, 0.6, d + 1, colors.path);
+  floorBox(x, 0.3, z, w + 1, 0.6, d + 1, colors.path);
   const canopy = pavilionRoof(
     w + 2,
     d + 2,
@@ -339,23 +345,22 @@ function pavilion(x, z, w, d, label) {
 }
 // Students’ Corner is the stepped shade tree; the snack shop is built beside it.
 // Entrance and compact bike shed just left after entering.
-box(-76, 0.1, 57, 20, 0.2, 13, colors.path);
+floorBox(-76, 0.1, 57, 20, 0.2, 13, colors.path);
 box(-76, 3.2, 57, 20, 0.25, 7, '#c1c6b3');
 for (const x of [-85, -67]) for (const z of [54, 60]) box(x, 1.6, z, 0.15, 3.2, 0.15, '#5f7562');
-const parkedVehicles = parkVehicles(scene);
 campusReflections(renderer, scene);
 // Empty parking and a separate pedestrian forecourt lead toward the raised hall.
 const parking = campusLayout.parking,
   forecourt = campusLayout.forecourt;
-box(parking.x, 0.15, parking.z, parking.width, 0.2, parking.depth, colors.road);
+floorBox(parking.x, 0.15, parking.z, parking.width, 0.2, parking.depth, colors.road);
 for (let x = parking.x - parking.width / 2 + 2; x < parking.x + parking.width / 2 - 1; x += 3.5) {
   for (const z of [parking.z - 5.5, parking.z + 5.5]) box(x, 0.28, z, 0.08, 0.02, 5, '#cecbb6');
 }
-box(forecourt.x, 0.13, forecourt.z, forecourt.width, 0.26, forecourt.depth, colors.path);
+floorBox(forecourt.x, 0.13, forecourt.z, forecourt.width, 0.26, forecourt.depth, colors.path);
 // The drive joins the cross-campus road without crossing the hall's stairs.
-box(parking.x - 17, 0.13, 18, 4, 0.2, 28, colors.path);
+floorBox(parking.x - 17, 0.13, 18, 4, 0.2, 28, colors.path);
 for (const path of campusWalkways)
-  box(path.x, 0.2, path.z, path.width, 0.16, path.depth, colors.path);
+  floorBox(path.x, 0.2, path.z, path.width, 0.16, path.depth, colors.path);
 moveFacility(campusLayout.canteen, () => pavilion(33, 26, 18, 12, 'CANTEEN'));
 // Restrained landscaping with deterministic variation.
 let seed = 42;
@@ -1102,7 +1107,7 @@ function animate(now) {
   renderer.render(activeScene(), camera);
   if (frames++ % 6 === 0) mini();
 }
-const realism = finish(scene, renderer, sun, { box, cyl, ball, mat, colors });
+const realism = finish(scene, renderer, sun, { box, floorBox, cyl, ball, mat, colors });
 
 // Remove floating map labels; department names are mounted on their entrances.
 for (const o of [...scene.children])
@@ -1111,7 +1116,7 @@ for (const o of [...scene.children])
     o.material.dispose();
     scene.remove(o);
   }
-const details = campusDetails({ scene, box, cyl, mat, colors });
+const details = campusDetails({ scene, box, floorBox, cyl, mat, colors });
 campusSurroundings({ scene, box, mat, colors });
 raiseForecourt();
 function raiseForecourt() {
@@ -1126,14 +1131,14 @@ function raiseForecourt() {
     )
       o.position.y += 0.9;
   }
-  cyl(-51, 0.48, 0, 12.8, 0.96, '#aaa18b');
+  cyl(-51, 0.48, 0, 12.8, 0.96, '#aaa18b').userData.vehicleSurface = true;
   for (let i = 0; i < 4; i++)
-    box(-51, (4 - i) * 0.1475, 13.15 + i * 0.7, 7, (4 - i) * 0.295, 0.72, '#b5ad98');
-  box(-51, 0.52, -16.5, 5, 1.04, 9, '#a69c83');
+    floorBox(-51, (4 - i) * 0.1475, 13.15 + i * 0.7, 7, (4 - i) * 0.295, 0.72, '#b5ad98');
+  floorBox(-51, 0.52, -16.5, 5, 1.04, 9, '#a69c83');
 }
-departmentDetails({ scene, box, cyl, ball, mat, colors, tree });
-rearCampus({ scene, box, cyl, ball, mat, colors, tree, solid });
-const tea = teaStall({ scene, player, box, cyl, roof, solid, toast });
+departmentDetails({ scene, box, floorBox, cyl, ball, mat, colors, tree });
+rearCampus({ scene, box, floorBox, cyl, ball, mat, colors, tree, solid });
+const tea = teaStall({ scene, player, box, floorBox, cyl, roof, solid, toast });
 const social = createSocial({
   scene,
   player,
@@ -1159,8 +1164,17 @@ const social = createSocial({
   onVehicleState: (players, id, positions) => riding.reconcile(players, id, positions),
   onSwingState: (players, id) => swings.reconcile(players, id),
 });
-socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, moveFacility });
-const riding = createRiding({ vehicles: parkedVehicles, player, social, toast, blocked });
+socialPlaces({ scene, box, floorBox, cyl, ball, solid, mat, colors, roof, moveFacility });
+const vehicleHeightAt = vehicleGround(scene);
+const parkedVehicles = parkVehicles(scene, vehicleHeightAt);
+const riding = createRiding({
+  vehicles: parkedVehicles,
+  player,
+  social,
+  toast,
+  blocked,
+  floor: campusFloor,
+});
 const swings = createSwings({
   scene,
   player,
@@ -1237,7 +1251,7 @@ function campusFloor(x, z) {
   if (Math.hypot(x + 51, z) < 12.8 || (Math.abs(x + 51) < 3 && z < -12 && z > -20)) return 1.18;
   if (Math.abs(x + 51) < 3.5 && z >= 12.8 && z <= 15.5)
     return Math.max(0, 1.18 - Math.floor((z - 12.8) / 0.7) * 0.3);
-  return auditoriumGroundHeight(x, z) ?? 0;
+  return auditoriumGroundHeight(x, z) ?? vehicleHeightAt(x, z);
 }
 const liveVoice = createLiveVoice({ social, toast });
 const events = createEvents({
@@ -1336,6 +1350,14 @@ if (
           .join(','),
         route: tapPath[0] || null,
         vehicle: riding.vehicleId(),
+        vehicleBaseY: parkedVehicles
+          .reduce((nearest, v) =>
+            v.group.position.distanceToSquared(player.position) <
+            nearest.group.position.distanceToSquared(player.position)
+              ? v
+              : nearest,
+          )
+          .group.position.y.toFixed(3),
         looking: touchControls.isLooking(),
         x: player.position.x.toFixed(1),
         y: player.position.y.toFixed(2),

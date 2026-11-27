@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three.module.js';
-export function campusDetails({ scene, box, cyl, mat, colors }) {
+export function campusDetails({ scene, box, floorBox = box, cyl, mat, colors }) {
   // The entrance, divided approach, fountain and Main Block share the same axis.
   const gateX = -51;
   // A small local pocket road runs outside the front boundary.
   // The narrow gate road continues through the map-informed surroundings network.
   // The continuous approach drive already reaches the pocket road. A second
   // almost-coplanar asphalt slab here caused flicker beneath the gate.
-  box(0, -0.6, 84, 230, 1.4, 7, '#c6b78e');
+  floorBox(0, -0.6, 84, 230, 1.4, 7, '#c6b78e');
   for (const x of [gateX - 11, gateX + 11]) {
     box(x, 3.7, 65, 3.2, 7.4, 2.5, colors.cream);
     box(x, 7.6, 65, 3.7, 0.4, 2.8, '#d4c8ad');
@@ -18,10 +18,10 @@ export function campusDetails({ scene, box, cyl, mat, colors }) {
   for (const x of [gateX - 11, gateX + 11])
     for (let z = 66; z <= 70; z += 0.65) box(x, 1.6, z, 0.08, 3.2, 0.08, '#454c46');
   // Low central lawn divider, with a clear carriageway on either side.
-  box(gateX, 0.31, 36, 1.8, 0.25, 43, '#c8c0aa');
-  box(gateX, 0.48, 36, 1.4, 0.1, 42.6, '#9eaf6a');
+  floorBox(gateX, 0.31, 36, 1.8, 0.25, 43, '#c8c0aa');
+  floorBox(gateX, 0.48, 36, 1.4, 0.1, 42.6, '#9eaf6a');
   for (let z = 18; z < 58; z += 3.5) cyl(gateX, 0.64, z, 0.26, 0.25, '#8a9e52', scene, 0.2, 8);
-  for (const x of [gateX - 7.6, gateX + 7.6]) box(x, 0.3, 36, 0.25, 0.35, 56, '#b9b4a4');
+  for (const x of [gateX - 7.6, gateX + 7.6]) floorBox(x, 0.3, 36, 0.25, 0.35, 56, '#b9b4a4');
   // Two simple semicircular lawns flank the entrance walk and fountain.
   for (const side of [-1, 1]) {
     const points = [];
@@ -36,6 +36,7 @@ export function campusDetails({ scene, box, cyl, mat, colors }) {
     lawn.rotation.x = -Math.PI / 2;
     lawn.position.set(-51, 0.35, 0);
     lawn.receiveShadow = true;
+    lawn.userData.vehicleSurface = true;
     scene.add(lawn);
   }
   // Main Block's white central tower, red arched recesses and stepped arcades.
@@ -80,7 +81,7 @@ export function campusDetails({ scene, box, cyl, mat, colors }) {
   }
   for (const x of [-53.4, -51, -48.6]) box(x, 18.6, -20.25, 0.85, 0.65, 0.15, '#273e43');
   // Raised front platform and broad shallow stairs leading to the covered approach.
-  for (let i = 0; i < 5; i++) box(-51, 0.12 + i * 0.12, -8.5 - i * 0.5, 9, 0.24, 1, '#b4ad9f');
+  for (let i = 0; i < 5; i++) floorBox(-51, 0.12 + i * 0.12, -8.5 - i * 0.5, 9, 0.24, 1, '#b4ad9f');
   // Bharathappuzha is behind the academic blocks, beyond the campus boundary.
   box(0, -1.2, -95, 700, 0.3, 34, '#c1b490');
   box(0, -1.3, -146, 700, 0.3, 76, '#638f94');

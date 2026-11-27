@@ -2,7 +2,18 @@ import * as THREE from './vendor/three.module.js';
 import { campusLayout, studentsCorner } from './campus-layout.js';
 import { surface } from './realism.js';
 import { rectangularHipRoof } from './roof-geometry.js';
-export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, moveFacility }) {
+export function socialPlaces({
+  scene,
+  box,
+  floorBox = box,
+  cyl,
+  ball,
+  solid,
+  mat,
+  colors,
+  roof,
+  moveFacility,
+}) {
   function board(text, x, y, z, w = 4, h = 0.65, color = '#36534a', parent = scene) {
     const cv = document.createElement('canvas');
     cv.width = 640;
@@ -27,7 +38,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   // A small snack shop sits beside the open tree gathering area.
   box(-85, 1.55, 27.5, 12, 3.1, 3, colors.cream);
   solid(-85, 27.5, 12, 3, 3.5);
-  box(-85, 0.15, 28.5, 13, 0.3, 7, colors.path);
+  floorBox(-85, 0.15, 28.5, 13, 0.3, 7, colors.path);
   const shopRoof = new THREE.Mesh(
     rectangularHipRoof(13, 7, 1.6, 5),
     surface(colors.roof, 13, 1, 7, mat(colors.roof))[2],
@@ -78,7 +89,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
       scene,
       tier.radius,
       64,
-    );
+    ).userData.vehicleSurface = true;
     const edge = new THREE.Mesh(
       new THREE.RingGeometry(tier.radius - 0.08, tier.radius, 64),
       new THREE.MeshStandardMaterial({ color: '#c5c1a8', roughness: 1, side: THREE.DoubleSide }),
@@ -185,7 +196,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     arch.position.set(x, 3.65, 5.18);
     mosque.add(arch);
   }
-  box(0, 0.25, 7.7, 8.8, 0.5, 2.2, '#baae96', mosque);
+  floorBox(0, 0.25, 7.7, 8.8, 0.5, 2.2, '#baae96', mosque);
   solid(-30, 64, 10, 12, 10.8);
   // Men's prayer compound is at the rear, facing toward the bike-parking approach.
   for (const [x, z, w, d] of [
@@ -203,9 +214,9 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     box(-42, 1.25, z, 0.8, 2.5, 0.8, colors.cream);
     box(-42, 2.58, z, 1, 0.18, 1, colors.cream);
   }
-  box(-44, 0.27, 60.5, 2.5, 0.15, 10, colors.path);
-  box(-40, 0.28, 64, 8, 0.16, 2.6, colors.path);
-  box(-44.5, 0.27, 56, 3.5, 0.15, 2.6, colors.path);
+  floorBox(-44, 0.27, 60.5, 2.5, 0.15, 10, colors.path);
+  floorBox(-40, 0.28, 64, 8, 0.16, 2.6, colors.path);
+  floorBox(-44.5, 0.27, 56, 3.5, 0.15, 2.6, colors.path);
   function arch(x, y, z, w, h, angle = 0, parent = scene) {
     const shape = new THREE.Shape();
     shape.moveTo(-w / 2, 0);
@@ -243,7 +254,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     scene.add(fittedRoof);
     for (const side of [-1, 1])
       for (const z of [43, 48, 53]) arch(side * 14.62, 4.2, z, 2.8, 4.3, (side * Math.PI) / 2);
-    box(0, 2, 37.8, 20, 0.3, 5.5, '#bf9d79');
+    floorBox(0, 2, 37.8, 20, 0.3, 5.5, '#bf9d79');
     box(0, 9.15, 40, 20, 0.35, 6.8, colors.cream);
     for (const x of [-8, -2.7, 2.7, 8]) {
       cyl(x, 5.65, 37.5, 0.33, 6.8, colors.cream);
@@ -265,7 +276,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     board('AUDITORIUM', 0, 10.2, 36.72, 8, 0.72, '#b77d7d').rotation.y = Math.PI;
     for (const x of [-5.5, 0, 5.5]) arch(x, 2.15, 38.83, 2.5, 5.3, Math.PI);
     for (let i = 0; i < 10; i++)
-      box(
+      floorBox(
         0,
         (i + 1) * 0.105,
         30.8 + i * 0.6,
@@ -276,8 +287,8 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
       );
     // Low stone edging and small pots seen along the veranda, leaving the stair centre clear.
     for (const x of [-11.5, 11.5]) {
-      box(x, 0.55, 33, 3.1, 1.1, 5.8, '#77776a');
-      box(x, 1.14, 33, 3.25, 0.12, 6, '#a5a18c');
+      floorBox(x, 0.55, 33, 3.1, 1.1, 5.8, '#77776a');
+      floorBox(x, 1.14, 33, 3.25, 0.12, 6, '#a5a18c');
     }
     for (const x of [-12.2, -9.8, 9.8, 12.2]) {
       cyl(x, 2.52, 36.5, 0.42, 0.7, '#996c4e');
@@ -294,12 +305,12 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
       }
     }
     // Side landings preserve the raised access routes.
-    box(12, 1.05, 37.5, 5, 2.1, 4, '#b6ab96');
+    floorBox(12, 1.05, 37.5, 5, 2.1, 4, '#b6ab96');
     for (let i = 0; i < 7; i++)
-      box(15 + i * 0.65, (7 - i) * 0.15, 37.5, 0.67, (7 - i) * 0.3, 4, '#a99c84');
-    box(-16.7, 1.05, 38.5, 4.4, 2.1, 7, '#b6ab96');
+      floorBox(15 + i * 0.65, (7 - i) * 0.15, 37.5, 0.67, (7 - i) * 0.3, 4, '#a99c84');
+    floorBox(-16.7, 1.05, 38.5, 4.4, 2.1, 7, '#b6ab96');
     for (let i = 0; i < 10; i++)
-      box(-17.5, (10 - i) * 0.105, 42.3 + i * 0.65, 4, (10 - i) * 0.21, 0.67, '#a99c84');
+      floorBox(-17.5, (10 - i) * 0.105, 42.3 + i * 0.65, 4, (10 - i) * 0.21, 0.67, '#a99c84');
     for (const x of [-19.6, -15.4]) {
       box(x, 2.85, 38.4, 0.12, 1.3, 6.5, '#596357');
       for (let i = 0; i < 7; i++) {
@@ -312,7 +323,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   moveFacility(campusLayout.library, () => {
     box(24, 3.8, 56, 18, 7.6, 23, colors.cream);
     solid(24, 56, 18, 23, 11);
-    box(24, 0.25, 56, 19, 0.5, 24, '#aaa18e');
+    floorBox(24, 0.25, 56, 19, 0.5, 24, '#aaa18e');
     box(24, 7.7, 56, 18.6, 0.3, 23.6, colors.cream);
     const fittedRoof = new THREE.Mesh(
       rectangularHipRoof(20, 25, 2.5, 8),
@@ -330,7 +341,7 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
     }
     board('CENTRAL LIBRARY', 24, 3.15, 44.2, 16, 0.75, '#756855').rotation.y = Math.PI;
     box(24, 1.2, 44.19, 2.8, 2.4, 0.12, '#233d35');
-    box(24, 0.12, 42.7, 6, 0.24, 3, '#b7ad95');
+    floorBox(24, 0.12, 42.7, 6, 0.24, 3, '#b7ad95');
     for (const z of [48, 53, 58, 63]) arch(33.12, 3.4, z, 2.8, 3.7, Math.PI / 2);
   });
   // Connected routes follow the facilities' shared positions, including the descent to prayer space.
@@ -342,12 +353,20 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   box(joinX, 3.5, hall.z, 0.8, 7, 7, colors.cream);
   box(joinX, 7.1, hall.z, 1, 0.2, 7.4, colors.cream);
   solid(joinX, hall.z, 0.8, 7, 7.5);
-  box(hall.x, 0.13, hall.doorZ - 7, 5, 0.26, 5, colors.path);
-  box((hall.x + canteen.x) / 2, 0.13, 29.5, canteen.x - hall.x, 0.26, 3, colors.path);
-  box(library.doorX, 0.13, library.doorZ - 2, 7, 0.26, 4, colors.path);
+  floorBox(hall.x, 0.13, hall.doorZ - 7, 5, 0.26, 5, colors.path);
+  floorBox((hall.x + canteen.x) / 2, 0.13, 29.5, canteen.x - hall.x, 0.26, 3, colors.path);
+  floorBox(library.doorX, 0.13, library.doorZ - 2, 7, 0.26, 4, colors.path);
   const prayerPathStart = hall.dz + 48.8;
-  box(hall.x - 17.5, 0.13, (prayerPathStart + 64) / 2, 3, 0.26, 64 - prayerPathStart, colors.path);
-  box(-3.4, 0.13, 64, 3, 0.26, 4, colors.path);
+  floorBox(
+    hall.x - 17.5,
+    0.13,
+    (prayerPathStart + 64) / 2,
+    3,
+    0.26,
+    64 - prayerPathStart,
+    colors.path,
+  );
+  floorBox(-3.4, 0.13, 64, 3, 0.26, 4, colors.path);
   // The women's hall sits behind the auditorium; its entrance turns clockwise to face east.
   const women = new THREE.Group();
   women.position.set(-11, 0, 64);
@@ -366,9 +385,9 @@ export function socialPlaces({ scene, box, cyl, ball, solid, mat, colors, roof, 
   box(0, 3.1, -5.2, 7.8, 0.25, 2.7, colors.cream, women);
   for (const x of [-3.3, 3.3]) cyl(x, 1.5, -6.3, 0.19, 3, colors.cream, women);
   board('WOMEN’S MASJID', 0, 3.6, -4.72, 8, 0.65, '#456356', women).rotation.y = Math.PI;
-  box(0, 0.12, -6, 7, 0.24, 2.5, colors.path, women);
+  floorBox(0, 0.12, -6, 7, 0.24, 2.5, colors.path, women);
   board('MEN’S MASJID', -35.2, 4.45, 64, 6, 0.65, '#456356').rotation.y = -Math.PI / 2;
-  box(-3.4, 0.13, 62.8, 2.5, 0.26, 5, colors.path);
+  floorBox(-3.4, 0.13, 62.8, 2.5, 0.26, 5, colors.path);
   // The sculptural landmark is geometry, not a floating building label.
   box(-82.5, 0.4, 48, 15, 0.8, 1.35, '#262b2b');
   solid(-82.5, 48, 15, 1.5, 3.6);

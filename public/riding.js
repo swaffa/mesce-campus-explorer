@@ -1,4 +1,4 @@
-export function createRiding({ vehicles, player, social, toast, blocked }) {
+export function createRiding({ vehicles, player, social, toast, blocked, floor }) {
   const button = document.createElement('button');
   button.id = 'rideBtn';
   button.hidden = true;
@@ -10,7 +10,10 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
   const vehicle = () => vehicles.find((v) => v.id === mounted);
   function seating(model, v) {
     const car = v?.kind === 'car';
-    model.position.y = v ? (car ? 0.05 : 0.35) : 0;
+    model.position.y = v
+      ? v.group.position.y + (car ? 0.05 : 0.35)
+      : floor(model.position.x, model.position.z);
+    model.rotation.set(v?.group.rotation.x ?? 0, model.rotation.y, v?.group.rotation.z ?? 0, 'YXZ');
     model.scale.setScalar(car ? 0.72 : 1);
     model.userData.riding = !!v;
     model.userData.ridingOffset = car ? { x: -0.5, z: 0.2 } : null;
@@ -43,8 +46,7 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
         );
       } else {
         seating(player, null);
-        chosen.parked.copy(origin);
-        chosen.parkYaw = heading;
+        chosen.parked = { x: origin.x, z: origin.z, yaw: heading };
         // Try both doors, then the ends if a wall or another car is alongside.
         for (const [dx, dz] of [
           [chosen.width / 2 + 1, 0],
@@ -55,7 +57,7 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
           const x = origin.x + dx * Math.cos(heading) + dz * Math.sin(heading);
           const z = origin.z - dx * Math.sin(heading) + dz * Math.cos(heading);
           if (!blocked(x, z)) {
-            player.position.set(x, 0, z);
+            player.position.set(x, floor(x, z), z);
             break;
           }
         }
@@ -79,10 +81,7 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
   function reconcile(players, id, positions = []) {
     for (const parked of positions) {
       const v = vehicles.find((v) => v.id === parked.vehicle);
-      if (v) {
-        v.parked.set(parked.x, 0, parked.z);
-        v.parkYaw = parked.yaw;
-      }
+      if (v) v.parked = { x: parked.x, z: parked.z, yaw: parked.yaw };
     }
     const next = players.find((p) => p.id === id)?.vehicle || null;
     if (busy) return;
@@ -155,8 +154,7 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
         const v = vehicles.find((v) => v.id === peer.vehicle);
         if (v) {
           occupied.add(v.id);
-          v.group.position.set(peer.model.position.x, 0, peer.model.position.z);
-          v.group.rotation.y = peer.model.rotation.y;
+          v.place(peer.model.position.x, peer.model.position.z, peer.model.rotation.y);
           seating(peer.model, v);
         }
       } else if (peer.model.userData.riding) seating(peer.model, null);
@@ -165,8 +163,7 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
       const v = vehicle();
       if (v) {
         occupied.add(v.id);
-        v.group.position.set(player.position.x, 0, player.position.z);
-        v.group.rotation.y = player.rotation.y;
+        v.place(player.position.x, player.position.z, player.rotation.y);
       }
       seating(player, v);
     }
@@ -174,8 +171,7 @@ export function createRiding({ vehicles, player, social, toast, blocked }) {
     let closest = 4.1;
     for (const v of vehicles)
       if (!occupied.has(v.id)) {
-        v.group.position.copy(v.parked);
-        v.group.rotation.y = v.parkYaw ?? v.yaw;
+        v.place(v.parked.x, v.parked.z, v.parked.yaw);
         const distance = Math.hypot(player.position.x - v.parked.x, player.position.z - v.parked.z);
         if (distance < closest) {
           closest = distance;

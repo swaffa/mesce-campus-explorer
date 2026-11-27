@@ -79,6 +79,7 @@ export function campusSurroundings({ scene, box, mat, colors }) {
     land.castShadow = false;
     land.receiveShadow = false;
     land.userData.distantScenery = true;
+    land.userData.vehicleSurface = true;
   }
   const marks = [],
     marker = new THREE.Object3D();
@@ -107,6 +108,7 @@ export function campusSurroundings({ scene, box, mat, colors }) {
     material.polygonOffsetFactor = lift > 0 ? -3 : color === '#626c66' ? -2 : -1;
     material.polygonOffsetUnits = material.polygonOffsetFactor;
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.userData.vehicleSurface = offset === 0;
     // Distant ribbons stay outside the small moving campus shadow frustum.
     mesh.receiveShadow = false;
     scene.add(mesh);
@@ -154,6 +156,7 @@ export function campusSurroundings({ scene, box, mat, colors }) {
         side: THREE.DoubleSide,
       }),
     );
+    mesh.userData.vehicleSurface = true;
     scene.add(mesh);
   }
   for (const road of surroundingRoads) {

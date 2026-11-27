@@ -180,7 +180,7 @@ export function surface(c, w, h, d, fallback) {
     material(t, w, h),
   ];
 }
-export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
+export function finish(scene, renderer, sun, { box, floorBox = box, cyl, ball, mat, colors }) {
   renderer.toneMappingExposure = 1.02;
   scene.background = new THREE.Color('#b8d3e0');
   scene.fog = new THREE.FogExp2('#c5d8d9', 0.0028);
@@ -219,6 +219,7 @@ export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
   outer.rotation.x = -Math.PI / 2;
   outer.position.y = -1.5;
   outer.receiveShadow = true;
+  outer.userData.vehicleSurface = true;
   scene.add(outer);
   // Reflective windowpanes with real depth, lintels, sills and mullions.
   const panes = [];
@@ -296,10 +297,11 @@ export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
     [40, -28, 20, 18],
     [68, -28, 20, 18],
   ]) {
-    box(x, 0.35, z, w + 0.35, 0.7, d + 0.35, '#b7ad9b');
+    floorBox(x, 0.35, z, w + 0.35, 0.7, d + 0.35, '#b7ad9b');
   }
   for (const x of [12, 40, 68])
-    for (let i = 0; i < 4; i++) box(x, 0.15 + i * 0.18, -16.6 - i * 0.5, 4.5, 0.28, 0.7, '#c4bba8');
+    for (let i = 0; i < 4; i++)
+      floorBox(x, 0.15 + i * 0.18, -16.6 - i * 0.5, 4.5, 0.28, 0.7, '#c4bba8');
   // Benches with separate timber slats and metal legs.
   for (const [x, z] of campusBenchSpots) {
     for (let i = 0; i < 4; i++) box(x, 0.8, z + i * 0.17, 2.8, 0.1, 0.13, '#78523b');
@@ -307,7 +309,7 @@ export function finish(scene, renderer, sun, { box, cyl, ball, mat, colors }) {
     for (const a of [-1, 1]) box(x + a, 0.4, z + 0.2, 0.12, 0.8, 0.8, '#384a43');
   }
   // Keep the narrow kerbs; the owner requested no zebra-crossing stripes.
-  for (const z of [-4.2, 4.2]) box(10, 0.28, z, 169, 0.3, 0.23, '#b9b4a4');
+  for (const z of [-4.2, 4.2]) floorBox(10, 0.28, z, 169, 0.3, 0.23, '#b9b4a4');
   // Roof tiles use an actual repeating terracotta surface.
   scene.traverse((o) => {
     if (o.isMesh && o.geometry?.type === 'ConeGeometry') {

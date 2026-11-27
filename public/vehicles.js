@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { vehiclePlacement, wheelContacts } from './vehicle-ground.js';
 import { campusVehicles } from './vehicle-catalog.js';
 import { loadCampusModel, fitCampusModel } from './campus-models.js';
 
@@ -62,19 +63,17 @@ function lowVehicle(v) {
     box(0.09, 0.9, 0.09, 0, 1.1, v.length * 0.27);
     box(0.9, 0.08, 0.08, 0, 1.55, v.length * 0.25);
   }
-  for (const z of [-1, 1])
-    for (const x of v.kind === 'car' ? [-1, 1] : [0]) {
+  const { rear, front, halfTrack, centerX = 0 } = wheelContacts[v.model];
+  group.position.x = centerX;
+  const radius = v.kind === 'car' ? 0.48 : 0.36;
+  for (const z of [rear, front])
+    for (const x of halfTrack ? [-halfTrack, halfTrack] : [0]) {
       const mesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-          v.kind === 'car' ? 0.48 : 0.36,
-          v.kind === 'car' ? 0.48 : 0.36,
-          v.kind === 'car' ? 0.25 : 0.14,
-          14,
-        ),
+        new THREE.CylinderGeometry(radius, radius, v.kind === 'car' ? 0.25 : 0.14, 16),
         rubber,
       );
       mesh.rotation.z = Math.PI / 2;
-      mesh.position.set(x * v.width * 0.44, 0.48, z * v.length * 0.31);
+      mesh.position.set(x, radius, z);
       group.add(mesh);
     }
   return group;
@@ -110,18 +109,19 @@ function addPlates(model, v) {
     model.add(plate);
   }
 }
-export function parkVehicles(scene) {
+export function parkVehicles(scene, heightAt) {
   return campusVehicles.map((v) => {
     const group = new THREE.Group(),
       low = lowVehicle(v);
     group.add(low);
-    group.position.set(v.x, 0, v.z);
-    group.rotation.y = v.yaw;
+    const place = vehiclePlacement(group, wheelContacts[v.model], heightAt);
+    place(v.x, v.z, v.yaw);
     scene.add(group);
     const entry = {
       ...v,
       group,
-      parked: group.position.clone(),
+      place,
+      parked: { x: v.x, z: v.z, yaw: v.yaw },
       scooter: v.kind === 'scooter',
       low,
       high: null,

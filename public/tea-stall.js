@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
-export function teaStall({ scene, player, box, cyl, roof, solid, toast }) {
+export function teaStall({ scene, player, box, floorBox = box, cyl, roof, solid, toast }) {
   const x = -8,
     z = -35;
-  box(x, 0.32, z, 6, 0.45, 5, '#b8a18b');
+  floorBox(x, 0.32, z, 6, 0.45, 5, '#b8a18b');
   box(x, 1.65, z - 1.5, 5, 2.9, 0.35, '#e3d6ba');
   box(x - 2.4, 1.65, z, 0.35, 2.9, 4, '#82917b');
   box(x + 2.4, 1.65, z, 0.35, 2.9, 4, '#82917b');
@@ -55,7 +55,7 @@ export function teaStall({ scene, player, box, cyl, roof, solid, toast }) {
   board.position.set(x, 2.9, z + 1.95);
   scene.add(board);
   // The connecting path cuts across the compact lawn between the two blocks.
-  box(-8.5, 0.49, -26, 21, 0.14, 2.3, '#d9bd93');
-  box(-8, 0.49, -29.5, 2, 0.14, 5, '#d9bd93');
+  floorBox(-8.5, 0.49, -26, 21, 0.14, 2.3, '#d9bd93');
+  floorBox(-8, 0.49, -29.5, 2, 0.14, 5, '#d9bd93');
   return { update() {} };
 }

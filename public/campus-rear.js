@@ -3,7 +3,7 @@ import { rearPaths } from './campus-layout.js';
 
 // Original geometry informed by the owner's NSS walkthrough and satellite context.
 // The bridge is scenery beyond the playable boundary; distances are compressed.
-export function rearCampus({ scene, box, cyl, ball, mat, colors, tree, solid }) {
+export function rearCampus({ scene, box, floorBox = box, cyl, ball, mat, colors, tree, solid }) {
   function plaque(text, x, y, z, width, facing = 0) {
     const canvas = document.createElement('canvas');
     canvas.width = 768;
@@ -27,7 +27,8 @@ export function rearCampus({ scene, box, cyl, ball, mat, colors, tree, solid }) 
   }
 
   // A small side route wraps the stepped wing, keeping the existing front approach clear.
-  for (const path of rearPaths) box(path.x, 0.1, path.z, path.width, 0.18, path.depth, '#b2a488');
+  for (const path of rearPaths)
+    floorBox(path.x, 0.1, path.z, path.width, 0.18, path.depth, '#b2a488');
   for (const [x, z, scale] of [
     [-95, -41, 1.65],
     [-85, -47, 1.4],
@@ -62,7 +63,7 @@ export function rearCampus({ scene, box, cyl, ball, mat, colors, tree, solid }) 
   for (let x = -73; x < -57; x += 0.65) box(x, 3.16, -48, 0.055, 0.06, 5.6, '#b8bcad');
   plaque('IEDC', -65, 2.55, -50.86, 4, Math.PI);
   plaque('INNOVATION CENTRE', -65, 2.65, -45.97, 6, Math.PI);
-  box(-65, 0.12, -47.3, 15, 0.24, 2.4, '#b6afa0');
+  floorBox(-65, 0.12, -47.3, 15, 0.24, 2.4, '#b6afa0');
 
   // Distant road crossings over Bharathappuzha, separated from campus by the river bank.
   const bridge = new THREE.Group();
