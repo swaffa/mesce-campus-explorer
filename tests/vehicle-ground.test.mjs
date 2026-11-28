@@ -123,3 +123,35 @@ test('remote drivers, the local driver and restored parking all use the rendered
   riding.update(true);
   close(car.group.position.y, 0.25);
 });
+
+test('all four supplied models separate the original rubber and rims from the body', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const id of Object.keys(wheelContacts)) {
+    const glb = await readFile(new URL('../public/models/' + id + '.glb', import.meta.url));
+    const data = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)));
+    const tags = new Set(data.nodes.map((node) => node.extras?.campusWheel).filter(Boolean));
+    const names = wheelContacts[id].halfTrack
+      ? ['rearLeft', 'rearRight', 'frontLeft', 'frontRight']
+      : ['rear', 'front'];
+    for (const name of names) assert(tags.has(name), id + ' ' + name);
+  }
+});
+
+test('front steering and signed rolling work independently and restore neutral while parked', async () => {
+  const { animateVehicleWheels } = await import('../public/vehicle-wheels.js');
+  const { scene, floor } = campus();
+  for (const v of parkVehicles(scene, floor)) {
+    const axles = Object.values(v.wheelRigs[0]);
+    animateVehicleWheels(v, 1.4, 1, 0.1);
+    assert(v.wheelAngle > 0);
+    for (const a of axles) {
+      assert(a.front ? a.steer.rotation.y > 0 : a.steer.rotation.y === 0);
+      assert(a.roll.quaternion.angleTo(new THREE.Quaternion()) > 0.1);
+    }
+    animateVehicleWheels(v, -1.4, -1, 0.3);
+    close(v.wheelAngle, 0);
+    assert(v.wheelSteer < 0);
+    for (let i = 0; i < 100; i++) animateVehicleWheels(v, 0, 0, 0.04);
+    assert(Math.abs(v.wheelSteer) < 0.0001);
+  }
+});

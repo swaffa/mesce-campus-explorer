@@ -111,6 +111,11 @@ export function localPlaytest({
     readout.textContent = JSON.stringify(diagnostics());
   }, 200);
   addEventListener('pagehide', () => clearInterval(timer), { once: true });
-  panel.append(touchLabel);
+  const phoneLabel = document.createElement('label');
+  const phone = document.createElement('input');
+  phone.type = 'checkbox';
+  phoneLabel.append(phone, ' Preview phone movement pad');
+  phone.onchange = () => previewTouch(phone.checked || touch.checked, phone.checked);
+  panel.append(touchLabel, phoneLabel);
   document.getElementById('menu').append(panel);
 }

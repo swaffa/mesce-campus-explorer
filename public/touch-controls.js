@@ -1,8 +1,17 @@
-import { createCameraGesture } from './input-math.js';
+import { createCameraGesture, stickVector } from './input-math.js';
 
-// Direct campus interaction replaces the permanent movement pads.
+export function phoneInput(device, screenSize, coarse) {
+  if (device.userAgentData?.mobile) return true;
+  const ua = device.userAgent || '';
+  if (/iPhone|iPod|Android.*Mobile|Windows Phone/i.test(ua)) return true;
+  if (/iPad|Android|Macintosh/i.test(ua)) return false;
+  const shortest = Math.min(screenSize?.width ?? Infinity, screenSize?.height ?? Infinity);
+  return (coarse || device.maxTouchPoints > 0) && shortest > 0 && shortest < 600;
+}
 export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch, onJump, onTap }) {
   const preferenceInput = document.getElementById('touchPreference');
+  const stick = document.getElementById('phoneStick');
+  let stickId = null;
   const gesture = createCameraGesture(),
     pointers = new Map();
   const coarse = matchMedia('(any-pointer: coarse)');
@@ -17,13 +26,18 @@ export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch,
   let touch =
     preference === 'touch' ||
     (preference !== 'keyboard' && (navigator.maxTouchPoints > 0 || coarse.matches));
-  function setTouch(value) {
+  function setTouch(value, previewPhone = false) {
     touch = value;
     preferenceInput.checked = value;
     document.body.classList.toggle('touch-controls', value);
+    const phone =
+      value && (previewPhone || phoneInput(navigator, globalThis.screen, coarse.matches));
+    document.body.classList.toggle('phone-controls', phone);
     dispatchEvent(new CustomEvent('mesce-touch-mode', { detail: value }));
     document.getElementById('welcomeControls').textContent = value
-      ? 'Tap to walk · double-tap to run · drag to look · pinch to zoom'
+      ? phone
+        ? 'Use the movement pad to walk or steer · drag the campus to look'
+        : 'Tap to walk · double-tap to run · drag to look · pinch to zoom'
       : 'WASD / arrows or click to walk · Space to jump · Shift to run';
   }
   setTouch(touch);
@@ -38,6 +52,41 @@ export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch,
     setTouch(preferenceInput.checked);
     reset();
   });
+  function moveStick(event) {
+    if (event.pointerId !== stickId) return;
+    const rect = stick.getBoundingClientRect(),
+      radius = Math.min(rect.width, rect.height) / 2;
+    const vector = stickVector(
+      event.clientX - rect.left - rect.width / 2,
+      event.clientY - rect.top - rect.height / 2,
+      radius * 0.74,
+    );
+    stick.style.setProperty('--stick-x', vector.x * radius * 0.55 + 'px');
+    stick.style.setProperty('--stick-y', vector.y * radius * 0.55 + 'px');
+    onMove?.(vector);
+  }
+  function releaseStick() {
+    if (stickId === null) return;
+    const id = stickId;
+    stickId = null;
+    if (stick.hasPointerCapture(id)) stick.releasePointerCapture(id);
+    stick.style.removeProperty('--stick-x');
+    stick.style.removeProperty('--stick-y');
+    onMove?.({ x: 0, y: 0 });
+  }
+  stick.addEventListener('pointerdown', (event) => {
+    if (!enabled() || !touch || stickId !== null || event.button !== 0) return;
+    event.preventDefault();
+    stickId = event.pointerId;
+    stick.setPointerCapture(stickId);
+    running = false;
+    moveStick(event);
+  });
+  stick.addEventListener('pointermove', moveStick);
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
+    stick.addEventListener(type, (event) => {
+      if (event.pointerId === stickId) releaseStick();
+    });
   canvas.addEventListener('pointerdown', (event) => {
     if (!enabled() || (event.pointerType === 'mouse' && event.button !== 0)) return;
     if (event.pointerType === 'touch' && preference === 'auto' && !touch) setTouch(true);
@@ -95,6 +144,7 @@ export function createTouchControls({ canvas, enabled, onMove, onOrbit, onPinch,
     addEventListener(type, up, { capture: true, passive: true });
   canvas.addEventListener('contextmenu', (event) => event.preventDefault());
   function reset() {
+    releaseStick();
     pointers.clear();
     gesture.clear();
     twoFinger = null;

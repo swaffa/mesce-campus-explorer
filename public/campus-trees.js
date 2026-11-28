@@ -5,7 +5,7 @@ import { loadCampusModel, fitCampusModel } from './campus-models.js';
 export function campusTreeDetails(
   scene,
   entries,
-  { reducedMotion = () => false, lowQuality = () => false } = {},
+  { reducedMotion = () => false, lowQuality = () => false, floweringCrown: mechanical } = {},
 ) {
   const dummy = new THREE.Object3D(),
     petals = new THREE.InstancedMesh(
@@ -29,7 +29,6 @@ export function campusTreeDetails(
     phase: (i * 0.347) % 1,
     rate: 0.42 + ((i * 0.119) % 0.5),
   }));
-  const mechanical = entries.find((e) => e.flowers);
   let time = 0;
   return {
     update(player, started, dt, inside = false) {
@@ -37,12 +36,7 @@ export function campusTreeDetails(
       if (!paused) time += dt;
       for (const entry of entries) {
         const distance = Math.hypot(player.position.x - entry.x, player.position.z - entry.z);
-        if (
-          started &&
-          distance < (entry.flowers ? 58 : 48) &&
-          !entry.requested &&
-          time >= (entry.retryAfter || 0)
-        ) {
+        if (started && distance < 48 && !entry.requested && time >= (entry.retryAfter || 0)) {
           entry.requested = true;
           loadCampusModel(entry.model)
             .then((gltf) => {

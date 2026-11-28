@@ -24,7 +24,16 @@ export function loadCampusModel(id) {
         queue.push(async () => {
           try {
             resolve(
-              await loader.loadAsync(new URL('./models/' + id + '.glb?v=25', import.meta.url).href),
+              await loader.loadAsync(
+                new URL(
+                  './models/' +
+                    id +
+                    (['lexus', 'honda', 'harley', 'vespa'].includes(id)
+                      ? '.glb?v=27'
+                      : '.glb?v=25'),
+                  import.meta.url,
+                ).href,
+              ),
             );
           } catch (error) {
             cache.delete(id);

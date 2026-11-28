@@ -46,4 +46,4 @@ The added `GLTFLoader.js`, `SkeletonUtils.js` and `BufferGeometryUtils.js` come 
 
 The nine supplied models are catalogued in [the model inventory](../public/models/manifest.json) with source filenames, licenses, authors, byte sizes and preparation notes. The game loads these GLBs on approach and shares geometry across copies. Distant silhouettes keep the parking area visible while assets load. See [model credits](../public/credits.html).
 
-The Lexus and Honda use separate front and rear registrations. The Harley and Vespa share ten parking places with individual Kerala plates. The Mechanical swing uses the supplied saucer magnolia. Falling petals and leaves are generated separately and respect reduced motion.
+The Lexus and Honda use separate front and rear registrations. The Harley and Vespa share ten parking places with individual Kerala plates. The Mechanical swing hangs from an original flowering shade tree. The supplied saucer magnolia is retained for older clients. Falling petals and leaves are generated separately and respect reduced motion.

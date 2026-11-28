@@ -1,3 +1,4 @@
+import { animateVehicleWheels } from './vehicle-wheels.js';
 export function createRiding({ vehicles, player, social, toast, blocked, floor }) {
   const button = document.createElement('button');
   button.id = 'rideBtn';
@@ -6,6 +7,7 @@ export function createRiding({ vehicles, player, social, toast, blocked, floor }
   let mounted = null,
     busy = false,
     nearest = null,
+    steering = 0,
     speed = 0;
   const vehicle = () => vehicles.find((v) => v.id === mounted);
   function seating(model, v) {
@@ -35,15 +37,17 @@ export function createRiding({ vehicles, player, social, toast, blocked, floor }
       const id = mounted ? null : nearest.id;
       await social.requestRide(id);
       mounted = id;
-      speed = 0;
+      speed = steering = 0;
       if (id) {
         player.position.copy(origin);
         player.rotation.y = heading;
-        toast(
-          vehicle()?.kind === 'car'
-            ? 'Driving · W/S accelerate and brake · A/D steer · R get out'
-            : 'On your ride · use W/S and A/D, or tap a path · R get off',
-        );
+        if (document.body.classList.contains('phone-controls')) {
+          toast('Slide the pad up to drive, down to reverse, and sideways to steer.');
+        } else if (document.body.classList.contains('touch-controls')) {
+          toast('Tap an open path to drive there.');
+        } else {
+          toast('W/S to drive or reverse · A/D to steer · R to get off');
+        }
       } else {
         seating(player, null);
         chosen.parked = { x: origin.x, z: origin.z, yaw: heading };
@@ -116,6 +120,7 @@ export function createRiding({ vehicles, player, social, toast, blocked, floor }
         speed = 0;
       }
     }
+    steering = turn;
     if (Math.abs(forward) > 0.08) speed += forward * (v.kind === 'car' ? 6.5 : 10) * dt;
     else speed *= Math.exp(-dt * 2.5);
     speed = Math.max(-3.5, Math.min(v.topSpeed, speed));
@@ -147,15 +152,31 @@ export function createRiding({ vehicles, player, social, toast, blocked, floor }
       path.length = 0;
     }
   }
-  function update(started) {
+  function putDriver(v, driver, dt, local) {
+    const yaw = driver.rotation.y;
+    const dx = driver.position.x - v.group.position.x,
+      dz = driver.position.z - v.group.position.z;
+    const signed =
+      Math.hypot(dx, dz) < Math.max(2, dt * v.topSpeed * 3)
+        ? dx * Math.sin(yaw) + dz * Math.cos(yaw)
+        : 0;
+    const delta = yaw - v.group.rotation.y;
+    const remoteSteer =
+      Math.abs(signed) > 0.001
+        ? Math.atan((v.length * 0.64 * Math.atan2(Math.sin(delta), Math.cos(delta))) / signed) / 0.5
+        : 0;
+    animateVehicleWheels(v, signed, local ? steering : remoteSteer, dt);
+    v.place(driver.position.x, driver.position.z, yaw);
+    seating(driver, v);
+  }
+  function update(started, dt = 1 / 60) {
     const occupied = new Set();
     for (const peer of social.getPeers().values()) {
       if (peer.vehicle) {
         const v = vehicles.find((v) => v.id === peer.vehicle);
         if (v) {
           occupied.add(v.id);
-          v.place(peer.model.position.x, peer.model.position.z, peer.model.rotation.y);
-          seating(peer.model, v);
+          putDriver(v, peer.model, dt, false);
         }
       } else if (peer.model.userData.riding) seating(peer.model, null);
     }
@@ -163,14 +184,14 @@ export function createRiding({ vehicles, player, social, toast, blocked, floor }
       const v = vehicle();
       if (v) {
         occupied.add(v.id);
-        v.place(player.position.x, player.position.z, player.rotation.y);
+        putDriver(v, player, dt, true);
       }
-      seating(player, v);
     }
     nearest = null;
     let closest = 4.1;
     for (const v of vehicles)
       if (!occupied.has(v.id)) {
+        animateVehicleWheels(v, 0, 0, dt);
         v.place(v.parked.x, v.parked.z, v.parked.yaw);
         const distance = Math.hypot(player.position.x - v.parked.x, player.position.z - v.parked.z);
         if (distance < closest) {

@@ -1067,7 +1067,7 @@ function animate(now) {
   details.update(time);
   tea.update(started && !indoors());
   social.update(dt, time);
-  riding.update(started && !indoors());
+  riding.update(started && !indoors(), dt);
   updateVehicleDetail(parkedVehicles, player, cozy.lowQuality(), started && !indoors());
   swings.update(started && !indoors(), dt);
   auditorium.update(started);
@@ -1350,6 +1350,18 @@ if (
           .join(','),
         route: tapPath[0] || null,
         vehicle: riding.vehicleId(),
+        wheels: (() => {
+          const v = parkedVehicles.find((v) => v.id === riding.vehicleId());
+          return v
+            ? {
+                steer: +v.wheelSteer.toFixed(3),
+                roll: +v.wheelAngle.toFixed(3),
+                axles:
+                  v.wheelRigs.at(-1).front?.roll.children.length ??
+                  v.wheelRigs.at(-1).frontLeft.roll.children.length,
+              }
+            : undefined;
+        })(),
         vehicleBaseY: parkedVehicles
           .reduce((nearest, v) =>
             v.group.position.distanceToSquared(player.position) <

@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { plantSwingTree } from './swing-tree.js';
 import { campusTreeDetails } from './campus-trees.js';
 export function createSwings({
   scene,
@@ -14,18 +15,7 @@ export function createSwings({
   reducedMotion,
   lowQuality,
 }) {
-  function trunkBranch(a, b, r) {
-    const delta = b.clone().sub(a);
-    const m = new THREE.Mesh(
-      new THREE.CylinderGeometry(r * 0.65, r, delta.length(), 10),
-      mat('#70604a'),
-    );
-    m.position.copy(a).add(b).multiplyScalar(0.5);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
-    m.castShadow = true;
-    scene.add(m);
-  }
-  function bigTree(x, z, flowers = false) {
+  function bigTree(x, z) {
     cyl(x, 3.6, z, 0.65, 7.2, '#756149');
     solid(x, z, 1.5, 1.5, 7);
     for (let i = 0; i < 18; i++) {
@@ -40,51 +30,42 @@ export function createSwings({
         scene,
         0.8,
       );
-      if (flowers) {
-        for (let j = 0; j < 3; j++)
-          ball(
-            x + Math.cos(a) * (r + 1.5) + j * 0.22,
-            7.1 + (i % 3) * 1.2,
-            z + Math.sin(a) * (r + 1.6),
-            0.28,
-            ['#dc9cb6', '#c58b9b', '#e9bfd3'][j],
-            scene,
-            0.6,
-          );
-      }
     }
   }
   const detailedTrees = [];
-  for (const [x, z, model, height, flowers] of [
+  for (const [x, z, model, height] of [
     [22, -43, 'coconut', 11],
     [37, -12, 'mango', 10],
     [49, -44, 'tropical-palm', 12],
     [78, -43, 'coconut', 11],
-    [3, -13, 'leafy', 11],
-    [61, -13, 'magnolia', 12, true],
+    [3, -43, 'leafy', 11],
   ]) {
     const before = new Set(scene.children);
-    bigTree(x, z, flowers);
+    bigTree(x, z);
     const low = new THREE.Group();
     for (const child of [...scene.children]) if (!before.has(child)) low.add(child);
     scene.add(low);
-    detailedTrees.push({ x, z, model, height, flowers, low });
+    detailedTrees.push({ x, z, model, height, low });
   }
-  const treeDetails = campusTreeDetails(scene, detailedTrees, { reducedMotion, lowQuality });
+  const treeDetails = campusTreeDetails(scene, detailedTrees, {
+    reducedMotion,
+    lowQuality,
+    floweringCrown: { x: 65, z: -10, height: 8.5 },
+  });
   const stations = [
     { id: 'cs', name: 'CSE tree', x: 8, z: -9 },
     { id: 'mech', name: 'pink-flowering Mechanical tree', x: 66, z: -9 },
   ];
   for (const s of stations) {
-    trunkBranch(new THREE.Vector3(s.x - 5, 5.3, -13), new THREE.Vector3(s.x, 5.1, s.z), 0.27);
-    trunkBranch(
-      new THREE.Vector3(s.x - 1.4, 5.1, s.z),
-      new THREE.Vector3(s.x + 1.4, 5.1, s.z),
-      0.18,
-    );
+    const anchors = plantSwingTree(scene, s, s.id === 'mech', mat);
+    solid(s.x - 3.3, s.z - 1.85, 1.1, 1.1, 7);
     const pivot = new THREE.Group();
     pivot.position.set(s.x, 4.8, s.z);
-    for (const x of [-0.76, 0.76]) cyl(x, -1.8, 0, 0.028, 3.6, '#c3b795', pivot);
+    s.ropes = anchors.map((anchor, i) => ({
+      anchor,
+      end: new THREE.Vector3(i === 0 ? -0.76 : 0.76, -3.6, 0),
+      mesh: cyl(0, 0, 0, 0.038, 1, '#bc9863'),
+    }));
     box(0, -3.6, 0, 1.85, 0.17, 0.72, '#8a5b3f', pivot);
     scene.add(pivot);
     s.pivot = pivot;
@@ -145,6 +126,9 @@ export function createSwings({
     model.userData.legs.forEach((l) => (l.rotation.x = -1.1));
     model.userData.arms.forEach((a) => (a.rotation.x = -0.8));
   }
+  const end = new THREE.Vector3(),
+    direction = new THREE.Vector3(),
+    up = new THREE.Vector3(0, 1, 0);
   let display = '';
   function update(started, dt) {
     treeDetails.update(player, started, dt, social.getArea() !== 'campus');
@@ -155,6 +139,13 @@ export function createSwings({
       s.amplitude += (target - s.amplitude) * Math.min(1, dt * 2);
       const angle = Math.sin((now / 1000) * 1.8) * s.amplitude;
       s.pivot.rotation.x = angle;
+      for (const rope of s.ropes) {
+        s.pivot.localToWorld(end.copy(rope.end));
+        direction.subVectors(rope.anchor, end);
+        rope.mesh.position.copy(end).addScaledVector(direction, 0.5);
+        rope.mesh.scale.y = direction.length();
+        rope.mesh.quaternion.setFromUnitVectors(up, direction.normalize());
+      }
       if (sitter) {
         const model = sitter.id === selfId ? player : social.getPeers().get(sitter.id)?.model;
         if (model) seat(model, s, angle);

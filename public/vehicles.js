@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { createAxles, attachWheelParts } from './vehicle-wheels.js';
 import { vehiclePlacement, wheelContacts } from './vehicle-ground.js';
 import { campusVehicles } from './vehicle-catalog.js';
 import { loadCampusModel, fitCampusModel } from './campus-models.js';
@@ -63,20 +64,29 @@ function lowVehicle(v) {
     box(0.09, 0.9, 0.09, 0, 1.1, v.length * 0.27);
     box(0.9, 0.08, 0.08, 0, 1.55, v.length * 0.25);
   }
-  const { rear, front, halfTrack, centerX = 0 } = wheelContacts[v.model];
-  group.position.x = centerX;
-  const radius = v.kind === 'car' ? 0.48 : 0.36;
-  for (const z of [rear, front])
-    for (const x of halfTrack ? [-halfTrack, halfTrack] : [0]) {
-      const mesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(radius, radius, v.kind === 'car' ? 0.25 : 0.14, 16),
-        rubber,
+  const axles = createAxles(group, v.model);
+  const hubMaterial = new THREE.MeshStandardMaterial({
+    color: '#929791',
+    metalness: 0.52,
+    roughness: 0.48,
+  });
+  for (const axle of Object.values(axles)) {
+    const width = v.kind === 'car' ? 0.24 : 0.14;
+    const radius = Math.min(axle.radius, axle.steer.position.y);
+    axle.axis.set(1, 0, 0);
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, width, 16), rubber);
+    mesh.rotation.z = Math.PI / 2;
+    axle.roll.add(mesh);
+    for (const side of [-1, 1]) {
+      const spoke = new THREE.Mesh(
+        new THREE.BoxGeometry(0.025, axle.radius * 1.38, 0.07),
+        hubMaterial,
       );
-      mesh.rotation.z = Math.PI / 2;
-      mesh.position.set(x, radius, z);
-      group.add(mesh);
+      spoke.position.x = side * (width / 2 + 0.005);
+      axle.roll.add(spoke);
     }
-  return group;
+  }
+  return { group, axles };
 }
 function addPlates(model, v) {
   model.updateMatrixWorld(true);
@@ -112,7 +122,7 @@ function addPlates(model, v) {
 export function parkVehicles(scene, heightAt) {
   return campusVehicles.map((v) => {
     const group = new THREE.Group(),
-      low = lowVehicle(v);
+      { group: low, axles } = lowVehicle(v);
     group.add(low);
     const place = vehiclePlacement(group, wheelContacts[v.model], heightAt);
     place(v.x, v.z, v.yaw);
@@ -124,6 +134,9 @@ export function parkVehicles(scene, heightAt) {
       parked: { x: v.x, z: v.z, yaw: v.yaw },
       scooter: v.kind === 'scooter',
       low,
+      wheelRigs: [axles],
+      wheelSteer: 0,
+      wheelAngle: 0,
       high: null,
       loaded: false,
     };
@@ -135,6 +148,8 @@ export function parkVehicles(scene, heightAt) {
         .then((gltf) => {
           const high = fitCampusModel(gltf, { length: v.length });
           addPlates(high, v);
+          entry.wheelRigs.push(attachWheelParts(high, v.model));
+          entry.wheelDetailChanged = true;
           group.add(high);
           entry.high = high;
           entry.loaded = true;

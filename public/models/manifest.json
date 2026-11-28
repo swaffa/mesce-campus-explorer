@@ -4,48 +4,48 @@
     "file": "lexus.glb",
     "sourceFilename": "2025_lexus_es_300h.glb",
     "sourceBytes": 32447172,
-    "bytes": 7762988,
+    "bytes": 7766064,
     "author": "Ddiaz Design (https://sketchfab.com/ddiaz-design)",
     "license": "CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)",
     "source": "https://sketchfab.com/3d-models/2025-lexus-es-300h-71e1a01dd61343cda07cb02fb55bbd9d",
     "title": "2025 Lexus ES 300h",
-    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry."
+    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry. Wheel geometry separated at the axles for rolling and steering."
   },
   {
     "id": "honda",
     "file": "honda.glb",
     "sourceFilename": "honda_city_e_ii_1984.glb",
     "sourceBytes": 39272856,
-    "bytes": 11388880,
+    "bytes": 11164124,
     "author": "geyges (https://sketchfab.com/geyges)",
     "license": "SKETCHFAB Standard (https://sketchfab.com/licenses)",
     "source": "https://sketchfab.com/3d-models/honda-city-e-ii-1984-aafbb7e449f94535a9ae8ea8eba4cfef",
     "title": "Honda City E II (1984)",
-    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry."
+    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry. Wheel geometry separated at the axles for rolling and steering."
   },
   {
     "id": "harley",
     "file": "harley.glb",
     "sourceFilename": "harley_davidson_motorcycle_el_ohv_v-twin.glb",
     "sourceBytes": 107304404,
-    "bytes": 16728060,
+    "bytes": 16729508,
     "author": "matias_romero (https://sketchfab.com/matias_romero)",
     "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
     "source": "https://sketchfab.com/3d-models/harley-davidson-motorcycle-el-ohv-v-twin-9923aaa519334f48b8dd44fd792475ed",
     "title": "Harley Davidson Motorcycle \"EL OHV V-TWIN\"",
-    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry."
+    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry. Wheel geometry separated at the axles for rolling and steering."
   },
   {
     "id": "vespa",
     "file": "vespa.glb",
     "sourceFilename": "scooter_vespa.glb",
     "sourceBytes": 1945036,
-    "bytes": 277660,
+    "bytes": 278448,
     "author": "00amza (https://sketchfab.com/00amza)",
     "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
     "source": "https://sketchfab.com/3d-models/scooter-vespa-331fbfab505642b78c315e42d1f9229b",
     "title": "Scooter Vespa",
-    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry."
+    "modifications": "Browser copy: deduplicated materials/geometry, reduced triangle detail and 1024px WebP textures. Kerala registration plates are separate game geometry. Wheel geometry separated at the axles for rolling and steering."
   },
   {
     "id": "coconut",
